@@ -109,9 +109,9 @@ func (s *AuthService) UnblockUser(userExternalID uuid.UUID) error {
 	return nil
 }
 
-func (s *AuthService) GetUserByExternalID(externalID uuid.UUID) (*models.User, error) {
+func (s *AuthService) GetUserByExternalID(uuid uuid.UUID) (*models.User, error) {
 	var user models.User
-	if err := s.DB.Where("uuid = ?", externalID).First(&user).Error; err != nil {
+	if err := s.DB.Where("uuid = ?", uuid).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

@@ -121,6 +121,24 @@ func main() {
 	productGroup.PUT("/:uuid", productHandler.UpdateProduct)
 	productGroup.DELETE("/:uuid", productHandler.DeleteProduct)
 
+	// Initialize recipe service and handler
+	recipeService := services.NewRecipeService(database.DB)
+	recipeHandler := handlers.NewRecipeHandler(recipeService)
+
+	// Recipe routes
+	recipeGroup := e.Group("/recipes")
+	recipeGroup.Use(internalmw.Authorize("recipes", "read"))
+	recipeGroup.GET("/:uuid", recipeHandler.GetRecipeByUuid)
+	recipeGroup.Use(internalmw.Authorize("recipes", "write")) // For create, update, delete
+	recipeGroup.POST("/", recipeHandler.CreateRecipe)
+	recipeGroup.PUT("/:uuid", recipeHandler.UpdateRecipe)
+	recipeGroup.DELETE("/:uuid", recipeHandler.DeleteRecipe)
+
+	// Recipes by main product
+	productRecipeGroup := e.Group("/products/:main_product_uuid/recipes")
+	productRecipeGroup.Use(internalmw.Authorize("recipes", "read"))
+	productRecipeGroup.GET("/", recipeHandler.GetRecipesByMainProduct)
+
 	// Outlet routes
 	outletGroup := e.Group("/outlets")
 	outletGroup.Use(internalmw.Authorize("outlets", "read"))
@@ -142,6 +160,9 @@ func main() {
 	stockGroup.GET("/:product_uuid", stockHandler.GetStockByOutletAndProduct)
 	stockGroup.Use(internalmw.Authorize("stocks", "write")) // For update
 	stockGroup.PUT("/:product_uuid", stockHandler.UpdateStock)
+
+	// Global stock update route
+	e.PUT("/stocks", stockHandler.UpdateGlobalStock, internalmw.Authorize("stocks", "write"))
 
 	// Initialize order service and handler
 	orderService := services.NewOrderService(database.DB, stockService)

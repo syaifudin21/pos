@@ -8,12 +8,16 @@ p,admin,orders,read
 p,admin,orders,write
 p,admin,reports,read
 p,admin,users,manage
+p,admin,recipes,read
+p,admin,recipes,write
 p,manager,products,read
 p,manager,products,write
 p,manager,stocks,read
 p,manager,stocks,write
 p,manager,orders,read
 p,manager,reports,read
+p,manager,recipes,read
+p,manager,recipes,write
 p,cashier,products,read
 p,cashier,orders,write
 p,cashier,stocks,read

@@ -49,7 +49,7 @@ func (h *ProductHandler) GetAllProducts(c echo.Context) error {
 func (h *ProductHandler) GetProductByID(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
 	}
 	product, err := h.ProductService.GetProductByUuid(id)
 	if err != nil {
@@ -106,7 +106,7 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
 	}
 	product := new(ProductUpdateRequest)
 	if err := c.Bind(product); err != nil {
@@ -143,7 +143,7 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 func (h *ProductHandler) DeleteProduct(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
 	}
 	err = h.ProductService.DeleteProduct(id)
 	if err != nil {

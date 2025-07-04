@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/services"
 )
 
@@ -108,4 +109,29 @@ func (h *StockHandler) UpdateStock(c echo.Context) error {
 
 type UpdateStockRequest struct {
 	Quantity float64 `json:"quantity"`
+}
+
+// UpdateGlobalStock godoc
+// @Summary Update stock quantity globally
+// @Description Update the stock quantity for a specific product in an outlet by providing IDs in the request body.
+// @Tags Stocks
+// @Accept json
+// @Produce json
+// @Param stock body models.GlobalStockUpdateRequest true "Stock update details"
+// @Success 200 {object} SuccessResponse{data=models.Stock}
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /stocks [put]
+func (h *StockHandler) UpdateGlobalStock(c echo.Context) error {
+	req := new(models.GlobalStockUpdateRequest)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+	}
+
+	stock, err := h.StockService.UpdateGlobalStock(req.OutletExternalID, req.ProductExternalID, req.Quantity)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+	}
+	return c.JSON(http.StatusOK, SuccessResponse{Message: "Stock updated successfully", Data: stock})
 }

@@ -64,12 +64,12 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /orders/{uuid} [get]
 func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
-	externalID, err := uuid.Parse(c.Param("uuid"))
+	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
 	}
 
-	order, err := h.OrderService.GetOrderByUuid(externalID)
+	order, err := h.OrderService.GetOrderByUuid(uuid)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, ErrorResponse{Message: err.Error()})
 	}

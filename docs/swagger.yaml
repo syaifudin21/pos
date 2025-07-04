@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  handlers.CreateRecipeRequest:
+    properties:
+      component_uuid:
+        type: string
+      main_product_uuid:
+        type: string
+      quantity:
+        type: number
+    type: object
   handlers.ErrorResponse:
     properties:
       message:
@@ -80,6 +89,15 @@ definitions:
       message:
         type: string
     type: object
+  handlers.UpdateRecipeRequest:
+    properties:
+      component_uuid:
+        type: string
+      main_product_uuid:
+        type: string
+      quantity:
+        type: number
+    type: object
   handlers.UpdateStockRequest:
     properties:
       quantity:
@@ -87,8 +105,6 @@ definitions:
     type: object
   handlers.UserResponse:
     properties:
-      uuid:
-        type: string
       id:
         type: integer
       outlet_id:
@@ -96,6 +112,8 @@ definitions:
       role:
         type: string
       username:
+        type: string
+      uuid:
         type: string
     type: object
   models.CreateOrderRequest:
@@ -107,11 +125,18 @@ definitions:
       outlet_uuid:
         type: string
     type: object
+  models.GlobalStockUpdateRequest:
+    properties:
+      outlet_uuid:
+        type: string
+      product_uuid:
+        type: string
+      quantity:
+        type: number
+    type: object
   models.Order:
     properties:
       created_at:
-        type: string
-      uuid:
         type: string
       id:
         type: integer
@@ -134,12 +159,12 @@ definitions:
         $ref: '#/definitions/models.User'
       user_id:
         type: integer
+      uuid:
+        type: string
     type: object
   models.OrderItem:
     properties:
       created_at:
-        type: string
-      uuid:
         type: string
       id:
         type: integer
@@ -158,6 +183,8 @@ definitions:
         type: number
       updated_at:
         type: string
+      uuid:
+        type: string
     type: object
   models.OrderItemRequest:
     properties:
@@ -172,8 +199,6 @@ definitions:
         type: string
       created_at:
         type: string
-      uuid:
-        type: string
       id:
         type: integer
       name:
@@ -183,14 +208,14 @@ definitions:
         type: string
       updated_at:
         type: string
+      uuid:
+        type: string
     type: object
   models.Product:
     properties:
       created_at:
         type: string
       description:
-        type: string
-      uuid:
         type: string
       id:
         type: integer
@@ -205,12 +230,34 @@ definitions:
         type: string
       updated_at:
         type: string
+      uuid:
+        type: string
+    type: object
+  models.Recipe:
+    properties:
+      component:
+        $ref: '#/definitions/models.Product'
+      component_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      main_product:
+        $ref: '#/definitions/models.Product'
+      main_product_id:
+        type: integer
+      quantity:
+        description: Quantity of component needed for one main product
+        type: number
+      updated_at:
+        type: string
+      uuid:
+        type: string
     type: object
   models.Stock:
     properties:
       created_at:
-        type: string
-      uuid:
         type: string
       id:
         type: integer
@@ -226,12 +273,12 @@ definitions:
         type: number
       updated_at:
         type: string
+      uuid:
+        type: string
     type: object
   models.User:
     properties:
       created_at:
-        type: string
-      uuid:
         type: string
       id:
         type: integer
@@ -248,6 +295,8 @@ definitions:
       updated_at:
         type: string
       username:
+        type: string
+      uuid:
         type: string
     type: object
 host: localhost:8080
@@ -560,119 +609,6 @@ paths:
       summary: Create a new outlet
       tags:
       - Outlets
-  /outlets/{uuid}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete an outlet by its External ID.
-      parameters:
-      - description: Outlet External ID (UUID)
-        in: path
-        name: uuid
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-          schema:
-            $ref: '#/definitions/handlers.SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Delete an outlet
-      tags:
-      - Outlets
-    get:
-      consumes:
-      - application/json
-      description: Get a single outlet by its External ID.
-      parameters:
-      - description: Outlet External ID (UUID)
-        in: path
-        name: uuid
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/models.Outlet'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Get outlet by External ID
-      tags:
-      - Outlets
-    put:
-      consumes:
-      - application/json
-      description: Update an existing outlet by its External ID.
-      parameters:
-      - description: Outlet External ID (UUID)
-        in: path
-        name: uuid
-        required: true
-        type: string
-      - description: Updated outlet details
-        in: body
-        name: outlet
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.OutletUpdateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/models.Outlet'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Update an existing outlet
-      tags:
-      - Outlets
   /outlets/{outlet_uuid}/orders:
     get:
       consumes:
@@ -837,6 +773,119 @@ paths:
       summary: Update stock quantity
       tags:
       - Stocks
+  /outlets/{uuid}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an outlet by its External ID.
+      parameters:
+      - description: Outlet External ID (UUID)
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            $ref: '#/definitions/handlers.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Delete an outlet
+      tags:
+      - Outlets
+    get:
+      consumes:
+      - application/json
+      description: Get a single outlet by its External ID.
+      parameters:
+      - description: Outlet External ID (UUID)
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Outlet'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get outlet by External ID
+      tags:
+      - Outlets
+    put:
+      consumes:
+      - application/json
+      description: Update an existing outlet by its External ID.
+      parameters:
+      - description: Outlet External ID (UUID)
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Updated outlet details
+        in: body
+        name: outlet
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.OutletUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Outlet'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Update an existing outlet
+      tags:
+      - Outlets
   /products:
     get:
       consumes:
@@ -897,6 +946,42 @@ paths:
       summary: Create a new product
       tags:
       - Products
+  /products/{main_product_uuid}/recipes:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of recipes for a given main product.
+      parameters:
+      - description: Main Product External ID (UUID)
+        in: path
+        name: main_product_uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Recipe'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get recipes by main product
+      tags:
+      - Recipes
   /products/{uuid}:
     delete:
       consumes:
@@ -1010,6 +1095,154 @@ paths:
       summary: Update an existing product
       tags:
       - Products
+  /recipes:
+    post:
+      consumes:
+      - application/json
+      description: Create a new recipe with the provided details.
+      parameters:
+      - description: Recipe details
+        in: body
+        name: recipe
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateRecipeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Recipe'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Create a new recipe
+      tags:
+      - Recipes
+  /recipes/{uuid}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a recipe by its External ID.
+      parameters:
+      - description: Recipe External ID (UUID)
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            $ref: '#/definitions/handlers.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Delete a recipe
+      tags:
+      - Recipes
+    get:
+      consumes:
+      - application/json
+      description: Get a single recipe by its External ID.
+      parameters:
+      - description: Recipe External ID (UUID)
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Recipe'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get recipe by External ID
+      tags:
+      - Recipes
+    put:
+      consumes:
+      - application/json
+      description: Update an existing recipe by its External ID.
+      parameters:
+      - description: Recipe External ID (UUID)
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Updated recipe details
+        in: body
+        name: recipe
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateRecipeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Recipe'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Update an existing recipe
+      tags:
+      - Recipes
   /reports/outlets/{outlet_uuid}/sales:
     get:
       consumes:
@@ -1102,6 +1335,46 @@ paths:
       summary: Get sales report by product
       tags:
       - Reports
+  /stocks:
+    put:
+      consumes:
+      - application/json
+      description: Update the stock quantity for a specific product in an outlet by
+        providing IDs in the request body.
+      parameters:
+      - description: Stock update details
+        in: body
+        name: stock
+        required: true
+        schema:
+          $ref: '#/definitions/models.GlobalStockUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Stock'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Update stock quantity globally
+      tags:
+      - Stocks
 schemes:
 - http
 securityDefinitions:

@@ -95,9 +95,9 @@ func (s *OrderService) CreateOrder(outletUuid, userUuid uuid.UUID, items []model
 }
 
 // GetOrder retrieves an order by its external ID.
-func (s *OrderService) GetOrderByUuid(externalID uuid.UUID) (*models.Order, error) {
+func (s *OrderService) GetOrderByUuid(uuid uuid.UUID) (*models.Order, error) {
 	var order models.Order
-	if err := s.DB.Preload("Outlet").Preload("User").Preload("OrderItems.Product").Where("uuid = ?", externalID).First(&order).Error; err != nil {
+	if err := s.DB.Preload("Outlet").Preload("User").Preload("OrderItems.Product").Where("uuid = ?", uuid).First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("order not found")
 		}

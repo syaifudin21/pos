@@ -49,7 +49,7 @@ func (h *OutletHandler) GetAllOutlets(c echo.Context) error {
 func (h *OutletHandler) GetOutletByID(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
 	}
 	outlet, err := h.OutletService.GetOutletByUuid(id)
 	if err != nil {
@@ -104,7 +104,7 @@ func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
 	}
 	outlet := new(OutletUpdateRequest)
 	if err := c.Bind(outlet); err != nil {
@@ -139,7 +139,7 @@ func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 func (h *OutletHandler) DeleteOutlet(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
 	}
 	err = h.OutletService.DeleteOutlet(id)
 	if err != nil {
