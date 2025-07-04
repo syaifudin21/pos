@@ -17,12 +17,12 @@ func NewRecipeHandler(recipeService *services.RecipeService) *RecipeHandler {
 }
 
 // GetRecipeByUuid godoc
-// @Summary Get recipe by External ID
-// @Description Get a single recipe by its External ID.
+// @Summary Get recipe by Uuid
+// @Description Get a single recipe by its Uuid.
 // @Tags Recipes
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Recipe External ID (UUID)"
+// @Param uuid path string true "Recipe Uuid"
 // @Success 200 {object} SuccessResponse{data=models.Recipe}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -46,7 +46,7 @@ func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 // @Tags Recipes
 // @Accept json
 // @Produce json
-// @Param main_product_uuid path string true "Main Product External ID (UUID)"
+// @Param main_product_uuid path string true "Main Product Uuid"
 // @Success 200 {object} SuccessResponse{data=[]models.Recipe}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -54,7 +54,7 @@ func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 func (h *RecipeHandler) GetRecipesByMainProduct(c echo.Context) error {
 	mainProductUuid, err := uuid.Parse(c.Param("main_product_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Main Product External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Main Product Uuid format"})
 	}
 	recipes, err := h.RecipeService.GetRecipesByMainProduct(mainProductUuid)
 	if err != nil {
@@ -89,11 +89,11 @@ func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
 
 // UpdateRecipe godoc
 // @Summary Update an existing recipe
-// @Description Update an existing recipe by its External ID.
+// @Description Update an existing recipe by its Uuid.
 // @Tags Recipes
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Recipe External ID (UUID)"
+// @Param uuid path string true "Recipe Uuid"
 // @Param recipe body UpdateRecipeRequest true "Updated recipe details"
 // @Success 200 {object} SuccessResponse{data=models.Recipe}
 // @Failure 400 {object} ErrorResponse
@@ -119,11 +119,11 @@ func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 
 // DeleteRecipe godoc
 // @Summary Delete a recipe
-// @Description Delete a recipe by its External ID.
+// @Description Delete a recipe by its Uuid.
 // @Tags Recipes
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Recipe External ID (UUID)"
+// @Param uuid path string true "Recipe Uuid"
 // @Success 204 {object} SuccessResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse

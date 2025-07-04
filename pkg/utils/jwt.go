@@ -13,7 +13,7 @@ type Claims struct {
 	Username string    `json:"username"`
 	Role     string    `json:"role"`
 	OutletID *uint     `json:"outlet_id,omitempty"`
-	ID       uuid.UUID `json:"id"` // User's ExternalID
+	ID       uuid.UUID `json:"id"` // User's uuid
 	jwt.RegisteredClaims
 }
 

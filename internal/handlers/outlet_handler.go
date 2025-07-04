@@ -35,12 +35,12 @@ func (h *OutletHandler) GetAllOutlets(c echo.Context) error {
 }
 
 // GetOutletByID godoc
-// @Summary Get outlet by External ID
-// @Description Get a single outlet by its External ID.
+// @Summary Get outlet by Uuid
+// @Description Get a single outlet by its Uuid.
 // @Tags Outlets
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Outlet External ID (UUID)"
+// @Param uuid path string true "Outlet Uuid"
 // @Success 200 {object} SuccessResponse{data=models.Outlet}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -90,11 +90,11 @@ func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 
 // UpdateOutlet godoc
 // @Summary Update an existing outlet
-// @Description Update an existing outlet by its External ID.
+// @Description Update an existing outlet by its Uuid.
 // @Tags Outlets
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Outlet External ID (UUID)"
+// @Param uuid path string true "Outlet Uuid"
 // @Param outlet body OutletUpdateRequest true "Updated outlet details"
 // @Success 200 {object} SuccessResponse{data=models.Outlet}
 // @Failure 400 {object} ErrorResponse
@@ -126,11 +126,11 @@ func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 
 // DeleteOutlet godoc
 // @Summary Delete an outlet
-// @Description Delete an outlet by its External ID.
+// @Description Delete an outlet by its Uuid.
 // @Tags Outlets
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Outlet External ID (UUID)"
+// @Param uuid path string true "Outlet Uuid"
 // @Success 204 {object} SuccessResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse

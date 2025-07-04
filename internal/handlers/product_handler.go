@@ -35,12 +35,12 @@ func (h *ProductHandler) GetAllProducts(c echo.Context) error {
 }
 
 // GetProductByID godoc
-// @Summary Get product by External ID
-// @Description Get a single product by its External ID.
+// @Summary Get product by Uuid
+// @Description Get a single product by its Uuid.
 // @Tags Products
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Product External ID (UUID)"
+// @Param uuid path string true "Product Uuid"
 // @Success 200 {object} SuccessResponse{data=models.Product}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -92,11 +92,11 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 
 // UpdateProduct godoc
 // @Summary Update an existing product
-// @Description Update an existing product by its External ID.
+// @Description Update an existing product by its Uuid.
 // @Tags Products
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Product External ID (UUID)"
+// @Param uuid path string true "Product Uuid"
 // @Param product body ProductUpdateRequest true "Updated product details"
 // @Success 200 {object} SuccessResponse{data=models.Product}
 // @Failure 400 {object} ErrorResponse
@@ -130,11 +130,11 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 
 // DeleteProduct godoc
 // @Summary Delete a product
-// @Description Delete a product by its External ID.
+// @Description Delete a product by its Uuid.
 // @Tags Products
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Product External ID (UUID)"
+// @Param uuid path string true "Product Uuid"
 // @Success 204 {object} SuccessResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse

@@ -91,9 +91,9 @@ func (s *AuthService) BlockUser(userUuid uuid.UUID) error {
 	return nil
 }
 
-func (s *AuthService) UnblockUser(userExternalID uuid.UUID) error {
+func (s *AuthService) UnblockUser(useruuid uuid.UUID) error {
 	var user models.User
-	if err := s.DB.Where("uuid = ?", userExternalID).First(&user).Error; err != nil {
+	if err := s.DB.Where("uuid = ?", useruuid).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("user not found")
 		}
@@ -109,7 +109,7 @@ func (s *AuthService) UnblockUser(userExternalID uuid.UUID) error {
 	return nil
 }
 
-func (s *AuthService) GetUserByExternalID(uuid uuid.UUID) (*models.User, error) {
+func (s *AuthService) GetUserByuuid(uuid uuid.UUID) (*models.User, error) {
 	var user models.User
 	if err := s.DB.Where("uuid = ?", uuid).First(&user).Error; err != nil {
 		return nil, err

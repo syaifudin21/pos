@@ -103,11 +103,11 @@ type LoginResponse struct {
 
 // BlockUser godoc
 // @Summary Block a user
-// @Description Block a user by their External ID. Only admin can perform this action.
+// @Description Block a user by their Uuid. Only admin can perform this action.
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param uuid path string true "User External ID (UUID)"
+// @Param uuid path string true "User Uuid"
 // @Success 200 {object} SuccessResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -116,12 +116,12 @@ type LoginResponse struct {
 // @Failure 500 {object} ErrorResponse
 // @Router /auth/users/{uuid}/block [put]
 func (h *AuthHandler) BlockUser(c echo.Context) error {
-	userExternalID, err := uuid.Parse(c.Param("uuid"))
+	useruuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid User External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid User Uuid format"})
 	}
 
-	if err := h.AuthService.BlockUser(userExternalID); err != nil {
+	if err := h.AuthService.BlockUser(useruuid); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
 	}
 
@@ -130,11 +130,11 @@ func (h *AuthHandler) BlockUser(c echo.Context) error {
 
 // UnblockUser godoc
 // @Summary Unblock a user
-// @Description Unblock a user by their External ID. Only admin can perform this action.
+// @Description Unblock a user by their Uuid. Only admin can perform this action.
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param uuid path string true "User External ID (UUID)"
+// @Param uuid path string true "User Uuid"
 // @Success 200 {object} SuccessResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -143,12 +143,12 @@ func (h *AuthHandler) BlockUser(c echo.Context) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /auth/users/{uuid}/unblock [put]
 func (h *AuthHandler) UnblockUser(c echo.Context) error {
-	userExternalID, err := uuid.Parse(c.Param("uuid"))
+	useruuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid User External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid User Uuid format"})
 	}
 
-	if err := h.AuthService.UnblockUser(userExternalID); err != nil {
+	if err := h.AuthService.UnblockUser(useruuid); err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
 	}
 

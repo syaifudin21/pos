@@ -23,8 +23,8 @@ func NewStockHandler(stockService *services.StockService) *StockHandler {
 // @Tags Stocks
 // @Accept json
 // @Produce json
-// @Param outlet_uuid path string true "Outlet External ID (UUID)"
-// @Param product_uuid path string true "Product External ID (UUID)"
+// @Param outlet_uuid path string true "Outlet Uuid"
+// @Param product_uuid path string true "Product Uuid"
 // @Success 200 {object} SuccessResponse{data=models.Stock}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -33,11 +33,11 @@ func NewStockHandler(stockService *services.StockService) *StockHandler {
 func (h *StockHandler) GetStockByOutletAndProduct(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
 	}
 	productUuid, err := uuid.Parse(c.Param("product_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Product External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Product Uuid format"})
 	}
 
 	stock, err := h.StockService.GetStockByOutletAndProduct(outletUuid, productUuid)
@@ -53,7 +53,7 @@ func (h *StockHandler) GetStockByOutletAndProduct(c echo.Context) error {
 // @Tags Stocks
 // @Accept json
 // @Produce json
-// @Param outlet_uuid path string true "Outlet External ID (UUID)"
+// @Param outlet_uuid path string true "Outlet Uuid"
 // @Success 200 {object} SuccessResponse{data=[]models.Stock}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -61,7 +61,7 @@ func (h *StockHandler) GetStockByOutletAndProduct(c echo.Context) error {
 func (h *StockHandler) GetOutletStocks(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
 	}
 
 	stocks, err := h.StockService.GetOutletStocks(outletUuid)
@@ -77,8 +77,8 @@ func (h *StockHandler) GetOutletStocks(c echo.Context) error {
 // @Tags Stocks
 // @Accept json
 // @Produce json
-// @Param outlet_uuid path string true "Outlet External ID (UUID)"
-// @Param product_uuid path string true "Product External ID (UUID)"
+// @Param outlet_uuid path string true "Outlet Uuid"
+// @Param product_uuid path string true "Product Uuid"
 // @Param stock body UpdateStockRequest true "Stock update details"
 // @Success 200 {object} SuccessResponse{data=models.Stock}
 // @Failure 400 {object} ErrorResponse
@@ -88,11 +88,11 @@ func (h *StockHandler) GetOutletStocks(c echo.Context) error {
 func (h *StockHandler) UpdateStock(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
 	}
 	productUuid, err := uuid.Parse(c.Param("product_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Product External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Product Uuid format"})
 	}
 
 	req := new(UpdateStockRequest)
@@ -129,7 +129,7 @@ func (h *StockHandler) UpdateGlobalStock(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
 	}
 
-	stock, err := h.StockService.UpdateGlobalStock(req.OutletExternalID, req.ProductExternalID, req.Quantity)
+	stock, err := h.StockService.UpdateGlobalStock(req.OutletUuid, req.Productuuid, req.Quantity)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
 	}

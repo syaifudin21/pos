@@ -1,5 +1,16 @@
 basePath: /
 definitions:
+  handlers.CreatePurchaseOrderRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handlers.PurchaseOrderItemRequest'
+        type: array
+      outlet_uuid:
+        type: string
+      supplier_uuid:
+        type: string
+    type: object
   handlers.CreateRecipeRequest:
     properties:
       component_uuid:
@@ -8,6 +19,15 @@ definitions:
         type: string
       quantity:
         type: number
+    type: object
+  handlers.CreateSupplierRequest:
+    properties:
+      address:
+        type: string
+      contact:
+        type: string
+      name:
+        type: string
     type: object
   handlers.ErrorResponse:
     properties:
@@ -72,6 +92,15 @@ definitions:
       type:
         type: string
     type: object
+  handlers.PurchaseOrderItemRequest:
+    properties:
+      price:
+        type: number
+      product_uuid:
+        type: string
+      quantity:
+        type: number
+    type: object
   handlers.RegisterRequest:
     properties:
       outlet_id:
@@ -102,6 +131,15 @@ definitions:
     properties:
       quantity:
         type: number
+    type: object
+  handlers.UpdateSupplierRequest:
+    properties:
+      address:
+        type: string
+      contact:
+        type: string
+      name:
+        type: string
     type: object
   handlers.UserResponse:
     properties:
@@ -233,6 +271,58 @@ definitions:
       uuid:
         type: string
     type: object
+  models.PurchaseOrder:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      outlet:
+        $ref: '#/definitions/models.Outlet'
+      outlet_id:
+        type: integer
+      purchase_order_items:
+        items:
+          $ref: '#/definitions/models.PurchaseOrderItem'
+        type: array
+      status:
+        description: e.g., "pending", "completed", "cancelled"
+        type: string
+      supplier:
+        $ref: '#/definitions/models.Supplier'
+      supplier_id:
+        type: integer
+      total_amount:
+        type: number
+      updated_at:
+        type: string
+      uuid:
+        type: string
+    type: object
+  models.PurchaseOrderItem:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      price:
+        description: Price at the time of PO
+        type: number
+      product:
+        $ref: '#/definitions/models.Product'
+      product_id:
+        type: integer
+      purchase_order:
+        $ref: '#/definitions/models.PurchaseOrder'
+      purchase_order_id:
+        type: integer
+      quantity:
+        type: number
+      updated_at:
+        type: string
+      uuid:
+        type: string
+    type: object
   models.Recipe:
     properties:
       component:
@@ -271,6 +361,23 @@ definitions:
         type: integer
       quantity:
         type: number
+      updated_at:
+        type: string
+      uuid:
+        type: string
+    type: object
+  models.Supplier:
+    properties:
+      address:
+        type: string
+      contact:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
       updated_at:
         type: string
       uuid:
@@ -392,10 +499,10 @@ paths:
     put:
       consumes:
       - application/json
-      description: Block a user by their External ID. Only admin can perform this
+      description: Block a user by their Uuid. Only admin can perform this
         action.
       parameters:
-      - description: User External ID (UUID)
+      - description: User Uuid
         in: path
         name: uuid
         required: true
@@ -434,10 +541,10 @@ paths:
     put:
       consumes:
       - application/json
-      description: Unblock a user by their External ID. Only admin can perform this
+      description: Unblock a user by their Uuid. Only admin can perform this
         action.
       parameters:
-      - description: User External ID (UUID)
+      - description: User Uuid
         in: path
         name: uuid
         required: true
@@ -515,9 +622,9 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get a single order by its External ID.
+      description: Get a single order by its Uuid.
       parameters:
-      - description: Order External ID (UUID)
+      - description: Order Uuid
         in: path
         name: uuid
         required: true
@@ -546,7 +653,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Get order by External ID
+      summary: Get order by Uuid
       tags:
       - Orders
   /outlets:
@@ -609,13 +716,49 @@ paths:
       summary: Create a new outlet
       tags:
       - Outlets
+  /outlets/{outlet_uuid}/purchase-orders:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all purchase orders for a given outlet.
+      parameters:
+      - description: Outlet Uuid
+        in: path
+        name: outlet_uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.PurchaseOrder'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get all purchase orders for an outlet
+      tags:
+      - Purchase Orders
   /outlets/{outlet_uuid}/orders:
     get:
       consumes:
       - application/json
       description: Get a list of all orders for a given outlet.
       parameters:
-      - description: Outlet External ID (UUID)
+      - description: Outlet Uuid
         in: path
         name: outlet_uuid
         required: true
@@ -651,7 +794,7 @@ paths:
       - application/json
       description: Get a list of all stock quantities for products in a given outlet.
       parameters:
-      - description: Outlet External ID (UUID)
+      - description: Outlet Uuid
         in: path
         name: outlet_uuid
         required: true
@@ -687,12 +830,12 @@ paths:
       - application/json
       description: Get the stock quantity for a specific product in a given outlet.
       parameters:
-      - description: Outlet External ID (UUID)
+      - description: Outlet Uuid
         in: path
         name: outlet_uuid
         required: true
         type: string
-      - description: Product External ID (UUID)
+      - description: Product Uuid
         in: path
         name: product_uuid
         required: true
@@ -730,12 +873,12 @@ paths:
       description: Update the stock quantity for a specific product in an outlet.
         This is for direct stock adjustments.
       parameters:
-      - description: Outlet External ID (UUID)
+      - description: Outlet Uuid
         in: path
         name: outlet_uuid
         required: true
         type: string
-      - description: Product External ID (UUID)
+      - description: Product Uuid
         in: path
         name: product_uuid
         required: true
@@ -777,9 +920,9 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Delete an outlet by its External ID.
+      description: Delete an outlet by its Uuid.
       parameters:
-      - description: Outlet External ID (UUID)
+      - description: Outlet Uuid
         in: path
         name: uuid
         required: true
@@ -809,9 +952,9 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get a single outlet by its External ID.
+      description: Get a single outlet by its Uuid.
       parameters:
-      - description: Outlet External ID (UUID)
+      - description: Outlet Uuid
         in: path
         name: uuid
         required: true
@@ -840,15 +983,15 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Get outlet by External ID
+      summary: Get outlet by Uuid
       tags:
       - Outlets
     put:
       consumes:
       - application/json
-      description: Update an existing outlet by its External ID.
+      description: Update an existing outlet by its Uuid.
       parameters:
-      - description: Outlet External ID (UUID)
+      - description: Outlet Uuid
         in: path
         name: uuid
         required: true
@@ -952,7 +1095,7 @@ paths:
       - application/json
       description: Get a list of recipes for a given main product.
       parameters:
-      - description: Main Product External ID (UUID)
+      - description: Main Product Uuid
         in: path
         name: main_product_uuid
         required: true
@@ -986,9 +1129,9 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Delete a product by its External ID.
+      description: Delete a product by its Uuid.
       parameters:
-      - description: Product External ID (UUID)
+      - description: Product Uuid
         in: path
         name: uuid
         required: true
@@ -1018,9 +1161,9 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get a single product by its External ID.
+      description: Get a single product by its Uuid.
       parameters:
-      - description: Product External ID (UUID)
+      - description: Product Uuid
         in: path
         name: uuid
         required: true
@@ -1049,15 +1192,15 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Get product by External ID
+      summary: Get product by Uuid
       tags:
       - Products
     put:
       consumes:
       - application/json
-      description: Update an existing product by its External ID.
+      description: Update an existing product by its Uuid.
       parameters:
-      - description: Product External ID (UUID)
+      - description: Product Uuid
         in: path
         name: uuid
         required: true
@@ -1095,6 +1238,118 @@ paths:
       summary: Update an existing product
       tags:
       - Products
+  /purchase-orders:
+    post:
+      consumes:
+      - application/json
+      description: Create a new purchase order with specified supplier, outlet, and
+        products.
+      parameters:
+      - description: Purchase order details
+        in: body
+        name: purchase_order
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreatePurchaseOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.PurchaseOrder'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Create a new purchase order
+      tags:
+      - Purchase Orders
+  /purchase-orders/{uuid}:
+    get:
+      consumes:
+      - application/json
+      description: Get a single purchase order by its Uuid.
+      parameters:
+      - description: Purchase Order Uuid
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.PurchaseOrder'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get purchase order by Uuid
+      tags:
+      - Purchase Orders
+  /purchase-orders/{uuid}/receive:
+    put:
+      consumes:
+      - application/json
+      description: Mark a purchase order as completed and update stock quantities.
+      parameters:
+      - description: Purchase Order Uuid
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.PurchaseOrder'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Receive a purchase order
+      tags:
+      - Purchase Orders
   /recipes:
     post:
       consumes:
@@ -1134,9 +1389,9 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Delete a recipe by its External ID.
+      description: Delete a recipe by its Uuid.
       parameters:
-      - description: Recipe External ID (UUID)
+      - description: Recipe Uuid
         in: path
         name: uuid
         required: true
@@ -1166,9 +1421,9 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get a single recipe by its External ID.
+      description: Get a single recipe by its Uuid.
       parameters:
-      - description: Recipe External ID (UUID)
+      - description: Recipe Uuid
         in: path
         name: uuid
         required: true
@@ -1197,15 +1452,15 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Get recipe by External ID
+      summary: Get recipe by Uuid
       tags:
       - Recipes
     put:
       consumes:
       - application/json
-      description: Update an existing recipe by its External ID.
+      description: Update an existing recipe by its Uuid.
       parameters:
-      - description: Recipe External ID (UUID)
+      - description: Recipe Uuid
         in: path
         name: uuid
         required: true
@@ -1249,7 +1504,7 @@ paths:
       - application/json
       description: Get a sales report for a specific outlet within a date range.
       parameters:
-      - description: Outlet External ID (UUID)
+      - description: Outlet Uuid
         in: path
         name: outlet_uuid
         required: true
@@ -1295,7 +1550,7 @@ paths:
       - application/json
       description: Get a sales report for a specific product within a date range.
       parameters:
-      - description: Product External ID (UUID)
+      - description: Product Uuid
         in: path
         name: product_uuid
         required: true
@@ -1375,6 +1630,179 @@ paths:
       summary: Update stock quantity globally
       tags:
       - Stocks
+  /suppliers:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all suppliers.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Supplier'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get all suppliers
+      tags:
+      - Suppliers
+    post:
+      consumes:
+      - application/json
+      description: Create a new supplier with the provided details.
+      parameters:
+      - description: Supplier details
+        in: body
+        name: supplier
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateSupplierRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Supplier'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Create a new supplier
+      tags:
+      - Suppliers
+  /suppliers/{uuid}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a supplier by its Uuid.
+      parameters:
+      - description: Supplier Uuid
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            $ref: '#/definitions/handlers.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Delete a supplier
+      tags:
+      - Suppliers
+    get:
+      consumes:
+      - application/json
+      description: Get a single supplier by its Uuid.
+      parameters:
+      - description: Supplier Uuid
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Supplier'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get supplier by Uuid
+      tags:
+      - Suppliers
+    put:
+      consumes:
+      - application/json
+      description: Update an existing supplier by its Uuid.
+      parameters:
+      - description: Supplier Uuid
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Updated supplier details
+        in: body
+        name: supplier
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateSupplierRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Supplier'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Update an existing supplier
+      tags:
+      - Suppliers
 schemes:
 - http
 securityDefinitions:

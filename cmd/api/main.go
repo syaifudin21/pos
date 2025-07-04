@@ -58,6 +58,9 @@ func main() {
 		&models.Stock{},
 		&models.Order{},
 		&models.OrderItem{},
+		&models.Supplier{},
+		&models.PurchaseOrder{},
+		&models.PurchaseOrderItem{},
 		&models.BaseModel{},
 	) // BaseModel is included for its UUID type to be recognized by GORM
 	if err != nil {
@@ -189,6 +192,37 @@ func main() {
 	reportGroup.Use(internalmw.Authorize("reports", "read"))
 	reportGroup.GET("/outlets/:outlet_uuid/sales", reportHandler.GetSalesByOutletReport)
 	reportGroup.GET("/products/:product_uuid/sales", reportHandler.GetSalesByProductReport)
+
+	// Initialize supplier service and handler
+	supplierService := services.NewSupplierService(database.DB)
+	supplierHandler := handlers.NewSupplierHandler(supplierService)
+
+	// Supplier routes
+	supplierGroup := e.Group("/suppliers")
+	supplierGroup.Use(internalmw.Authorize("suppliers", "read"))
+	supplierGroup.GET("/", supplierHandler.GetAllSuppliers)
+	supplierGroup.GET("/:uuid", supplierHandler.GetSupplierByuuid)
+	supplierGroup.Use(internalmw.Authorize("suppliers", "write")) // For create, update, delete
+	supplierGroup.POST("/", supplierHandler.CreateSupplier)
+	supplierGroup.PUT("/:uuid", supplierHandler.UpdateSupplier)
+	supplierGroup.DELETE("/:uuid", supplierHandler.DeleteSupplier)
+
+	// Initialize purchase order service and handler
+	poService := services.NewPurchaseOrderService(database.DB, stockService)
+	poHandler := handlers.NewPurchaseOrderHandler(poService)
+
+	// Purchase Order routes
+	poGroup := e.Group("/purchase-orders")
+	poGroup.Use(internalmw.Authorize("purchase_orders", "write")) // Admin/Manager can create/receive POs
+	poGroup.POST("/", poHandler.CreatePurchaseOrder)
+	poGroup.PUT("/:uuid/receive", poHandler.ReceivePurchaseOrder)
+	poGroup.Use(internalmw.Authorize("purchase_orders", "read")) // Admin/Manager can read POs
+	poGroup.GET("/:uuid", poHandler.GetPurchaseOrderByUuid)
+
+	// Purchase Orders by outlet
+	outletPoGroup := e.Group("/outlets/:outlet_uuid/purchase-orders")
+	outletPoGroup.Use(internalmw.Authorize("purchase_orders", "read"))
+	outletPoGroup.GET("/", poHandler.GetPurchaseOrdersByOutlet)
 
 	// Start server
 	port := os.Getenv("PORT")

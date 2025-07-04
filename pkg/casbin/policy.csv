@@ -10,6 +10,10 @@ p,admin,reports,read
 p,admin,users,manage
 p,admin,recipes,read
 p,admin,recipes,write
+p,admin,suppliers,read
+p,admin,suppliers,write
+p,admin,purchase_orders,read
+p,admin,purchase_orders,write
 p,manager,products,read
 p,manager,products,write
 p,manager,stocks,read
@@ -18,6 +22,10 @@ p,manager,orders,read
 p,manager,reports,read
 p,manager,recipes,read
 p,manager,recipes,write
+p,manager,suppliers,read
+p,manager,suppliers,write
+p,manager,purchase_orders,read
+p,manager,purchase_orders,write
 p,cashier,products,read
 p,cashier,orders,write
 p,cashier,stocks,read

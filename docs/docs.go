@@ -148,7 +148,7 @@ const docTemplate = `{
         },
         "/auth/users/{uuid}/block": {
             "put": {
-                "description": "Block a user by their External ID. Only admin can perform this action.",
+                "description": "Block a user by their Uuid. Only admin can perform this action.",
                 "consumes": [
                     "application/json"
                 ],
@@ -162,7 +162,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User External ID (UUID)",
+                        "description": "User Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -210,7 +210,7 @@ const docTemplate = `{
         },
         "/auth/users/{uuid}/unblock": {
             "put": {
-                "description": "Unblock a user by their External ID. Only admin can perform this action.",
+                "description": "Unblock a user by their Uuid. Only admin can perform this action.",
                 "consumes": [
                     "application/json"
                 ],
@@ -224,7 +224,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User External ID (UUID)",
+                        "description": "User Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -336,7 +336,7 @@ const docTemplate = `{
         },
         "/orders/{uuid}": {
             "get": {
-                "description": "Get a single order by its External ID.",
+                "description": "Get a single order by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -346,11 +346,11 @@ const docTemplate = `{
                 "tags": [
                     "Orders"
                 ],
-                "summary": "Get order by External ID",
+                "summary": "Get order by Uuid",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Order External ID (UUID)",
+                        "description": "Order Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -496,6 +496,65 @@ const docTemplate = `{
                 }
             }
         },
+        "/outlets/{outlet_uuid}/purchase-orders": {
+            "get": {
+                "description": "Get a list of all purchase orders for a given outlet.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchase Orders"
+                ],
+                "summary": "Get all purchase orders for an outlet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outlet Uuid",
+                        "name": "outlet_uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.PurchaseOrder"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/outlets/{outlet_uuid}/orders": {
             "get": {
                 "description": "Get a list of all orders for a given outlet.",
@@ -512,7 +571,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Outlet External ID (UUID)",
+                        "description": "Outlet Uuid",
                         "name": "outlet_uuid",
                         "in": "path",
                         "required": true
@@ -571,7 +630,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Outlet External ID (UUID)",
+                        "description": "Outlet Uuid",
                         "name": "outlet_uuid",
                         "in": "path",
                         "required": true
@@ -630,14 +689,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Outlet External ID (UUID)",
+                        "description": "Outlet Uuid",
                         "name": "outlet_uuid",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Product External ID (UUID)",
+                        "description": "Product Uuid",
                         "name": "product_uuid",
                         "in": "path",
                         "required": true
@@ -697,14 +756,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Outlet External ID (UUID)",
+                        "description": "Outlet Uuid",
                         "name": "outlet_uuid",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Product External ID (UUID)",
+                        "description": "Product Uuid",
                         "name": "product_uuid",
                         "in": "path",
                         "required": true
@@ -761,7 +820,7 @@ const docTemplate = `{
         },
         "/outlets/{uuid}": {
             "get": {
-                "description": "Get a single outlet by its External ID.",
+                "description": "Get a single outlet by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -771,11 +830,11 @@ const docTemplate = `{
                 "tags": [
                     "Outlets"
                 ],
-                "summary": "Get outlet by External ID",
+                "summary": "Get outlet by Uuid",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Outlet External ID (UUID)",
+                        "description": "Outlet Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -821,7 +880,7 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Update an existing outlet by its External ID.",
+                "description": "Update an existing outlet by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -835,7 +894,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Outlet External ID (UUID)",
+                        "description": "Outlet Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -890,7 +949,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Delete an outlet by its External ID.",
+                "description": "Delete an outlet by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -904,7 +963,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Outlet External ID (UUID)",
+                        "description": "Outlet Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -1054,7 +1113,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Main Product External ID (UUID)",
+                        "description": "Main Product Uuid",
                         "name": "main_product_uuid",
                         "in": "path",
                         "required": true
@@ -1099,7 +1158,7 @@ const docTemplate = `{
         },
         "/products/{uuid}": {
             "get": {
-                "description": "Get a single product by its External ID.",
+                "description": "Get a single product by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1109,11 +1168,11 @@ const docTemplate = `{
                 "tags": [
                     "Products"
                 ],
-                "summary": "Get product by External ID",
+                "summary": "Get product by Uuid",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Product External ID (UUID)",
+                        "description": "Product Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -1159,7 +1218,7 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Update an existing product by its External ID.",
+                "description": "Update an existing product by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1173,7 +1232,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Product External ID (UUID)",
+                        "description": "Product Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -1228,7 +1287,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Delete a product by its External ID.",
+                "description": "Delete a product by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1242,7 +1301,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Product External ID (UUID)",
+                        "description": "Product Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -1253,6 +1312,188 @@ const docTemplate = `{
                         "description": "No Content",
                         "schema": {
                             "$ref": "#/definitions/handlers.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchase-orders": {
+            "post": {
+                "description": "Create a new purchase order with specified supplier, outlet, and products.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchase Orders"
+                ],
+                "summary": "Create a new purchase order",
+                "parameters": [
+                    {
+                        "description": "Purchase order details",
+                        "name": "purchase_order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreatePurchaseOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.PurchaseOrder"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchase-orders/{uuid}": {
+            "get": {
+                "description": "Get a single purchase order by its Uuid.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchase Orders"
+                ],
+                "summary": "Get purchase order by Uuid",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Purchase Order Uuid",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.PurchaseOrder"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchase-orders/{uuid}/receive": {
+            "put": {
+                "description": "Mark a purchase order as completed and update stock quantities.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchase Orders"
+                ],
+                "summary": "Receive a purchase order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Purchase Order Uuid",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.PurchaseOrder"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1336,7 +1577,7 @@ const docTemplate = `{
         },
         "/recipes/{uuid}": {
             "get": {
-                "description": "Get a single recipe by its External ID.",
+                "description": "Get a single recipe by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1346,11 +1587,11 @@ const docTemplate = `{
                 "tags": [
                     "Recipes"
                 ],
-                "summary": "Get recipe by External ID",
+                "summary": "Get recipe by Uuid",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Recipe External ID (UUID)",
+                        "description": "Recipe Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -1396,7 +1637,7 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Update an existing recipe by its External ID.",
+                "description": "Update an existing recipe by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1410,7 +1651,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Recipe External ID (UUID)",
+                        "description": "Recipe Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -1465,7 +1706,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Delete a recipe by its External ID.",
+                "description": "Delete a recipe by its Uuid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1479,7 +1720,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Recipe External ID (UUID)",
+                        "description": "Recipe Uuid",
                         "name": "uuid",
                         "in": "path",
                         "required": true
@@ -1529,7 +1770,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Outlet External ID (UUID)",
+                        "description": "Outlet Uuid",
                         "name": "outlet_uuid",
                         "in": "path",
                         "required": true
@@ -1602,7 +1843,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Product External ID (UUID)",
+                        "description": "Product Uuid",
                         "name": "product_uuid",
                         "in": "path",
                         "required": true
@@ -1722,9 +1963,305 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/suppliers": {
+            "get": {
+                "description": "Get a list of all suppliers.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Suppliers"
+                ],
+                "summary": "Get all suppliers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.Supplier"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new supplier with the provided details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Suppliers"
+                ],
+                "summary": "Create a new supplier",
+                "parameters": [
+                    {
+                        "description": "Supplier details",
+                        "name": "supplier",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreateSupplierRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Supplier"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/suppliers/{uuid}": {
+            "get": {
+                "description": "Get a single supplier by its Uuid.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Suppliers"
+                ],
+                "summary": "Get supplier by Uuid",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Supplier Uuid",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Supplier"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing supplier by its Uuid.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Suppliers"
+                ],
+                "summary": "Update an existing supplier",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Supplier Uuid",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated supplier details",
+                        "name": "supplier",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UpdateSupplierRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Supplier"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a supplier by its Uuid.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Suppliers"
+                ],
+                "summary": "Delete a supplier",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Supplier Uuid",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "handlers.CreatePurchaseOrderRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.PurchaseOrderItemRequest"
+                    }
+                },
+                "outlet_uuid": {
+                    "type": "string"
+                },
+                "supplier_uuid": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.CreateRecipeRequest": {
             "type": "object",
             "properties": {
@@ -1736,6 +2273,20 @@ const docTemplate = `{
                 },
                 "quantity": {
                     "type": "number"
+                }
+            }
+        },
+        "handlers.CreateSupplierRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "contact": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -1837,6 +2388,20 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.PurchaseOrderItemRequest": {
+            "type": "object",
+            "properties": {
+                "price": {
+                    "type": "number"
+                },
+                "product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                }
+            }
+        },
         "handlers.RegisterRequest": {
             "type": "object",
             "properties": {
@@ -1882,6 +2447,20 @@ const docTemplate = `{
             "properties": {
                 "quantity": {
                     "type": "number"
+                }
+            }
+        },
+        "handlers.UpdateSupplierRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "contact": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -2082,6 +2661,84 @@ const docTemplate = `{
                 }
             }
         },
+        "models.PurchaseOrder": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "outlet": {
+                    "$ref": "#/definitions/models.Outlet"
+                },
+                "outlet_id": {
+                    "type": "integer"
+                },
+                "purchase_order_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PurchaseOrderItem"
+                    }
+                },
+                "status": {
+                    "description": "e.g., \"pending\", \"completed\", \"cancelled\"",
+                    "type": "string"
+                },
+                "supplier": {
+                    "$ref": "#/definitions/models.Supplier"
+                },
+                "supplier_id": {
+                    "type": "integer"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PurchaseOrderItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "price": {
+                    "description": "Price at the time of PO",
+                    "type": "number"
+                },
+                "product": {
+                    "$ref": "#/definitions/models.Product"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "purchase_order": {
+                    "$ref": "#/definitions/models.PurchaseOrder"
+                },
+                "purchase_order_id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Recipe": {
             "type": "object",
             "properties": {
@@ -2138,6 +2795,32 @@ const docTemplate = `{
                 },
                 "quantity": {
                     "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Supplier": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "contact": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 },
                 "updated_at": {
                     "type": "string"

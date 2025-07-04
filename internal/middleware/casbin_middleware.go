@@ -38,7 +38,7 @@ func Authorize(obj, act string) echo.MiddlewareFunc {
 			}
 
 			// Check if user is blocked
-			user, err := services.NewAuthService(db).GetUserByExternalID(claims.ID)
+			user, err := services.NewAuthService(db).GetUserByuuid(claims.ID)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, handlers.ErrorResponse{Message: "Failed to retrieve user information"})
 			}

@@ -94,14 +94,14 @@ func (s *OrderService) CreateOrder(outletUuid, userUuid uuid.UUID, items []model
 	return &order, nil
 }
 
-// GetOrder retrieves an order by its external ID.
+// GetOrder retrieves an order by its Uuid.
 func (s *OrderService) GetOrderByUuid(uuid uuid.UUID) (*models.Order, error) {
 	var order models.Order
 	if err := s.DB.Preload("Outlet").Preload("User").Preload("OrderItems.Product").Where("uuid = ?", uuid).First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("order not found")
 		}
-		log.Printf("Error getting order by ExternalID: %v", err)
+		log.Printf("Error getting order by uuid: %v", err)
 		return nil, errors.New("failed to retrieve order")
 	}
 	return &order, nil

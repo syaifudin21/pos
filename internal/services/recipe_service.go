@@ -17,14 +17,14 @@ func NewRecipeService(db *gorm.DB) *RecipeService {
 	return &RecipeService{DB: db}
 }
 
-// GetRecipeByUuid retrieves a recipe by its external ID.
+// GetRecipeByUuid retrieves a recipe by its Uuid.
 func (s *RecipeService) GetRecipeByUuid(uuid uuid.UUID) (*models.Recipe, error) {
 	var recipe models.Recipe
 	if err := s.DB.Preload("MainProduct").Preload("Component").Where("uuid = ?", uuid).First(&recipe).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("recipe not found")
 		}
-		log.Printf("Error getting recipe by ExternalID: %v", err)
+		log.Printf("Error getting recipe by uuid: %v", err)
 		return nil, errors.New("failed to retrieve recipe")
 	}
 	return &recipe, nil
@@ -113,7 +113,7 @@ func (s *RecipeService) UpdateRecipe(uuid uuid.UUID, mainProductUuid, componentU
 	return &recipe, nil
 }
 
-// DeleteRecipe deletes a recipe by its external ID.
+// DeleteRecipe deletes a recipe by its Uuid.
 func (s *RecipeService) DeleteRecipe(uuid uuid.UUID) error {
 	if err := s.DB.Where("uuid = ?", uuid).Delete(&models.Recipe{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

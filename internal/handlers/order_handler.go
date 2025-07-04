@@ -37,7 +37,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	}
 
 	claims := c.Get("claims").(*utils.Claims)
-	userUuid := claims.ID // Assuming user's ExternalID is stored in claims.ID
+	userUuid := claims.ID // Assuming user's uuid is stored in claims.ID
 
 	// For simplicity, assuming outlet ID is passed in the request or derived from user's outlet
 	// For now, let's use the outlet ID from the request
@@ -52,12 +52,12 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 }
 
 // GetOrderByUuid godoc
-// @Summary Get order by External ID
-// @Description Get a single order by its External ID.
+// @Summary Get order by Uuid
+// @Description Get a single order by its Uuid.
 // @Tags Orders
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Order External ID (UUID)"
+// @Param uuid path string true "Order Uuid"
 // @Success 200 {object} SuccessResponse{data=models.Order}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -82,7 +82,7 @@ func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
 // @Tags Orders
 // @Accept json
 // @Produce json
-// @Param outlet_uuid path string true "Outlet External ID (UUID)"
+// @Param outlet_uuid path string true "Outlet Uuid"
 // @Success 200 {object} SuccessResponse{data=[]models.Order}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -90,7 +90,7 @@ func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
 func (h *OrderHandler) GetOrdersByOutlet(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
 	}
 
 	orders, err := h.OrderService.GetOrdersByOutlet(outletUuid)

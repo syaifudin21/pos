@@ -23,7 +23,7 @@ func NewReportHandler(reportService *services.ReportService) *ReportHandler {
 // @Tags Reports
 // @Accept json
 // @Produce json
-// @Param outlet_uuid path string true "Outlet External ID (UUID)"
+// @Param outlet_uuid path string true "Outlet Uuid"
 // @Param start_date query string true "Start date (YYYY-MM-DD)"
 // @Param end_date query string true "End date (YYYY-MM-DD)"
 // @Success 200 {object} SuccessResponse{data=[]models.Order}
@@ -33,7 +33,7 @@ func NewReportHandler(reportService *services.ReportService) *ReportHandler {
 func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
 	}
 
 	startDateStr := c.QueryParam("start_date")
@@ -62,7 +62,7 @@ func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
 // @Tags Reports
 // @Accept json
 // @Produce json
-// @Param product_uuid path string true "Product External ID (UUID)"
+// @Param product_uuid path string true "Product Uuid"
 // @Param start_date query string true "Start date (YYYY-MM-DD)"
 // @Param end_date query string true "End date (YYYY-MM-DD)"
 // @Success 200 {object} SuccessResponse{data=[]models.OrderItem}
@@ -72,7 +72,7 @@ func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
 func (h *ReportHandler) GetSalesByProductReport(c echo.Context) error {
 	productUuid, err := uuid.Parse(c.Param("product_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Product External ID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Product Uuid format"})
 	}
 
 	startDateStr := c.QueryParam("start_date")
