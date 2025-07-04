@@ -1,16 +1,5 @@
 basePath: /
 definitions:
-  handlers.CreatePurchaseOrderRequest:
-    properties:
-      items:
-        items:
-          $ref: '#/definitions/handlers.PurchaseOrderItemRequest'
-        type: array
-      outlet_uuid:
-        type: string
-      supplier_uuid:
-        type: string
-    type: object
   handlers.CreateRecipeRequest:
     properties:
       component_uuid:
@@ -92,15 +81,6 @@ definitions:
       type:
         type: string
     type: object
-  handlers.PurchaseOrderItemRequest:
-    properties:
-      price:
-        type: number
-      product_uuid:
-        type: string
-      quantity:
-        type: number
-    type: object
   handlers.RegisterRequest:
     properties:
       outlet_id:
@@ -161,6 +141,17 @@ definitions:
           $ref: '#/definitions/models.OrderItemRequest'
         type: array
       outlet_uuid:
+        type: string
+    type: object
+  models.CreatePurchaseOrderRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.PurchaseOrderItemRequest'
+        type: array
+      outlet_uuid:
+        type: string
+      supplier_uuid:
         type: string
     type: object
   models.GlobalStockUpdateRequest:
@@ -312,16 +303,25 @@ definitions:
         $ref: '#/definitions/models.Product'
       product_id:
         type: integer
-      purchase_order:
-        $ref: '#/definitions/models.PurchaseOrder'
       purchase_order_id:
         type: integer
+      purchase_order_uuid:
+        type: string
       quantity:
         type: number
       updated_at:
         type: string
       uuid:
         type: string
+    type: object
+  models.PurchaseOrderItemRequest:
+    properties:
+      price:
+        type: number
+      product_uuid:
+        type: string
+      quantity:
+        type: number
     type: object
   models.Recipe:
     properties:
@@ -499,8 +499,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: Block a user by their Uuid. Only admin can perform this
-        action.
+      description: Block a user by their Uuid. Only admin can perform this action.
       parameters:
       - description: User Uuid
         in: path
@@ -541,8 +540,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: Unblock a user by their Uuid. Only admin can perform this
-        action.
+      description: Unblock a user by their Uuid. Only admin can perform this action.
       parameters:
       - description: User Uuid
         in: path
@@ -716,42 +714,6 @@ paths:
       summary: Create a new outlet
       tags:
       - Outlets
-  /outlets/{outlet_uuid}/purchase-orders:
-    get:
-      consumes:
-      - application/json
-      description: Get a list of all purchase orders for a given outlet.
-      parameters:
-      - description: Outlet Uuid
-        in: path
-        name: outlet_uuid
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.SuccessResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/models.PurchaseOrder'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Get all purchase orders for an outlet
-      tags:
-      - Purchase Orders
   /outlets/{outlet_uuid}/orders:
     get:
       consumes:
@@ -788,6 +750,42 @@ paths:
       summary: Get all orders for an outlet
       tags:
       - Orders
+  /outlets/{outlet_uuid}/purchase-orders:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all purchase orders for a given outlet.
+      parameters:
+      - description: Outlet Uuid
+        in: path
+        name: outlet_uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.PurchaseOrder'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get all purchase orders for an outlet
+      tags:
+      - Purchase Orders
   /outlets/{outlet_uuid}/stocks:
     get:
       consumes:
@@ -1089,6 +1087,87 @@ paths:
       summary: Create a new product
       tags:
       - Products
+  /products/{external_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a single product by its External ID.
+      parameters:
+      - description: Product External ID (UUID)
+        in: path
+        name: external_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Product'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get product by External ID
+      tags:
+      - Products
+    put:
+      consumes:
+      - application/json
+      description: Update an existing product by its External ID.
+      parameters:
+      - description: Product External ID (UUID)
+        in: path
+        name: external_id
+        required: true
+        type: string
+      - description: Updated product details
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ProductUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Product'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Update an existing product
+      tags:
+      - Products
   /products/{main_product_uuid}/recipes:
     get:
       consumes:
@@ -1158,86 +1237,6 @@ paths:
       summary: Delete a product
       tags:
       - Products
-    get:
-      consumes:
-      - application/json
-      description: Get a single product by its Uuid.
-      parameters:
-      - description: Product Uuid
-        in: path
-        name: uuid
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/models.Product'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Get product by Uuid
-      tags:
-      - Products
-    put:
-      consumes:
-      - application/json
-      description: Update an existing product by its Uuid.
-      parameters:
-      - description: Product Uuid
-        in: path
-        name: uuid
-        required: true
-        type: string
-      - description: Updated product details
-        in: body
-        name: product
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.ProductUpdateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/models.Product'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Update an existing product
-      tags:
-      - Products
   /purchase-orders:
     post:
       consumes:
@@ -1250,7 +1249,7 @@ paths:
         name: purchase_order
         required: true
         schema:
-          $ref: '#/definitions/handlers.CreatePurchaseOrderRequest'
+          $ref: '#/definitions/models.CreatePurchaseOrderRequest'
       produces:
       - application/json
       responses:

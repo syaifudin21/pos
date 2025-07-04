@@ -496,65 +496,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/outlets/{outlet_uuid}/purchase-orders": {
-            "get": {
-                "description": "Get a list of all purchase orders for a given outlet.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Purchase Orders"
-                ],
-                "summary": "Get all purchase orders for an outlet",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Outlet Uuid",
-                        "name": "outlet_uuid",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.PurchaseOrder"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/outlets/{outlet_uuid}/orders": {
             "get": {
                 "description": "Get a list of all orders for a given outlet.",
@@ -592,6 +533,65 @@ const docTemplate = `{
                                             "type": "array",
                                             "items": {
                                                 "$ref": "#/definitions/models.Order"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/outlets/{outlet_uuid}/purchase-orders": {
+            "get": {
+                "description": "Get a list of all purchase orders for a given outlet.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchase Orders"
+                ],
+                "summary": "Get all purchase orders for an outlet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outlet Uuid",
+                        "name": "outlet_uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.PurchaseOrder"
                                             }
                                         }
                                     }
@@ -1097,6 +1097,137 @@ const docTemplate = `{
                 }
             }
         },
+        "/products/{external_id}": {
+            "get": {
+                "description": "Get a single product by its External ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Get product by External ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product External ID (UUID)",
+                        "name": "external_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Product"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing product by its External ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Update an existing product",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product External ID (UUID)",
+                        "name": "external_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated product details",
+                        "name": "product",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ProductUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Product"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/products/{main_product_uuid}/recipes": {
             "get": {
                 "description": "Get a list of recipes for a given main product.",
@@ -1157,135 +1288,6 @@ const docTemplate = `{
             }
         },
         "/products/{uuid}": {
-            "get": {
-                "description": "Get a single product by its Uuid.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Products"
-                ],
-                "summary": "Get product by Uuid",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Product Uuid",
-                        "name": "uuid",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.Product"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update an existing product by its Uuid.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Products"
-                ],
-                "summary": "Update an existing product",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Product Uuid",
-                        "name": "uuid",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated product details",
-                        "name": "product",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ProductUpdateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.Product"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            },
             "delete": {
                 "description": "Delete a product by its Uuid.",
                 "consumes": [
@@ -1355,7 +1357,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.CreatePurchaseOrderRequest"
+                            "$ref": "#/definitions/models.CreatePurchaseOrderRequest"
                         }
                     }
                 ],
@@ -2245,23 +2247,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handlers.CreatePurchaseOrderRequest": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/handlers.PurchaseOrderItemRequest"
-                    }
-                },
-                "outlet_uuid": {
-                    "type": "string"
-                },
-                "supplier_uuid": {
-                    "type": "string"
-                }
-            }
-        },
         "handlers.CreateRecipeRequest": {
             "type": "object",
             "properties": {
@@ -2388,20 +2373,6 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.PurchaseOrderItemRequest": {
-            "type": "object",
-            "properties": {
-                "price": {
-                    "type": "number"
-                },
-                "product_uuid": {
-                    "type": "string"
-                },
-                "quantity": {
-                    "type": "number"
-                }
-            }
-        },
         "handlers.RegisterRequest": {
             "type": "object",
             "properties": {
@@ -2494,6 +2465,23 @@ const docTemplate = `{
                     }
                 },
                 "outlet_uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreatePurchaseOrderRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PurchaseOrderItemRequest"
+                    }
+                },
+                "outlet_uuid": {
+                    "type": "string"
+                },
+                "supplier_uuid": {
                     "type": "string"
                 }
             }
@@ -2722,11 +2710,11 @@ const docTemplate = `{
                 "product_id": {
                     "type": "integer"
                 },
-                "purchase_order": {
-                    "$ref": "#/definitions/models.PurchaseOrder"
-                },
                 "purchase_order_id": {
                     "type": "integer"
+                },
+                "purchase_order_uuid": {
+                    "type": "string"
                 },
                 "quantity": {
                     "type": "number"
@@ -2736,6 +2724,20 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "type": "string"
+                }
+            }
+        },
+        "models.PurchaseOrderItemRequest": {
+            "type": "object",
+            "properties": {
+                "price": {
+                    "type": "number"
+                },
+                "product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
                 }
             }
         },

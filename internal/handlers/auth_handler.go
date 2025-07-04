@@ -5,8 +5,18 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/services"
 )
+
+func isValidRole(role string) bool {
+	for _, r := range models.AllowedUserRoles {
+		if r == role {
+			return true
+		}
+	}
+	return false
+}
 
 type AuthHandler struct {
 	AuthService *services.AuthService
@@ -35,6 +45,10 @@ func (h *AuthHandler) Register(c echo.Context) error {
 
 	if req.Username == "" || req.Password == "" || req.Role == "" {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Username, password, and role are required"})
+	}
+
+	if !isValidRole(req.Role) {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid role specified"})
 	}
 
 	user, err := h.AuthService.RegisterUser(req.Username, req.Password, req.Role, req.OutletID)

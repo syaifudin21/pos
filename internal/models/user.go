@@ -1,5 +1,8 @@
 package models
 
+// AllowedUserRoles defines the list of roles that a user can have.
+var AllowedUserRoles = []string{"admin", "owner", "manager", "cashier"}
+
 type User struct {
 	BaseModel
 	Username  string  `gorm:"unique;not null" json:"username"`

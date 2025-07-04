@@ -9,6 +9,15 @@ import (
 	"github.com/msyaifudin/pos/internal/services"
 )
 
+func isValidProductType(productType string) bool {
+	for _, pt := range models.AllowedProductTypes {
+		if pt == productType {
+			return true
+		}
+	}
+	return false
+}
+
 type ProductHandler struct {
 	ProductService *services.ProductService
 }
@@ -35,21 +44,21 @@ func (h *ProductHandler) GetAllProducts(c echo.Context) error {
 }
 
 // GetProductByID godoc
-// @Summary Get product by Uuid
-// @Description Get a single product by its Uuid.
+// @Summary Get product by External ID
+// @Description Get a single product by its External ID.
 // @Tags Products
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Product Uuid"
+// @Param external_id path string true "Product External ID (UUID)"
 // @Success 200 {object} SuccessResponse{data=models.Product}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /products/{uuid} [get]
+// @Router /products/{external_id} [get]
 func (h *ProductHandler) GetProductByID(c echo.Context) error {
-	id, err := uuid.Parse(c.Param("uuid"))
+	id, err := uuid.Parse(c.Param("external_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid External ID format"})
 	}
 	product, err := h.ProductService.GetProductByUuid(id)
 	if err != nil {
@@ -75,6 +84,10 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
 	}
 
+	if !isValidProductType(product.Type) {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid product type specified"})
+	}
+
 	newProduct := &models.Product{
 		Name:        product.Name,
 		Description: product.Description,
@@ -92,25 +105,29 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 
 // UpdateProduct godoc
 // @Summary Update an existing product
-// @Description Update an existing product by its Uuid.
+// @Description Update an existing product by its External ID.
 // @Tags Products
 // @Accept json
 // @Produce json
-// @Param uuid path string true "Product Uuid"
+// @Param external_id path string true "Product External ID (UUID)"
 // @Param product body ProductUpdateRequest true "Updated product details"
 // @Success 200 {object} SuccessResponse{data=models.Product}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /products/{uuid} [put]
+// @Router /products/{external_id} [put]
 func (h *ProductHandler) UpdateProduct(c echo.Context) error {
-	id, err := uuid.Parse(c.Param("uuid"))
+	id, err := uuid.Parse(c.Param("external_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid External ID format"})
 	}
 	product := new(ProductUpdateRequest)
 	if err := c.Bind(product); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+	}
+
+	if !isValidProductType(product.Type) {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid product type specified"})
 	}
 
 	updatedProduct := &models.Product{
