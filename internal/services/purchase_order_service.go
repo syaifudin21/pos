@@ -116,9 +116,7 @@ func (s *PurchaseOrderService) GetPurchaseOrdersByOutlet(outletUuid uuid.UUID) (
 // ReceivePurchaseOrder updates stock based on a completed purchase order.
 func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID) (*models.PurchaseOrder, error) {
 	var po models.PurchaseOrder
-
-	log.Printf(po.Outlet.Name)
-	if err := s.DB.Preload("PurchaseOrderItems.Product").Where("uuid = ?", poUuid).First(&po).Error; err != nil {
+	if err := s.DB.Preload("Outlet").Preload("PurchaseOrderItems.Product").Where("uuid = ?", poUuid).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("purchase order not found")
 		}
@@ -137,9 +135,7 @@ func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID) (*models.P
 
 	for _, item := range po.PurchaseOrderItems {
 		// Add stock using StockService
-		// log.Printf("Menerima PO: OutletUuid=%v, ProductUuid=%v, Quantity=%v", po.Outlet, item.Product.Uuid, item.Quantity)
-
-		_, err := s.StockService.UpdateStock(po.Outlet.Uuid, item.Product.Uuid, item.Quantity) // Assuming UpdateStock adds to existing quantity
+		_, err := s.StockService.AdjustStock(po.Outlet.Uuid, item.Product.Uuid, item.Quantity) // Use AdjustStock to accumulate
 		if err != nil {
 			tx.Rollback()
 			log.Printf("Error updating stock for received PO: %v", err)

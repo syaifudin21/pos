@@ -158,6 +158,50 @@ func (s *StockService) DeductStockForSale(OutletUuid, productuuid uuid.UUID, qua
 	return nil
 }
 
-func (s *StockService) UpdateGlobalStock(OutletUuid, productuuid uuid.UUID, quantity float64) (*models.Stock, error) {
-	return s.UpdateStock(OutletUuid, productuuid, quantity)
+func (s *StockService) UpdateGlobalStock(outletUuid, productUuid uuid.UUID, quantity float64) (*models.Stock, error) {
+	return s.UpdateStock(outletUuid, productUuid, quantity)
+}
+
+// AdjustStock adds or subtracts quantity from an existing stock entry.
+// If stock does not exist, it creates a new one.
+func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityChange float64) (*models.Stock, error) {
+	var outlet models.Outlet
+	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+		return nil, errors.New("outlet not found")
+	}
+
+	var product models.Product
+	if err := s.DB.Where("uuid = ?", productUuid).First(&product).Error; err != nil {
+		return nil, errors.New("product not found")
+	}
+
+	var stock models.Stock
+	if err := s.DB.Where("outlet_id = ? AND product_id = ?", outlet.ID, product.ID).First(&stock).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Create new stock entry if not found
+			stock = models.Stock{
+				OutletID:  outlet.ID,
+				ProductID: product.ID,
+				Quantity:  quantityChange,
+			}
+			if err := s.DB.Create(&stock).Error; err != nil {
+				log.Printf("Error creating stock: %v", err)
+				return nil, errors.New("failed to create stock")
+			}
+		} else {
+			log.Printf("Error finding stock for adjustment: %v", err)
+			return nil, errors.New("failed to retrieve stock for adjustment")
+		}
+	} else {
+		// Adjust existing stock
+		stock.Quantity += quantityChange
+		if err := s.DB.Save(&stock).Error; err != nil {
+			log.Printf("Error adjusting stock: %v", err)
+			return nil, errors.New("failed to adjust stock")
+		}
+	}
+
+	// Reload stock with associations for response
+	s.DB.Preload("Outlet").Preload("Product").First(&stock, stock.ID)
+	return &stock, nil
 }
