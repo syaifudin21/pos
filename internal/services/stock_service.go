@@ -97,16 +97,18 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 
 // DeductStockForSale handles stock deduction based on product type.
 // For FnB main products, it deducts from components based on recipe.
-func (s *StockService) DeductStockForSale(OutletUuid, productuuid uuid.UUID, quantity float64) error {
+func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uuid.UUID, quantity float64) error {
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", OutletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("external_id = ?", outletExternalID).First(&outlet).Error; err != nil {
 		return errors.New("outlet not found")
 	}
 
 	var product models.Product
-	if err := s.DB.Where("uuid = ?", productuuid).First(&product).Error; err != nil {
+	if err := s.DB.Where("external_id = ?", productExternalID).First(&product).Error; err != nil {
 		return errors.New("product not found")
 	}
+
+	log.Printf("DeductStockForSale: Processing product %s (Type: %s) for outlet %s, quantity: %f", product.Name, product.Type, outlet.Name, quantity)
 
 	if product.Type == "fnb_main_product" {
 		// Deduct components based on recipe
@@ -124,39 +126,50 @@ func (s *StockService) DeductStockForSale(OutletUuid, productuuid uuid.UUID, qua
 			requiredComponentQuantity := recipe.Quantity * quantity
 			var componentStock models.Stock
 			if err := s.DB.Where("outlet_id = ? AND product_id = ?", outlet.ID, recipe.ComponentID).First(&componentStock).Error; err != nil {
+				log.Printf("DeductStockForSale: Component stock not found for product %s (component of %s) in outlet %s. Error: %v", recipe.Component.Name, product.Name, outlet.Name, err)
 				return errors.New("component stock not found")
 			}
 
+			log.Printf("DeductStockForSale: Before deduction - Product %s (component of %s), Current Stock: %f", recipe.Component.Name, product.Name, componentStock.Quantity)
+
 			if componentStock.Quantity < requiredComponentQuantity {
+				log.Printf("DeductStockForSale: Insufficient stock for component %s. Available: %f, Required: %f", recipe.Component.Name, componentStock.Quantity, requiredComponentQuantity)
 				return errors.New("insufficient stock for components")
 			}
 
 			componentStock.Quantity -= requiredComponentQuantity
 			if err := s.DB.Save(&componentStock).Error; err != nil {
-				log.Printf("Error deducting component stock: %v", err)
+				log.Printf("Error deducting component stock for product %s: %v", recipe.Component.Name, err)
 				return errors.New("failed to deduct component stock")
 			}
+			log.Printf("DeductStockForSale: After deduction - Product %s (component of %s), New Stock: %f", recipe.Component.Name, product.Name, componentStock.Quantity)
 		}
 	} else {
 		// Deduct directly for retail items or FnB components
 		var stock models.Stock
 		if err := s.DB.Where("outlet_id = ? AND product_id = ?", outlet.ID, product.ID).First(&stock).Error; err != nil {
+			log.Printf("DeductStockForSale: Stock not found for product %s in outlet %s. Error: %v", product.Name, outlet.Name, err)
 			return errors.New("stock not found")
 		}
 
+		log.Printf("DeductStockForSale: Before deduction - Product %s, Current Stock: %f", product.Name, stock.Quantity)
+
 		if stock.Quantity < quantity {
+			log.Printf("DeductStockForSale: Insufficient stock for product %s. Available: %f, Required: %f", product.Name, stock.Quantity, quantity)
 			return errors.New("insufficient stock")
 		}
 
 		stock.Quantity -= quantity
 		if err := s.DB.Save(&stock).Error; err != nil {
-			log.Printf("Error deducting stock: %v", err)
+			log.Printf("Error deducting stock for product %s: %v", product.Name, err)
 			return errors.New("failed to deduct stock")
 		}
+		log.Printf("DeductStockForSale: After deduction - Product %s, New Stock: %f", product.Name, stock.Quantity)
 	}
 
 	return nil
 }
+
 
 func (s *StockService) UpdateGlobalStock(outletUuid, productUuid uuid.UUID, quantity float64) (*models.Stock, error) {
 	return s.UpdateStock(outletUuid, productUuid, quantity)
