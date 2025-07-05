@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log"
 
 	"github.com/google/uuid"
+	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
@@ -81,7 +83,7 @@ func (s *SupplierService) CreateSupplier(req *dtos.CreateSupplierRequest, userID
 		Address: req.Address,
 		UserID:  ownerID,
 	}
-	if err := s.DB.Create(supplier).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(supplier).Error; err != nil {
 		log.Printf("Error creating supplier: %v", err)
 		return nil, errors.New("failed to create supplier")
 	}
@@ -113,7 +115,7 @@ func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, req *dtos.UpdateSupplie
 	supplier.Contact = req.Contact
 	supplier.Address = req.Address
 
-	if err := s.DB.Save(&supplier).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&supplier).Error; err != nil {
 		log.Printf("Error updating supplier: %v", err)
 		return nil, errors.New("failed to update supplier")
 	}
@@ -131,7 +133,7 @@ func (s *SupplierService) DeleteSupplier(uuid uuid.UUID, userID uint) error {
 	if err != nil {
 		return err
 	}
-	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, ownerID).Delete(&models.Supplier{}).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Where("uuid = ? AND user_id = ?", uuid, ownerID).Delete(&models.Supplier{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("supplier not found")
 		}

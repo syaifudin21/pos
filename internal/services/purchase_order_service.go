@@ -1,11 +1,13 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
@@ -66,7 +68,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 		UserID:      ownerID,
 	}
 
-	if err := tx.Create(&po).Error; err != nil {
+	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&po).Error; err != nil {
 		tx.Rollback()
 		log.Printf("Error creating purchase order: %v", err)
 		return nil, errors.New("failed to create purchase order")
@@ -97,7 +99,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 	}
 
 	po.TotalAmount = totalAmount
-	if err := tx.Save(&po).Error; err != nil {
+	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&po).Error; err != nil {
 		tx.Rollback()
 		log.Printf("Error updating purchase order total amount: %v", err)
 		return nil, errors.New("failed to update purchase order total amount")
@@ -210,7 +212,7 @@ func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID, userID uin
 	}
 
 	po.Status = "completed"
-	if err := tx.Save(&po).Error; err != nil {
+	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&po).Error; err != nil {
 		tx.Rollback()
 		log.Printf("Error updating purchase order status: %v", err)
 		return nil, errors.New("failed to update purchase order status")

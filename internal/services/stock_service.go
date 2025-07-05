@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log"
 
 	"github.com/google/uuid"
+	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
@@ -128,7 +130,7 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 				Quantity:  quantity,
 				UserID:    ownerID,
 			}
-			if err := s.DB.Create(&stock).Error; err != nil {
+			if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&stock).Error; err != nil {
 				log.Printf("Error creating stock: %v", err)
 				return nil, errors.New("failed to create stock")
 			}
@@ -139,7 +141,7 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 	} else {
 		// Update existing stock
 		stock.Quantity = quantity
-		if err := s.DB.Save(&stock).Error; err != nil {
+		if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&stock).Error; err != nil {
 			log.Printf("Error updating stock: %v", err)
 			return nil, errors.New("failed to update stock")
 		}
@@ -200,7 +202,7 @@ func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uu
 			}
 
 			componentStock.Quantity -= requiredComponentQuantity
-			if err := s.DB.Save(&componentStock).Error; err != nil {
+			if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&componentStock).Error; err != nil {
 				log.Printf("Error deducting component stock for product %s: %v", recipe.Component.Name, err)
 				return errors.New("failed to deduct component stock")
 			}
@@ -208,7 +210,7 @@ func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uu
 		}
 	} else if product.Type == "retail_item" {
 		var retailStock models.Stock
-		if err := s.DB.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outlet.ID, product.ID, ownerID).First(&retailStock).Error; err != nil {
+		if err := s.DB.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outlet.ID, product.ID, userID).First(&retailStock).Error; err != nil {
 			log.Printf("DeductStockForSale: Retail item stock not found for product %s in outlet %s. Error: %v", product.Name, outlet.Name, err)
 			return errors.New("retail item stock not found")
 		}
@@ -258,7 +260,7 @@ func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityCh
 				Quantity:  quantityChange,
 				UserID:    userID,
 			}
-			if err := s.DB.Create(&stock).Error; err != nil {
+			if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&stock).Error; err != nil {
 				log.Printf("Error creating stock: %v", err)
 				return nil, errors.New("failed to create stock")
 			}
@@ -282,4 +284,3 @@ func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityCh
 		Quantity:    stock.Quantity,
 	}, nil
 }
-

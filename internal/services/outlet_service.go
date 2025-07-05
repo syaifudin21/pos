@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log"
 
 	"github.com/google/uuid"
+	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
@@ -81,7 +83,7 @@ func (s *OutletService) CreateOutlet(req *dtos.OutletCreateRequest, userID uint)
 		Type:    req.Type,
 		UserID:  ownerID,
 	}
-	if err := s.DB.Create(outlet).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(outlet).Error; err != nil {
 		log.Printf("Error creating outlet: %v", err)
 		return nil, errors.New("failed to create outlet")
 	}

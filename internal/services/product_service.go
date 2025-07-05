@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log"
 
 	"github.com/google/uuid"
+	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
@@ -85,7 +87,7 @@ func (s *ProductService) CreateProduct(req *dtos.ProductCreateRequest, userID ui
 		Type:        req.Type,
 		UserID:      ownerID,
 	}
-	if err := s.DB.Create(product).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(product).Error; err != nil {
 		log.Printf("Error creating product: %v", err)
 		return nil, errors.New("failed to create product")
 	}
@@ -121,7 +123,7 @@ func (s *ProductService) UpdateProduct(Uuid uuid.UUID, req *dtos.ProductUpdateRe
 	product.SKU = req.SKU
 	product.Type = req.Type
 
-	if err := s.DB.Save(&product).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&product).Error; err != nil {
 		log.Printf("Error updating product: %v", err)
 		return nil, errors.New("failed to update product")
 	}
@@ -141,7 +143,7 @@ func (s *ProductService) DeleteProduct(Uuid uuid.UUID, userID uint) error {
 	if err != nil {
 		return err
 	}
-	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, ownerID).Delete(&models.Product{}).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Where("uuid = ? AND user_id = ?", Uuid, ownerID).Delete(&models.Product{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("product not found")
 		}

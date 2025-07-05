@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log"
 
 	"github.com/google/uuid"
+	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
@@ -120,7 +122,7 @@ func (s *RecipeService) CreateRecipe(mainProductUuid, componentUuid uuid.UUID, q
 		UserID:        ownerID,
 	}
 
-	if err := s.DB.Create(&recipe).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&recipe).Error; err != nil {
 		log.Printf("Error creating recipe: %v", err)
 		return nil, errors.New("failed to create recipe")
 	}
@@ -169,7 +171,7 @@ func (s *RecipeService) UpdateRecipe(uuid uuid.UUID, mainProductUuid, componentU
 	recipe.ComponentID = component.ID
 	recipe.Quantity = quantity
 
-	if err := s.DB.Save(&recipe).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&recipe).Error; err != nil {
 		log.Printf("Error updating recipe: %v", err)
 		return nil, errors.New("failed to update recipe")
 	}
@@ -190,7 +192,7 @@ func (s *RecipeService) DeleteRecipe(uuid uuid.UUID, userID uint) error {
 	if err != nil {
 		return err
 	}
-	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, ownerID).Delete(&models.Recipe{}).Error; err != nil {
+	if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Where("uuid = ? AND user_id = ?", uuid, ownerID).Delete(&models.Recipe{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("recipe not found")
 		}

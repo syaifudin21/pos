@@ -24,6 +24,11 @@ func InitDB() {
 	if err != nil {
 		log.Fatalf("Gagal koneksi ke database: %v", err)
 	}
+
+	if err := db.Use(&UpdateByCallback{}); err != nil {
+		log.Fatalf("Gagal register plugin UpdateByCallback: %v", err)
+	}
+
 	DB = db
 
 	log.Println("Database connection established")

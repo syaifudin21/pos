@@ -1,19 +1,21 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
 )
 
 type OrderService struct {
-	DB           *gorm.DB
-	StockService *StockService // Dependency on StockService
+	DB            *gorm.DB
+	StockService  *StockService  // Dependency on StockService
 	IpaymuService *IpaymuService // Dependency on IpaymuService
 }
 
@@ -70,7 +72,7 @@ func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dt
 		PaymentMethod: paymentMethod,
 	}
 
-	if err := tx.Create(&order).Error; err != nil {
+	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&order).Error; err != nil {
 		tx.Rollback()
 		log.Printf("Error creating order: %v", err)
 		return nil, errors.New("failed to create order")
@@ -106,7 +108,7 @@ func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dt
 	}
 
 	order.TotalAmount = totalAmount
-	if err := tx.Save(&order).Error; err != nil {
+	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&order).Error; err != nil {
 		tx.Rollback()
 		log.Printf("Error updating order total amount: %v", err)
 		return nil, errors.New("failed to update order total amount")
