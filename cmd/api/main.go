@@ -9,36 +9,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	_ "github.com/msyaifudin/pos/docs" // Import generated docs
 	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/handlers"
 	internalmw "github.com/msyaifudin/pos/internal/middleware"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/pkg/casbin"
-	echoSwagger "github.com/swaggo/echo-swagger"
 )
-
-// @title POS API Documentation
-// @version 1.0
-// @description This is a sample POS API server.
-// @termsOfService http://swagger.io/terms/
-
-// @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
-
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
-
-// @host localhost:8080
-// @BasePath /
-// @schemes http
-
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	// Load environment variables from .env file
@@ -61,7 +38,7 @@ func main() {
 		&models.Supplier{},
 		&models.PurchaseOrder{},
 		&models.PurchaseOrderItem{},
-		&models.BaseModel{},
+		// &models.BaseModel{},
 	) // BaseModel is included for its UUID type to be recognized by GORM
 	if err != nil {
 		log.Fatalf("Failed to auto-migrate database: %v", err)
@@ -83,9 +60,6 @@ func main() {
 			return next(c)
 		}
 	})
-
-	// Swagger UI
-	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	// Basic route
 	e.GET("/", func(c echo.Context) error {

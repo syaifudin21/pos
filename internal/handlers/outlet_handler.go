@@ -44,18 +44,6 @@ func (h *OutletHandler) GetAllOutlets(c echo.Context) error {
 	return JSONSuccess(c, http.StatusOK, "outlets_retrieved_successfully", outletResponses)
 }
 
-// GetOutletByID godoc
-// @Summary Get outlet by Uuid
-// @Description Get a single outlet by its Uuid.
-// @Tags Outlets
-// @Accept json
-// @Produce json
-// @Param uuid path string true "Outlet Uuid"
-// @Success 200 {object} SuccessResponse{data=dtos.OutletResponse}
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
-// @Router /outlets/{uuid} [get]
 func (h *OutletHandler) GetOutletByID(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
@@ -68,17 +56,6 @@ func (h *OutletHandler) GetOutletByID(c echo.Context) error {
 	return JSONSuccess(c, http.StatusOK, "outlet_retrieved_successfully", outlet)
 }
 
-// CreateOutlet godoc
-// @Summary Create a new outlet
-// @Description Create a new outlet with the provided details.
-// @Tags Outlets
-// @Accept json
-// @Produce json
-// @Param outlet body dtos.OutletCreateRequest true "Outlet details"
-// @Success 201 {object} SuccessResponse{data=dtos.OutletResponse}
-// @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
-// @Router /outlets [post]
 func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 	outlet := new(dtos.OutletCreateRequest)
 	if err := c.Bind(outlet); err != nil {

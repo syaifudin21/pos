@@ -2,7 +2,6 @@ package dtos
 
 import "github.com/google/uuid"
 
-// Request and Response Structs for Swagger
 type RegisterRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
