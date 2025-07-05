@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
 )
 
@@ -18,13 +19,22 @@ func NewStockService(db *gorm.DB) *StockService {
 }
 
 // GetStockByOutletAndProduct retrieves stock for a specific product in an outlet.
-func (s *StockService) GetStockByOutletAndProduct(outletUuid, productUuid uuid.UUID) (*models.Stock, error) {
+func (s *StockService) GetStockByOutletAndProduct(outletUuid, productUuid uuid.UUID) (*dtos.StockResponse, error) {
 	var stock models.Stock
-	err := s.DB.Preload("Outlet").Preload("Product").
-		Joins("JOIN outlets ON stocks.outlet_id = outlets.id").
-		Joins("JOIN products ON stocks.product_id = products.id").
-		Where("outlets.uuid = ? AND products.uuid = ?", outletUuid, productUuid).
-		First(&stock).Error
+	var outlet models.Outlet
+	var product models.Product
+
+	err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error
+	if err != nil {
+		return nil, errors.New("outlet not found")
+	}
+
+	err = s.DB.Where("uuid = ?", productUuid).First(&product).Error
+	if err != nil {
+		return nil, errors.New("product not found")
+	}
+
+	err = s.DB.Where("outlet_id = ? AND product_id = ?", outlet.ID, product.ID).First(&stock).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -33,27 +43,42 @@ func (s *StockService) GetStockByOutletAndProduct(outletUuid, productUuid uuid.U
 		log.Printf("Error getting stock by outlet and product: %v", err)
 		return nil, errors.New("failed to retrieve stock")
 	}
-	return &stock, nil
+	return &dtos.StockResponse{
+		ProductUuid: product.Uuid,
+		ProductName: product.Name,
+		ProductSku:  product.SKU,
+		Quantity:    stock.Quantity,
+	}, nil
 }
 
 // GetOutletStocks retrieves all stocks for a given outlet.
-func (s *StockService) GetOutletStocks(outletUuid uuid.UUID) ([]models.Stock, error) {
+func (s *StockService) GetOutletStocks(outletUuid uuid.UUID) ([]dtos.StockResponse, error) {
 	var stocks []models.Stock
-	err := s.DB.Preload("Product").
-		Joins("JOIN outlets ON stocks.outlet_id = outlets.id").
-		Where("outlets.uuid = ?", outletUuid).
-		Find(&stocks).Error
+	var outlet models.Outlet
+	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+		return nil, errors.New("outlet not found")
+	}
 
-	if err != nil {
+	if err := s.DB.Preload("Product").Where("outlet_id = ?", outlet.ID).Find(&stocks).Error; err != nil {
 		log.Printf("Error getting outlet stocks: %v", err)
 		return nil, errors.New("failed to retrieve outlet stocks")
 	}
-	return stocks, nil
+
+	var stockResponses []dtos.StockResponse
+	for _, stock := range stocks {
+		stockResponses = append(stockResponses, dtos.StockResponse{
+			ProductUuid: stock.Product.Uuid,
+			ProductName: stock.Product.Name,
+			ProductSku:  stock.Product.SKU,
+			Quantity:    stock.Quantity,
+		})
+	}
+	return stockResponses, nil
 }
 
 // UpdateStock updates the quantity of a product in an outlet.
 // This is a direct update, useful for initial setup or corrections.
-func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity float64) (*models.Stock, error) {
+func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity float64) (*dtos.StockResponse, error) {
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
@@ -90,21 +115,24 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 		}
 	}
 
-	// Reload stock with associations for response
-	s.DB.Preload("Outlet").Preload("Product").First(&stock, stock.ID)
-	return &stock, nil
+	return &dtos.StockResponse{
+		ProductUuid: product.Uuid,
+		ProductName: product.Name,
+		ProductSku:  product.SKU,
+		Quantity:    stock.Quantity,
+	}, nil
 }
 
 // DeductStockForSale handles stock deduction based on product type.
 // For FnB main products, it deducts from components based on recipe.
 func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uuid.UUID, quantity float64) error {
 	var outlet models.Outlet
-	if err := s.DB.Where("external_id = ?", outletExternalID).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ?", outletExternalID).First(&outlet).Error; err != nil {
 		return errors.New("outlet not found")
 	}
 
 	var product models.Product
-	if err := s.DB.Where("external_id = ?", productExternalID).First(&product).Error; err != nil {
+	if err := s.DB.Where("uuid = ?", productExternalID).First(&product).Error; err != nil {
 		return errors.New("product not found")
 	}
 
@@ -144,40 +172,18 @@ func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uu
 			}
 			log.Printf("DeductStockForSale: After deduction - Product %s (component of %s), New Stock: %f", recipe.Component.Name, product.Name, componentStock.Quantity)
 		}
-	} else {
-		// Deduct directly for retail items or FnB components
-		var stock models.Stock
-		if err := s.DB.Where("outlet_id = ? AND product_id = ?", outlet.ID, product.ID).First(&stock).Error; err != nil {
-			log.Printf("DeductStockForSale: Stock not found for product %s in outlet %s. Error: %v", product.Name, outlet.Name, err)
-			return errors.New("stock not found")
-		}
-
-		log.Printf("DeductStockForSale: Before deduction - Product %s, Current Stock: %f", product.Name, stock.Quantity)
-
-		if stock.Quantity < quantity {
-			log.Printf("DeductStockForSale: Insufficient stock for product %s. Available: %f, Required: %f", product.Name, stock.Quantity, quantity)
-			return errors.New("insufficient stock")
-		}
-
-		stock.Quantity -= quantity
-		if err := s.DB.Save(&stock).Error; err != nil {
-			log.Printf("Error deducting stock for product %s: %v", product.Name, err)
-			return errors.New("failed to deduct stock")
-		}
-		log.Printf("DeductStockForSale: After deduction - Product %s, New Stock: %f", product.Name, stock.Quantity)
 	}
 
 	return nil
 }
 
-
-func (s *StockService) UpdateGlobalStock(outletUuid, productUuid uuid.UUID, quantity float64) (*models.Stock, error) {
+func (s *StockService) UpdateGlobalStock(outletUuid, productUuid uuid.UUID, quantity float64) (*dtos.StockResponse, error) {
 	return s.UpdateStock(outletUuid, productUuid, quantity)
 }
 
 // AdjustStock adds or subtracts quantity from an existing stock entry.
 // If stock does not exist, it creates a new one.
-func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityChange float64) (*models.Stock, error) {
+func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityChange float64) (*dtos.StockResponse, error) {
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
@@ -214,7 +220,10 @@ func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityCh
 		}
 	}
 
-	// Reload stock with associations for response
-	s.DB.Preload("Outlet").Preload("Product").First(&stock, stock.ID)
-	return &stock, nil
+	return &dtos.StockResponse{
+		ProductUuid: product.Uuid,
+		ProductName: product.Name,
+		ProductSku:  product.SKU,
+		Quantity:    stock.Quantity,
+	}, nil
 }

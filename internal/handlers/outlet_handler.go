@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 )
 
@@ -23,15 +23,25 @@ func NewOutletHandler(outletService *services.OutletService) *OutletHandler {
 // @Tags Outlets
 // @Accept json
 // @Produce json
-// @Success 200 {object} SuccessResponse{data=[]models.Outlet}
+// @Success 200 {object} SuccessResponse{data=[]dtos.OutletResponse}
 // @Failure 500 {object} ErrorResponse
 // @Router /outlets [get]
 func (h *OutletHandler) GetAllOutlets(c echo.Context) error {
 	outlets, err := h.OutletService.GetAllOutlets()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Outlets retrieved successfully", Data: outlets})
+	var outletResponses []dtos.OutletResponse
+	for _, outlet := range outlets {
+		outletResponses = append(outletResponses, dtos.OutletResponse{
+			ID:      outlet.ID,
+			Uuid:    outlet.Uuid,
+			Name:    outlet.Name,
+			Address: outlet.Address,
+			Type:    outlet.Type,
+		})
+	}
+	return JSONSuccess(c, http.StatusOK, "outlets_retrieved_successfully", outletResponses)
 }
 
 // GetOutletByID godoc
@@ -41,7 +51,7 @@ func (h *OutletHandler) GetAllOutlets(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Outlet Uuid"
-// @Success 200 {object} SuccessResponse{data=models.Outlet}
+// @Success 200 {object} SuccessResponse{data=dtos.OutletResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -49,13 +59,13 @@ func (h *OutletHandler) GetAllOutlets(c echo.Context) error {
 func (h *OutletHandler) GetOutletByID(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 	outlet, err := h.OutletService.GetOutletByUuid(id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Outlet retrieved successfully", Data: outlet})
+	return JSONSuccess(c, http.StatusOK, "outlet_retrieved_successfully", outlet)
 }
 
 // CreateOutlet godoc
@@ -64,28 +74,28 @@ func (h *OutletHandler) GetOutletByID(c echo.Context) error {
 // @Tags Outlets
 // @Accept json
 // @Produce json
-// @Param outlet body OutletCreateRequest true "Outlet details"
-// @Success 201 {object} SuccessResponse{data=models.Outlet}
+// @Param outlet body dtos.OutletCreateRequest true "Outlet details"
+// @Success 201 {object} SuccessResponse{data=dtos.OutletResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /outlets [post]
 func (h *OutletHandler) CreateOutlet(c echo.Context) error {
-	outlet := new(OutletCreateRequest)
+	outlet := new(dtos.OutletCreateRequest)
 	if err := c.Bind(outlet); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	newOutlet := &models.Outlet{
-		Name:    outlet.Name,
-		Address: outlet.Address,
-		Type:    outlet.Type,
-	}
-
-	createdOutlet, err := h.OutletService.CreateOutlet(newOutlet)
+	createdOutlet, err := h.OutletService.CreateOutlet(outlet)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusCreated, SuccessResponse{Message: "Outlet created successfully", Data: createdOutlet})
+	return JSONSuccess(c, http.StatusCreated, "outlet_created_successfully", dtos.OutletResponse{
+		ID:      createdOutlet.ID,
+		Uuid:    createdOutlet.Uuid,
+		Name:    createdOutlet.Name,
+		Address: createdOutlet.Address,
+		Type:    createdOutlet.Type,
+	})
 }
 
 // UpdateOutlet godoc
@@ -95,8 +105,8 @@ func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Outlet Uuid"
-// @Param outlet body OutletUpdateRequest true "Updated outlet details"
-// @Success 200 {object} SuccessResponse{data=models.Outlet}
+// @Param outlet body dtos.OutletUpdateRequest true "Updated outlet details"
+// @Success 200 {object} SuccessResponse{data=dtos.OutletResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -104,24 +114,18 @@ func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	outlet := new(OutletUpdateRequest)
+	outlet := new(dtos.OutletUpdateRequest)
 	if err := c.Bind(outlet); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	updatedOutlet := &models.Outlet{
-		Name:    outlet.Name,
-		Address: outlet.Address,
-		Type:    outlet.Type,
-	}
-
-	result, err := h.OutletService.UpdateOutlet(id, updatedOutlet)
+	result, err := h.OutletService.UpdateOutlet(id, outlet)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Outlet updated successfully", Data: result})
+	return JSONSuccess(c, http.StatusOK, "outlet_updated_successfully", result)
 }
 
 // DeleteOutlet godoc
@@ -139,23 +143,11 @@ func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 func (h *OutletHandler) DeleteOutlet(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 	err = h.OutletService.DeleteOutlet(id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusNoContent, SuccessResponse{Message: "Outlet deleted successfully"})
-}
-
-type OutletCreateRequest struct {
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Type    string `json:"type"`
-}
-
-type OutletUpdateRequest struct {
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Type    string `json:"type"`
+	return JSONSuccess(c, http.StatusNoContent, "outlet_deleted_successfully", nil)
 }

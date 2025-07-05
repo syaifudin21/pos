@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +27,7 @@ func (s *SupplierService) GetAllSuppliers() ([]models.Supplier, error) {
 	return suppliers, nil
 }
 
-func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID) (*models.Supplier, error) {
+func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID) (*dtos.SupplierResponse, error) {
 	var supplier models.Supplier
 	if err := s.DB.Where("uuid = ?", uuid).First(&supplier).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -35,18 +36,35 @@ func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID) (*models.Supplier, e
 		log.Printf("Error getting supplier by uuid: %v", err)
 		return nil, errors.New("failed to retrieve supplier")
 	}
-	return &supplier, nil
+	return &dtos.SupplierResponse{
+		ID:      supplier.ID,
+		Uuid:    supplier.Uuid,
+		Name:    supplier.Name,
+		Contact: supplier.Contact,
+		Address: supplier.Address,
+	}, nil
 }
 
-func (s *SupplierService) CreateSupplier(supplier *models.Supplier) (*models.Supplier, error) {
+func (s *SupplierService) CreateSupplier(req *dtos.CreateSupplierRequest) (*dtos.SupplierResponse, error) {
+	supplier := &models.Supplier{
+		Name:    req.Name,
+		Contact: req.Contact,
+		Address: req.Address,
+	}
 	if err := s.DB.Create(supplier).Error; err != nil {
 		log.Printf("Error creating supplier: %v", err)
 		return nil, errors.New("failed to create supplier")
 	}
-	return supplier, nil
+	return &dtos.SupplierResponse{
+		ID:      supplier.ID,
+		Uuid:    supplier.Uuid,
+		Name:    supplier.Name,
+		Contact: supplier.Contact,
+		Address: supplier.Address,
+	}, nil
 }
 
-func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, updatedSupplier *models.Supplier) (*models.Supplier, error) {
+func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, req *dtos.UpdateSupplierRequest) (*dtos.SupplierResponse, error) {
 	var supplier models.Supplier
 	if err := s.DB.Where("uuid = ?", uuid).First(&supplier).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -57,15 +75,21 @@ func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, updatedSupplier *models
 	}
 
 	// Update fields
-	supplier.Name = updatedSupplier.Name
-	supplier.Contact = updatedSupplier.Contact
-	supplier.Address = updatedSupplier.Address
+	supplier.Name = req.Name
+	supplier.Contact = req.Contact
+	supplier.Address = req.Address
 
 	if err := s.DB.Save(&supplier).Error; err != nil {
 		log.Printf("Error updating supplier: %v", err)
 		return nil, errors.New("failed to update supplier")
 	}
-	return &supplier, nil
+	return &dtos.SupplierResponse{
+		ID:      supplier.ID,
+		Uuid:    supplier.Uuid,
+		Name:    supplier.Name,
+		Contact: supplier.Contact,
+		Address: supplier.Address,
+	}, nil
 }
 
 func (s *SupplierService) DeleteSupplier(uuid uuid.UUID) error {

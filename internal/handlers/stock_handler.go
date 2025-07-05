@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 )
 
@@ -25,7 +25,7 @@ func NewStockHandler(stockService *services.StockService) *StockHandler {
 // @Produce json
 // @Param outlet_uuid path string true "Outlet Uuid"
 // @Param product_uuid path string true "Product Uuid"
-// @Success 200 {object} SuccessResponse{data=models.Stock}
+// @Success 200 {object} SuccessResponse{data=dtos.StockResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -33,18 +33,18 @@ func NewStockHandler(stockService *services.StockService) *StockHandler {
 func (h *StockHandler) GetStockByOutletAndProduct(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 	productUuid, err := uuid.Parse(c.Param("product_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Product Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_product_uuid_format")
 	}
 
 	stock, err := h.StockService.GetStockByOutletAndProduct(outletUuid, productUuid)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Stock retrieved successfully", Data: stock})
+	return JSONSuccess(c, http.StatusOK, "stock_retrieved_successfully", stock)
 }
 
 // GetOutletStocks godoc
@@ -54,21 +54,21 @@ func (h *StockHandler) GetStockByOutletAndProduct(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param outlet_uuid path string true "Outlet Uuid"
-// @Success 200 {object} SuccessResponse{data=[]models.Stock}
+// @Success 200 {object} SuccessResponse{data=[]dtos.StockResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /outlets/{outlet_uuid}/stocks [get]
 func (h *StockHandler) GetOutletStocks(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
 	stocks, err := h.StockService.GetOutletStocks(outletUuid)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Outlet stocks retrieved successfully", Data: stocks})
+	return JSONSuccess(c, http.StatusOK, "outlet_stocks_retrieved_successfully", stocks)
 }
 
 // UpdateStock godoc
@@ -79,8 +79,7 @@ func (h *StockHandler) GetOutletStocks(c echo.Context) error {
 // @Produce json
 // @Param outlet_uuid path string true "Outlet Uuid"
 // @Param product_uuid path string true "Product Uuid"
-// @Param stock body UpdateStockRequest true "Stock update details"
-// @Success 200 {object} SuccessResponse{data=models.Stock}
+// @Success 200 {object} SuccessResponse{data=dtos.StockResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -88,27 +87,23 @@ func (h *StockHandler) GetOutletStocks(c echo.Context) error {
 func (h *StockHandler) UpdateStock(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 	productUuid, err := uuid.Parse(c.Param("product_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Product Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_product_uuid_format")
 	}
 
-	req := new(UpdateStockRequest)
+	req := new(dtos.UpdateStockRequest)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
 	stock, err := h.StockService.UpdateStock(outletUuid, productUuid, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Stock updated successfully", Data: stock})
-}
-
-type UpdateStockRequest struct {
-	Quantity float64 `json:"quantity"`
+	return JSONSuccess(c, http.StatusOK, "stock_updated_successfully", stock)
 }
 
 // UpdateGlobalStock godoc
@@ -117,21 +112,21 @@ type UpdateStockRequest struct {
 // @Tags Stocks
 // @Accept json
 // @Produce json
-// @Param stock body models.GlobalStockUpdateRequest true "Stock update details"
-// @Success 200 {object} SuccessResponse{data=models.Stock}
+// @Param stock body dtos.GlobalStockUpdateRequest true "Stock update details"
+// @Success 200 {object} SuccessResponse{data=dtos.StockResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /stocks [put]
 func (h *StockHandler) UpdateGlobalStock(c echo.Context) error {
-	req := new(models.GlobalStockUpdateRequest)
+	req := new(dtos.GlobalStockUpdateRequest)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
 	stock, err := h.StockService.UpdateGlobalStock(req.OutletUuid, req.Productuuid, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Stock updated successfully", Data: stock})
+	return JSONSuccess(c, http.StatusOK, "stock_updated_successfully", stock)
 }

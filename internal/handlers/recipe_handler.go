@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 )
 
@@ -23,7 +24,7 @@ func NewRecipeHandler(recipeService *services.RecipeService) *RecipeHandler {
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Recipe Uuid"
-// @Success 200 {object} SuccessResponse{data=models.Recipe}
+// @Success 200 {object} SuccessResponse{data=dtos.RecipeResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -31,13 +32,13 @@ func NewRecipeHandler(recipeService *services.RecipeService) *RecipeHandler {
 func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 	recipe, err := h.RecipeService.GetRecipeByUuid(uuid)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Recipe retrieved successfully", Data: recipe})
+	return JSONSuccess(c, http.StatusOK, "recipe_retrieved_successfully", recipe)
 }
 
 // GetRecipesByMainProduct godoc
@@ -47,20 +48,32 @@ func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param main_product_uuid path string true "Main Product Uuid"
-// @Success 200 {object} SuccessResponse{data=[]models.Recipe}
+// @Success 200 {object} SuccessResponse{data=[]dtos.RecipeResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /products/{main_product_uuid}/recipes [get]
 func (h *RecipeHandler) GetRecipesByMainProduct(c echo.Context) error {
 	mainProductUuid, err := uuid.Parse(c.Param("main_product_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Main Product Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_main_product_uuid_format")
 	}
 	recipes, err := h.RecipeService.GetRecipesByMainProduct(mainProductUuid)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Recipes retrieved successfully", Data: recipes})
+	var recipeResponses []dtos.RecipeResponse
+	for _, recipe := range recipes {
+		recipeResponses = append(recipeResponses, dtos.RecipeResponse{
+			ID:              recipe.ID,
+			Uuid:            recipe.Uuid,
+			MainProductID:   recipe.MainProductID,
+			MainProductUuid: recipe.MainProductUuid,
+			ComponentID:     recipe.ComponentID,
+			ComponentUuid:   recipe.ComponentUuid,
+			Quantity:        recipe.Quantity,
+		})
+	}
+	return JSONSuccess(c, http.StatusOK, "recipes_retrieved_successfully", recipeResponses)
 }
 
 // CreateRecipe godoc
@@ -69,22 +82,22 @@ func (h *RecipeHandler) GetRecipesByMainProduct(c echo.Context) error {
 // @Tags Recipes
 // @Accept json
 // @Produce json
-// @Param recipe body CreateRecipeRequest true "Recipe details"
-// @Success 201 {object} SuccessResponse{data=models.Recipe}
+// @Param recipe body dtos.CreateRecipeRequest true "Recipe details"
+// @Success 201 {object} SuccessResponse{data=dtos.RecipeResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /recipes [post]
 func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
-	req := new(CreateRecipeRequest)
+	req := new(dtos.CreateRecipeRequest)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
 	createdRecipe, err := h.RecipeService.CreateRecipe(req.MainProductUuid, req.ComponentUuid, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusCreated, SuccessResponse{Message: "Recipe created successfully", Data: createdRecipe})
+	return JSONSuccess(c, http.StatusCreated, "recipe_created_successfully", createdRecipe)
 }
 
 // UpdateRecipe godoc
@@ -94,8 +107,8 @@ func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Recipe Uuid"
-// @Param recipe body UpdateRecipeRequest true "Updated recipe details"
-// @Success 200 {object} SuccessResponse{data=models.Recipe}
+// @Param recipe body dtos.UpdateRecipeRequest true "Updated recipe details"
+// @Success 200 {object} SuccessResponse{data=dtos.RecipeResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -103,18 +116,18 @@ func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
 func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	req := new(UpdateRecipeRequest)
+	req := new(dtos.UpdateRecipeRequest)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
 	updatedRecipe, err := h.RecipeService.UpdateRecipe(uuid, req.MainProductUuid, req.ComponentUuid, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Recipe updated successfully", Data: updatedRecipe})
+	return JSONSuccess(c, http.StatusOK, "recipe_updated_successfully", updatedRecipe)
 }
 
 // DeleteRecipe godoc
@@ -132,23 +145,11 @@ func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 func (h *RecipeHandler) DeleteRecipe(c echo.Context) error {
 	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 	err = h.RecipeService.DeleteRecipe(uuid)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusNoContent, SuccessResponse{Message: "Recipe deleted successfully"})
-}
-
-type CreateRecipeRequest struct {
-	MainProductUuid uuid.UUID `json:"main_product_uuid"`
-	ComponentUuid   uuid.UUID `json:"component_uuid"`
-	Quantity        float64   `json:"quantity"`
-}
-
-type UpdateRecipeRequest struct {
-	MainProductUuid uuid.UUID `json:"main_product_uuid"`
-	ComponentUuid   uuid.UUID `json:"component_uuid"`
-	Quantity        float64   `json:"quantity"`
+	return JSONSuccess(c, http.StatusNoContent, "recipe_deleted_successfully", nil)
 }

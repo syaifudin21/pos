@@ -26,14 +26,14 @@ func NewReportHandler(reportService *services.ReportService) *ReportHandler {
 // @Param outlet_uuid path string true "Outlet Uuid"
 // @Param start_date query string true "Start date (YYYY-MM-DD)"
 // @Param end_date query string true "End date (YYYY-MM-DD)"
-// @Success 200 {object} SuccessResponse{data=[]models.Order}
+// @Success 200 {object} SuccessResponse{data=[]dtos.OrderResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /reports/outlets/{outlet_uuid}/sales [get]
 func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
 	startDateStr := c.QueryParam("start_date")
@@ -41,19 +41,19 @@ func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
 
 	startDate, err := time.Parse("2006-01-02", startDateStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid start_date format. Use YYYY-MM-DD"})
+		return JSONError(c, http.StatusBadRequest, "invalid_start_date_format")
 	}
 	endDate, err := time.Parse("2006-01-02", endDateStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid end_date format. Use YYYY-MM-DD"})
+		return JSONError(c, http.StatusBadRequest, "invalid_end_date_format")
 	}
 
 	orders, err := h.ReportService.SalesByOutletReport(outletUuid, startDate, endDate)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Sales report by outlet generated successfully", Data: orders})
+	return JSONSuccess(c, http.StatusOK, "sales_report_by_outlet_generated_successfully", orders)
 }
 
 // GetSalesByProductReport godoc
@@ -65,14 +65,14 @@ func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
 // @Param product_uuid path string true "Product Uuid"
 // @Param start_date query string true "Start date (YYYY-MM-DD)"
 // @Param end_date query string true "End date (YYYY-MM-DD)"
-// @Success 200 {object} SuccessResponse{data=[]models.OrderItem}
+// @Success 200 {object} SuccessResponse{data=[]dtos.OrderItemResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /reports/products/{product_uuid}/sales [get]
 func (h *ReportHandler) GetSalesByProductReport(c echo.Context) error {
 	productUuid, err := uuid.Parse(c.Param("product_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Product Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_product_uuid_format")
 	}
 
 	startDateStr := c.QueryParam("start_date")
@@ -80,17 +80,17 @@ func (h *ReportHandler) GetSalesByProductReport(c echo.Context) error {
 
 	startDate, err := time.Parse("2006-01-02", startDateStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid start_date format. Use YYYY-MM-DD"})
+		return JSONError(c, http.StatusBadRequest, "invalid_start_date_format")
 	}
 	endDate, err := time.Parse("2006-01-02", endDateStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid end_date format. Use YYYY-MM-DD"})
+		return JSONError(c, http.StatusBadRequest, "invalid_end_date_format")
 	}
 
 	orderItems, err := h.ReportService.SalesByProductReport(productUuid, startDate, endDate)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Sales report by product generated successfully", Data: orderItems})
+	return JSONSuccess(c, http.StatusOK, "sales_report_by_product_generated_successfully", orderItems)
 }

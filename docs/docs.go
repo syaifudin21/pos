@@ -9,16 +9,7 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -44,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.LoginRequest"
+                            "$ref": "#/definitions/dtos.LoginRequest"
                         }
                     }
                 ],
@@ -60,7 +51,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/handlers.LoginResponse"
+                                            "$ref": "#/definitions/dtos.LoginResponse"
                                         }
                                     }
                                 }
@@ -108,7 +99,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.RegisterRequest"
+                            "$ref": "#/definitions/dtos.RegisterRequest"
                         }
                     }
                 ],
@@ -124,7 +115,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/handlers.UserResponse"
+                                            "$ref": "#/definitions/dtos.UserResponse"
                                         }
                                     }
                                 }
@@ -290,7 +281,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreateOrderRequest"
+                            "$ref": "#/definitions/dtos.CreateOrderRequest"
                         }
                     }
                 ],
@@ -306,7 +297,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Order"
+                                            "$ref": "#/definitions/dtos.OrderResponse"
                                         }
                                     }
                                 }
@@ -368,7 +359,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Order"
+                                            "$ref": "#/definitions/dtos.OrderResponse"
                                         }
                                     }
                                 }
@@ -423,7 +414,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.Outlet"
+                                                "$ref": "#/definitions/dtos.OutletResponse"
                                             }
                                         }
                                     }
@@ -458,7 +449,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.OutletCreateRequest"
+                            "$ref": "#/definitions/dtos.OutletCreateRequest"
                         }
                     }
                 ],
@@ -474,7 +465,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Outlet"
+                                            "$ref": "#/definitions/dtos.OutletResponse"
                                         }
                                     }
                                 }
@@ -532,7 +523,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.Order"
+                                                "$ref": "#/definitions/dtos.OrderResponse"
                                             }
                                         }
                                     }
@@ -542,6 +533,71 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/outlets/{outlet_uuid}/products": {
+            "get": {
+                "description": "Get a list of products available in a specific outlet.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Get products by outlet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Outlet Uuid",
+                        "name": "outlet_uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dtos.ProductOutletResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -591,7 +647,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.PurchaseOrder"
+                                                "$ref": "#/definitions/dtos.PurchaseOrderResponse"
                                             }
                                         }
                                     }
@@ -650,7 +706,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.Stock"
+                                                "$ref": "#/definitions/dtos.StockResponse"
                                             }
                                         }
                                     }
@@ -714,7 +770,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Stock"
+                                            "$ref": "#/definitions/dtos.StockResponse"
                                         }
                                     }
                                 }
@@ -767,15 +823,6 @@ const docTemplate = `{
                         "name": "product_uuid",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "description": "Stock update details",
-                        "name": "stock",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UpdateStockRequest"
-                        }
                     }
                 ],
                 "responses": {
@@ -790,7 +837,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Stock"
+                                            "$ref": "#/definitions/dtos.StockResponse"
                                         }
                                     }
                                 }
@@ -852,7 +899,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Outlet"
+                                            "$ref": "#/definitions/dtos.OutletResponse"
                                         }
                                     }
                                 }
@@ -905,7 +952,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.OutletUpdateRequest"
+                            "$ref": "#/definitions/dtos.OutletUpdateRequest"
                         }
                     }
                 ],
@@ -921,7 +968,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Outlet"
+                                            "$ref": "#/definitions/dtos.OutletResponse"
                                         }
                                     }
                                 }
@@ -1024,7 +1071,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.Product"
+                                                "$ref": "#/definitions/dtos.ProductResponse"
                                             }
                                         }
                                     }
@@ -1059,7 +1106,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.ProductCreateRequest"
+                            "$ref": "#/definitions/dtos.ProductCreateRequest"
                         }
                     }
                 ],
@@ -1075,7 +1122,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Product"
+                                            "$ref": "#/definitions/dtos.ProductResponse"
                                         }
                                     }
                                 }
@@ -1131,76 +1178,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Product"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update an existing product by its External ID.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Products"
-                ],
-                "summary": "Update an existing product",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Product External ID (UUID)",
-                        "name": "external_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated product details",
-                        "name": "product",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ProductUpdateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.Product"
+                                            "$ref": "#/definitions/dtos.ProductResponse"
                                         }
                                     }
                                 }
@@ -1264,7 +1242,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.Recipe"
+                                                "$ref": "#/definitions/dtos.RecipeResponse"
                                             }
                                         }
                                     }
@@ -1288,6 +1266,75 @@ const docTemplate = `{
             }
         },
         "/products/{uuid}": {
+            "put": {
+                "description": "Update an existing product by its External ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Update an existing product",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product External ID (UUID)",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated product details",
+                        "name": "product",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.ProductUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dtos.ProductResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "description": "Delete a product by its Uuid.",
                 "consumes": [
@@ -1357,7 +1404,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreatePurchaseOrderRequest"
+                            "$ref": "#/definitions/dtos.CreatePurchaseOrderRequest"
                         }
                     }
                 ],
@@ -1373,7 +1420,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.PurchaseOrder"
+                                            "$ref": "#/definitions/dtos.PurchaseOrderResponse"
                                         }
                                     }
                                 }
@@ -1429,7 +1476,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.PurchaseOrder"
+                                            "$ref": "#/definitions/dtos.PurchaseOrderResponse"
                                         }
                                     }
                                 }
@@ -1491,7 +1538,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.PurchaseOrder"
+                                            "$ref": "#/definitions/dtos.PurchaseOrderResponse"
                                         }
                                     }
                                 }
@@ -1539,7 +1586,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.CreateRecipeRequest"
+                            "$ref": "#/definitions/dtos.CreateRecipeRequest"
                         }
                     }
                 ],
@@ -1555,7 +1602,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Recipe"
+                                            "$ref": "#/definitions/dtos.RecipeResponse"
                                         }
                                     }
                                 }
@@ -1611,7 +1658,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Recipe"
+                                            "$ref": "#/definitions/dtos.RecipeResponse"
                                         }
                                     }
                                 }
@@ -1664,7 +1711,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.UpdateRecipeRequest"
+                            "$ref": "#/definitions/dtos.UpdateRecipeRequest"
                         }
                     }
                 ],
@@ -1680,7 +1727,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Recipe"
+                                            "$ref": "#/definitions/dtos.RecipeResponse"
                                         }
                                     }
                                 }
@@ -1806,7 +1853,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.Order"
+                                                "$ref": "#/definitions/dtos.OrderResponse"
                                             }
                                         }
                                     }
@@ -1879,7 +1926,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.OrderItem"
+                                                "$ref": "#/definitions/dtos.OrderItemResponse"
                                             }
                                         }
                                     }
@@ -1922,7 +1969,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.GlobalStockUpdateRequest"
+                            "$ref": "#/definitions/dtos.GlobalStockUpdateRequest"
                         }
                     }
                 ],
@@ -1938,7 +1985,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Stock"
+                                            "$ref": "#/definitions/dtos.StockResponse"
                                         }
                                     }
                                 }
@@ -1993,7 +2040,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.Supplier"
+                                                "$ref": "#/definitions/dtos.SupplierResponse"
                                             }
                                         }
                                     }
@@ -2028,7 +2075,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.CreateSupplierRequest"
+                            "$ref": "#/definitions/dtos.CreateSupplierRequest"
                         }
                     }
                 ],
@@ -2044,7 +2091,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Supplier"
+                                            "$ref": "#/definitions/dtos.SupplierResponse"
                                         }
                                     }
                                 }
@@ -2100,7 +2147,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Supplier"
+                                            "$ref": "#/definitions/dtos.SupplierResponse"
                                         }
                                     }
                                 }
@@ -2153,7 +2200,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.UpdateSupplierRequest"
+                            "$ref": "#/definitions/dtos.UpdateSupplierRequest"
                         }
                     }
                 ],
@@ -2169,7 +2216,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Supplier"
+                                            "$ref": "#/definitions/dtos.SupplierResponse"
                                         }
                                     }
                                 }
@@ -2247,7 +2294,38 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handlers.CreateRecipeRequest": {
+        "dtos.CreateOrderRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.OrderItemRequest"
+                    }
+                },
+                "outlet_uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.CreatePurchaseOrderRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.PurchaseItemRequest"
+                    }
+                },
+                "outlet_uuid": {
+                    "type": "string"
+                },
+                "supplier_uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.CreateRecipeRequest": {
             "type": "object",
             "properties": {
                 "component_uuid": {
@@ -2261,7 +2339,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.CreateSupplierRequest": {
+        "dtos.CreateSupplierRequest": {
             "type": "object",
             "properties": {
                 "address": {
@@ -2271,6 +2349,430 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.GlobalStockUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "outlet_uuid": {
+                    "type": "string"
+                },
+                "product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                }
+            }
+        },
+        "dtos.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/dtos.UserResponse"
+                }
+            }
+        },
+        "dtos.OrderItemRequest": {
+            "type": "object",
+            "properties": {
+                "product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dtos.OrderItemResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "order_uuid": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.OrderResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "order_date": {
+                    "description": "Consider formatting time.Time to string",
+                    "type": "string"
+                },
+                "outlet_id": {
+                    "type": "integer"
+                },
+                "outlet_uuid": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "user_uuid": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.OutletCreateRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.OutletResponse": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.OutletUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.ProductCreateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.ProductOutletResponse": {
+            "type": "object",
+            "properties": {
+                "price": {
+                    "type": "number"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "product_sku": {
+                    "type": "string"
+                },
+                "product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "description": "Stock quantity at the outlet",
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.ProductResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.ProductUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.PurchaseItemRequest": {
+            "type": "object",
+            "properties": {
+                "price": {
+                    "type": "number"
+                },
+                "product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dtos.PurchaseOrderResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "order_date": {
+                    "type": "string"
+                },
+                "outlet_id": {
+                    "type": "integer"
+                },
+                "outlet_uuid": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "supplier_id": {
+                    "type": "integer"
+                },
+                "supplier_uuid": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.RecipeResponse": {
+            "type": "object",
+            "properties": {
+                "component_id": {
+                    "type": "integer"
+                },
+                "component_uuid": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "main_product_id": {
+                    "type": "integer"
+                },
+                "main_product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.RegisterRequest": {
+            "type": "object",
+            "properties": {
+                "outlet_id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.StockResponse": {
+            "type": "object",
+            "properties": {
+                "product_name": {
+                    "type": "string"
+                },
+                "product_sku": {
+                    "type": "string"
+                },
+                "product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                }
+            }
+        },
+        "dtos.SupplierResponse": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "contact": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.UpdateRecipeRequest": {
+            "type": "object",
+            "properties": {
+                "component_uuid": {
+                    "type": "string"
+                },
+                "main_product_uuid": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                }
+            }
+        },
+        "dtos.UpdateSupplierRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "contact": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.UserResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "outlet_id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "uuid": {
                     "type": "string"
                 }
             }
@@ -2283,113 +2785,6 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.LoginRequest": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.LoginResponse": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/handlers.UserResponse"
-                }
-            }
-        },
-        "handlers.OutletCreateRequest": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.OutletUpdateRequest": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.ProductCreateRequest": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "sku": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.ProductUpdateRequest": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "sku": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.RegisterRequest": {
-            "type": "object",
-            "properties": {
-                "outlet_id": {
-                    "type": "integer"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
         "handlers.SuccessResponse": {
             "type": "object",
             "properties": {
@@ -2398,493 +2793,18 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
-        },
-        "handlers.UpdateRecipeRequest": {
-            "type": "object",
-            "properties": {
-                "component_uuid": {
-                    "type": "string"
-                },
-                "main_product_uuid": {
-                    "type": "string"
-                },
-                "quantity": {
-                    "type": "number"
-                }
-            }
-        },
-        "handlers.UpdateStockRequest": {
-            "type": "object",
-            "properties": {
-                "quantity": {
-                    "type": "number"
-                }
-            }
-        },
-        "handlers.UpdateSupplierRequest": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "contact": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.UserResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "outlet_id": {
-                    "type": "integer"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.CreateOrderRequest": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.OrderItemRequest"
-                    }
-                },
-                "outlet_uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.CreatePurchaseOrderRequest": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.PurchaseOrderItemRequest"
-                    }
-                },
-                "outlet_uuid": {
-                    "type": "string"
-                },
-                "supplier_uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.GlobalStockUpdateRequest": {
-            "type": "object",
-            "properties": {
-                "outlet_uuid": {
-                    "type": "string"
-                },
-                "product_uuid": {
-                    "type": "string"
-                },
-                "quantity": {
-                    "type": "number"
-                }
-            }
-        },
-        "models.Order": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "order_items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.OrderItem"
-                    }
-                },
-                "outlet": {
-                    "$ref": "#/definitions/models.Outlet"
-                },
-                "outlet_id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "description": "e.g., \"pending\", \"completed\", \"cancelled\"",
-                    "type": "string"
-                },
-                "total_amount": {
-                    "type": "number"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/models.User"
-                },
-                "user_id": {
-                    "type": "integer"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.OrderItem": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "order": {
-                    "$ref": "#/definitions/models.Order"
-                },
-                "order_id": {
-                    "type": "integer"
-                },
-                "price": {
-                    "description": "Price at the time of order",
-                    "type": "number"
-                },
-                "product": {
-                    "$ref": "#/definitions/models.Product"
-                },
-                "product_id": {
-                    "type": "integer"
-                },
-                "quantity": {
-                    "type": "number"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.OrderItemRequest": {
-            "type": "object",
-            "properties": {
-                "product_uuid": {
-                    "type": "string"
-                },
-                "quantity": {
-                    "type": "number"
-                }
-            }
-        },
-        "models.Outlet": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "type": {
-                    "description": "e.g., \"retail\", \"fnb\"",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Product": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "sku": {
-                    "type": "string"
-                },
-                "type": {
-                    "description": "e.g., \"retail_item\", \"fnb_main_product\", \"fnb_component\"",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.PurchaseOrder": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "outlet": {
-                    "$ref": "#/definitions/models.Outlet"
-                },
-                "outlet_id": {
-                    "type": "integer"
-                },
-                "purchase_order_items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.PurchaseOrderItem"
-                    }
-                },
-                "status": {
-                    "description": "e.g., \"pending\", \"completed\", \"cancelled\"",
-                    "type": "string"
-                },
-                "supplier": {
-                    "$ref": "#/definitions/models.Supplier"
-                },
-                "supplier_id": {
-                    "type": "integer"
-                },
-                "total_amount": {
-                    "type": "number"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.PurchaseOrderItem": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "price": {
-                    "description": "Price at the time of PO",
-                    "type": "number"
-                },
-                "product": {
-                    "$ref": "#/definitions/models.Product"
-                },
-                "product_id": {
-                    "type": "integer"
-                },
-                "purchase_order_id": {
-                    "type": "integer"
-                },
-                "purchase_order_uuid": {
-                    "type": "string"
-                },
-                "quantity": {
-                    "type": "number"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.PurchaseOrderItemRequest": {
-            "type": "object",
-            "properties": {
-                "price": {
-                    "type": "number"
-                },
-                "product_uuid": {
-                    "type": "string"
-                },
-                "quantity": {
-                    "type": "number"
-                }
-            }
-        },
-        "models.Recipe": {
-            "type": "object",
-            "properties": {
-                "component": {
-                    "$ref": "#/definitions/models.Product"
-                },
-                "component_id": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "main_product": {
-                    "$ref": "#/definitions/models.Product"
-                },
-                "main_product_id": {
-                    "type": "integer"
-                },
-                "quantity": {
-                    "description": "Quantity of component needed for one main product",
-                    "type": "number"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Stock": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "outlet": {
-                    "$ref": "#/definitions/models.Outlet"
-                },
-                "outlet_id": {
-                    "type": "integer"
-                },
-                "product": {
-                    "$ref": "#/definitions/models.Product"
-                },
-                "product_id": {
-                    "type": "integer"
-                },
-                "quantity": {
-                    "type": "number"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Supplier": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "contact": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.User": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "is_blocked": {
-                    "type": "boolean"
-                },
-                "outlet": {
-                    "$ref": "#/definitions/models.Outlet"
-                },
-                "outlet_id": {
-                    "description": "Optional, for users tied to a specific outlet",
-                    "type": "integer"
-                },
-                "role": {
-                    "description": "e.g., admin, manager, cashier",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                },
-                "uuid": {
-                    "type": "string"
-                }
-            }
-        }
-    },
-    "securityDefinitions": {
-        "ApiKeyAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
-	Host:             "localhost:8080",
-	BasePath:         "/",
-	Schemes:          []string{"http"},
-	Title:            "POS API Documentation",
-	Description:      "This is a sample POS API server.",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
+	Schemes:          []string{},
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 }

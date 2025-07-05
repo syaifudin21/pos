@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 )
 
@@ -23,15 +23,25 @@ func NewSupplierHandler(supplierService *services.SupplierService) *SupplierHand
 // @Tags Suppliers
 // @Accept json
 // @Produce json
-// @Success 200 {object} SuccessResponse{data=[]models.Supplier}
+// @Success 200 {object} SuccessResponse{data=[]dtos.SupplierResponse}
 // @Failure 500 {object} ErrorResponse
 // @Router /suppliers [get]
 func (h *SupplierHandler) GetAllSuppliers(c echo.Context) error {
 	suppliers, err := h.SupplierService.GetAllSuppliers()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Suppliers retrieved successfully", Data: suppliers})
+	var supplierResponses []dtos.SupplierResponse
+	for _, supplier := range suppliers {
+		supplierResponses = append(supplierResponses, dtos.SupplierResponse{
+			ID:      supplier.ID,
+			Uuid:    supplier.Uuid,
+			Name:    supplier.Name,
+			Contact: supplier.Contact,
+			Address: supplier.Address,
+		})
+	}
+	return JSONSuccess(c, http.StatusOK, "Suppliers retrieved successfully", supplierResponses)
 }
 
 // GetSupplierByuuid godoc
@@ -41,7 +51,7 @@ func (h *SupplierHandler) GetAllSuppliers(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Supplier Uuid"
-// @Success 200 {object} SuccessResponse{data=models.Supplier}
+// @Success 200 {object} SuccessResponse{data=dtos.SupplierResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -49,13 +59,13 @@ func (h *SupplierHandler) GetAllSuppliers(c echo.Context) error {
 func (h *SupplierHandler) GetSupplierByuuid(c echo.Context) error {
 	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
 	supplier, err := h.SupplierService.GetSupplierByuuid(uuid)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Supplier retrieved successfully", Data: supplier})
+	return JSONSuccess(c, http.StatusOK, "Supplier retrieved successfully", supplier)
 }
 
 // CreateSupplier godoc
@@ -64,28 +74,22 @@ func (h *SupplierHandler) GetSupplierByuuid(c echo.Context) error {
 // @Tags Suppliers
 // @Accept json
 // @Produce json
-// @Param supplier body CreateSupplierRequest true "Supplier details"
-// @Success 201 {object} SuccessResponse{data=models.Supplier}
+// @Param supplier body dtos.CreateSupplierRequest true "Supplier details"
+// @Success 201 {object} SuccessResponse{data=dtos.SupplierResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /suppliers [post]
 func (h *SupplierHandler) CreateSupplier(c echo.Context) error {
-	req := new(CreateSupplierRequest)
+	req := new(dtos.CreateSupplierRequest)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "Invalid request payload")
 	}
 
-	newSupplier := &models.Supplier{
-		Name:    req.Name,
-		Contact: req.Contact,
-		Address: req.Address,
-	}
-
-	createdSupplier, err := h.SupplierService.CreateSupplier(newSupplier)
+	createdSupplier, err := h.SupplierService.CreateSupplier(req)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusCreated, SuccessResponse{Message: "Supplier created successfully", Data: createdSupplier})
+	return JSONSuccess(c, http.StatusCreated, "Supplier created successfully", createdSupplier)
 }
 
 // UpdateSupplier godoc
@@ -95,8 +99,8 @@ func (h *SupplierHandler) CreateSupplier(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Supplier Uuid"
-// @Param supplier body UpdateSupplierRequest true "Updated supplier details"
-// @Success 200 {object} SuccessResponse{data=models.Supplier}
+// @Param supplier body dtos.UpdateSupplierRequest true "Updated supplier details"
+// @Success 200 {object} SuccessResponse{data=dtos.SupplierResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -104,24 +108,18 @@ func (h *SupplierHandler) CreateSupplier(c echo.Context) error {
 func (h *SupplierHandler) UpdateSupplier(c echo.Context) error {
 	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
-	req := new(UpdateSupplierRequest)
+	req := new(dtos.UpdateSupplierRequest)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "Invalid request payload")
 	}
 
-	updatedSupplier := &models.Supplier{
-		Name:    req.Name,
-		Contact: req.Contact,
-		Address: req.Address,
-	}
-
-	result, err := h.SupplierService.UpdateSupplier(uuid, updatedSupplier)
+	result, err := h.SupplierService.UpdateSupplier(uuid, req)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Supplier updated successfully", Data: result})
+	return JSONSuccess(c, http.StatusOK, "Supplier updated successfully", result)
 }
 
 // DeleteSupplier godoc
@@ -139,23 +137,11 @@ func (h *SupplierHandler) UpdateSupplier(c echo.Context) error {
 func (h *SupplierHandler) DeleteSupplier(c echo.Context) error {
 	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
 	err = h.SupplierService.DeleteSupplier(uuid)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusNoContent, SuccessResponse{Message: "Supplier deleted successfully"})
-}
-
-type CreateSupplierRequest struct {
-	Name    string `json:"name"`
-	Contact string `json:"contact,omitempty"`
-	Address string `json:"address,omitempty"`
-}
-
-type UpdateSupplierRequest struct {
-	Name    string `json:"name"`
-	Contact string `json:"contact,omitempty"`
-	Address string `json:"address,omitempty"`
+	return JSONSuccess(c, http.StatusNoContent, "Supplier deleted successfully", nil)
 }

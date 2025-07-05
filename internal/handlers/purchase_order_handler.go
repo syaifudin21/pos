@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 )
 
@@ -23,23 +23,23 @@ func NewPurchaseOrderHandler(poService *services.PurchaseOrderService) *Purchase
 // @Tags Purchase Orders
 // @Accept json
 // @Produce json
-// @Param purchase_order body models.CreatePurchaseOrderRequest true "Purchase order details"
-// @Success 201 {object} SuccessResponse{data=models.PurchaseOrder}
+// @Param purchase_order body dtos.CreatePurchaseOrderRequest true "Purchase order details"
+// @Success 201 {object} SuccessResponse{data=dtos.PurchaseOrderResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /purchase-orders [post]
 func (h *PurchaseOrderHandler) CreatePurchaseOrder(c echo.Context) error {
-	req := new(models.CreatePurchaseOrderRequest)
+	req := new(dtos.CreatePurchaseOrderRequest)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
 	po, err := h.PurchaseOrderService.CreatePurchaseOrder(req.SupplierUuid, req.OutletUuid, req.Items)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return c.JSON(http.StatusCreated, SuccessResponse{Message: "Purchase order created successfully", Data: po})
+	return JSONSuccess(c, http.StatusCreated, "purchase_order_created_successfully", po)
 }
 
 // GetPurchaseOrderByUuid godoc
@@ -49,7 +49,7 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Purchase Order Uuid"
-// @Success 200 {object} SuccessResponse{data=models.PurchaseOrder}
+// @Success 200 {object} SuccessResponse{data=dtos.PurchaseOrderResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -57,14 +57,14 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c echo.Context) error {
 func (h *PurchaseOrderHandler) GetPurchaseOrderByUuid(c echo.Context) error {
 	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
 	po, err := h.PurchaseOrderService.GetPurchaseOrderByUuid(uuid)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Purchase order retrieved successfully", Data: po})
+	return JSONSuccess(c, http.StatusOK, "purchase_order_retrieved_successfully", po)
 }
 
 // GetPurchaseOrdersByOutlet godoc
@@ -74,21 +74,21 @@ func (h *PurchaseOrderHandler) GetPurchaseOrderByUuid(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param outlet_uuid path string true "Outlet Uuid"
-// @Success 200 {object} SuccessResponse{data=[]models.PurchaseOrder}
+// @Success 200 {object} SuccessResponse{data=[]dtos.PurchaseOrderResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /outlets/{outlet_uuid}/purchase-orders [get]
 func (h *PurchaseOrderHandler) GetPurchaseOrdersByOutlet(c echo.Context) error {
 	OutletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
 	pos, err := h.PurchaseOrderService.GetPurchaseOrdersByOutlet(OutletUuid)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Purchase orders retrieved successfully", Data: pos})
+	return JSONSuccess(c, http.StatusOK, "purchase_orders_retrieved_successfully", pos)
 }
 
 // ReceivePurchaseOrder godoc
@@ -98,7 +98,7 @@ func (h *PurchaseOrderHandler) GetPurchaseOrdersByOutlet(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Purchase Order Uuid"
-// @Success 200 {object} SuccessResponse{data=models.PurchaseOrder}
+// @Success 200 {object} SuccessResponse{data=dtos.PurchaseOrderResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -106,12 +106,12 @@ func (h *PurchaseOrderHandler) GetPurchaseOrdersByOutlet(c echo.Context) error {
 func (h *PurchaseOrderHandler) ReceivePurchaseOrder(c echo.Context) error {
 	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
 	po, err := h.PurchaseOrderService.ReceivePurchaseOrder(uuid)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Purchase order received successfully", Data: po})
+	return JSONSuccess(c, http.StatusOK, "purchase_order_received_successfully", po)
 }

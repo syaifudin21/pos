@@ -124,6 +124,11 @@ func main() {
 	productGroup.PUT("/:uuid", productHandler.UpdateProduct)
 	productGroup.DELETE("/:uuid", productHandler.DeleteProduct)
 
+	// Products by outlet
+	outletProductGroup := e.Group("/outlets/:outlet_uuid/products")
+	outletProductGroup.Use(internalmw.Authorize("products", "read"))
+	outletProductGroup.GET("/", productHandler.GetProductsByOutlet)
+
 	// Initialize recipe service and handler
 	recipeService := services.NewRecipeService(database.DB)
 	recipeHandler := handlers.NewRecipeHandler(recipeService)

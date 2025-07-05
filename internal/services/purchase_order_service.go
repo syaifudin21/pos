@@ -3,9 +3,11 @@ package services
 import (
 	"errors"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
 )
 
@@ -19,7 +21,7 @@ func NewPurchaseOrderService(db *gorm.DB, stockService *StockService) *PurchaseO
 }
 
 // CreatePurchaseOrder creates a new purchase order.
-func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid.UUID, items []models.PurchaseOrderItemRequest) (*models.PurchaseOrder, error) {
+func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid.UUID, items []dtos.PurchaseItemRequest) (*dtos.PurchaseOrderResponse, error) {
 	var supplier models.Supplier
 	if err := s.DB.Where("uuid = ?", supplierUuid).First(&supplier).Error; err != nil {
 		return nil, errors.New("supplier not found")
@@ -51,7 +53,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 	totalAmount := 0.0
 	for _, item := range items {
 		var product models.Product
-		if err := tx.Where("uuid = ?", item.Productuuid).First(&product).Error; err != nil {
+		if err := tx.Where("uuid = ?", item.ProductUuid).First(&product).Error; err != nil {
 			tx.Rollback()
 			return nil, errors.New("product not found")
 		}
@@ -60,7 +62,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 			PurchaseOrderID:   po.ID,
 			PurchaseOrderUuid: po.Uuid, // Set the ExternalID here
 			ProductID:         product.ID,
-			Quantity:          item.Quantity,
+			Quantity:          float64(item.Quantity),
 			Price:             item.Price,
 		}
 
@@ -69,7 +71,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 			log.Printf("Error creating purchase order item: %v", err)
 			return nil, errors.New("failed to create purchase order item")
 		}
-		totalAmount += item.Price * item.Quantity
+		totalAmount += item.Price * float64(item.Quantity)
 	}
 
 	po.TotalAmount = totalAmount
@@ -81,40 +83,74 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 
 	tx.Commit()
 
-	s.DB.Preload("Supplier").Preload("Outlet").Preload("PurchaseOrderItems.Product").First(&po, po.ID)
-	return &po, nil
+	return &dtos.PurchaseOrderResponse{
+		ID:           po.ID,
+		Uuid:         po.Uuid,
+		SupplierID:   supplier.ID,
+		SupplierUuid: supplier.Uuid,
+		OutletID:     po.OutletID,
+		OutletUuid:   outlet.Uuid,
+		OrderDate:    po.CreatedAt.Format(time.RFC3339),
+		TotalAmount:  po.TotalAmount,
+		Status:       po.Status,
+	}, nil
 }
 
 // GetPurchaseOrderByExternalID retrieves a purchase order by its external ID.
-func (s *PurchaseOrderService) GetPurchaseOrderByUuid(uuid uuid.UUID) (*models.PurchaseOrder, error) {
+func (s *PurchaseOrderService) GetPurchaseOrderByUuid(uuid uuid.UUID) (*dtos.PurchaseOrderResponse, error) {
 	var po models.PurchaseOrder
-	if err := s.DB.Preload("Supplier").Preload("Outlet").Preload("PurchaseOrderItems.Product").Where("uuid = ?", uuid).First(&po).Error; err != nil {
+	if err := s.DB.Preload("Supplier").Preload("Outlet").Where("uuid = ?", uuid).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("purchase order not found")
 		}
 		log.Printf("Error getting purchase order by ExternalID: %v", err)
 		return nil, errors.New("failed to retrieve purchase order")
 	}
-	return &po, nil
+	return &dtos.PurchaseOrderResponse{
+		ID:           po.ID,
+		Uuid:         po.Uuid,
+		SupplierID:   po.SupplierID,
+		SupplierUuid: po.Supplier.Uuid,
+		OutletID:     po.OutletID,
+		OutletUuid:   po.Outlet.Uuid,
+		OrderDate:    po.CreatedAt.Format(time.RFC3339),
+		TotalAmount:  po.TotalAmount,
+		Status:       po.Status,
+	}, nil
 }
 
 // GetPurchaseOrdersByOutlet retrieves all purchase orders for a specific outlet.
-func (s *PurchaseOrderService) GetPurchaseOrdersByOutlet(outletUuid uuid.UUID) ([]models.PurchaseOrder, error) {
+func (s *PurchaseOrderService) GetPurchaseOrdersByOutlet(outletUuid uuid.UUID) ([]dtos.PurchaseOrderResponse, error) {
 	var pos []models.PurchaseOrder
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
-	if err := s.DB.Preload("Supplier").Preload("PurchaseOrderItems.Product").Where("outlet_id = ?", outlet.ID).Find(&pos).Error; err != nil {
+	if err := s.DB.Preload("Supplier").Where("outlet_id = ?", outlet.ID).Find(&pos).Error; err != nil {
 		log.Printf("Error getting purchase orders by outlet: %v", err)
 		return nil, errors.New("failed to retrieve purchase orders")
 	}
-	return pos, nil
+
+	var poResponses []dtos.PurchaseOrderResponse
+	for _, po := range pos {
+		poResponses = append(poResponses, dtos.PurchaseOrderResponse{
+			ID:           po.ID,
+			Uuid:         po.Uuid,
+			SupplierID:   po.SupplierID,
+			SupplierUuid: po.Supplier.Uuid,
+			OutletID:     po.OutletID,
+			OutletUuid:   outlet.Uuid,
+			OrderDate:    po.CreatedAt.Format(time.RFC3339),
+			TotalAmount:  po.TotalAmount,
+			Status:       po.Status,
+		})
+	}
+	return poResponses, nil
 }
 
 // ReceivePurchaseOrder updates stock based on a completed purchase order.
-func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID) (*models.PurchaseOrder, error) {
+func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID) (*dtos.PurchaseOrderResponse, error) {
 	var po models.PurchaseOrder
 	if err := s.DB.Preload("Outlet").Preload("PurchaseOrderItems.Product").Where("uuid = ?", poUuid).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -152,6 +188,15 @@ func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID) (*models.P
 
 	tx.Commit()
 
-	s.DB.Preload("Supplier").Preload("Outlet").Preload("PurchaseOrderItems.Product").First(&po, po.ID)
-	return &po, nil
+	return &dtos.PurchaseOrderResponse{
+		ID:           po.ID,
+		Uuid:         po.Uuid,
+		SupplierID:   po.SupplierID,
+		SupplierUuid: po.Supplier.Uuid,
+		OutletID:     po.OutletID,
+		OutletUuid:   po.Outlet.Uuid,
+		OrderDate:    po.CreatedAt.Format(time.RFC3339),
+		TotalAmount:  po.TotalAmount,
+		Status:       po.Status,
+	}, nil
 }

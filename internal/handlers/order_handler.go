@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/pkg/utils"
 )
@@ -24,16 +24,16 @@ func NewOrderHandler(orderService *services.OrderService) *OrderHandler {
 // @Tags Orders
 // @Accept json
 // @Produce json
-// @Param order body models.CreateOrderRequest true "Order details"
-// @Success 201 {object} SuccessResponse{data=models.Order}
+// @Param order body dtos.CreateOrderRequest true "Order details"
+// @Success 201 {object} SuccessResponse{data=dtos.OrderResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /orders [post]
 func (h *OrderHandler) CreateOrder(c echo.Context) error {
-	req := new(models.CreateOrderRequest)
+	req := new(dtos.CreateOrderRequest)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
 	claims := c.Get("claims").(*utils.Claims)
@@ -45,10 +45,10 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 	order, err := h.OrderService.CreateOrder(outletUuid, userUuid, req.Items)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return c.JSON(http.StatusCreated, SuccessResponse{Message: "Order created successfully", Data: order})
+	return JSONSuccess(c, http.StatusCreated, "order_created_successfully", order)
 }
 
 // GetOrderByUuid godoc
@@ -58,7 +58,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Order Uuid"
-// @Success 200 {object} SuccessResponse{data=models.Order}
+// @Success 200 {object} SuccessResponse{data=dtos.OrderResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -66,14 +66,14 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
 	uuid, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid UUID format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
 	order, err := h.OrderService.GetOrderByUuid(uuid)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Order retrieved successfully", Data: order})
+	return JSONSuccess(c, http.StatusOK, "order_retrieved_successfully", order)
 }
 
 // GetOrdersByOutlet godoc
@@ -83,19 +83,19 @@ func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param outlet_uuid path string true "Outlet Uuid"
-// @Success 200 {object} SuccessResponse{data=[]models.Order}
+// @Success 200 {object} SuccessResponse{data=[]dtos.OrderResponse}
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /outlets/{outlet_uuid}/orders [get]
 func (h *OrderHandler) GetOrdersByOutlet(c echo.Context) error {
 	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid Outlet Uuid format"})
+		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
 	orders, err := h.OrderService.GetOrdersByOutlet(outletUuid)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, SuccessResponse{Message: "Orders retrieved successfully", Data: orders})
+	return JSONSuccess(c, http.StatusOK, "orders_retrieved_successfully", orders)
 }

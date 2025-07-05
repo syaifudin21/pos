@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +27,7 @@ func (s *OutletService) GetAllOutlets() ([]models.Outlet, error) {
 	return outlets, nil
 }
 
-func (s *OutletService) GetOutletByUuid(Uuid uuid.UUID) (*models.Outlet, error) {
+func (s *OutletService) GetOutletByUuid(Uuid uuid.UUID) (*dtos.OutletResponse, error) {
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ?", Uuid).First(&outlet).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -35,18 +36,35 @@ func (s *OutletService) GetOutletByUuid(Uuid uuid.UUID) (*models.Outlet, error) 
 		log.Printf("Error getting outlet by Uuid: %v", err)
 		return nil, errors.New("failed to retrieve outlet")
 	}
-	return &outlet, nil
+	return &dtos.OutletResponse{
+		ID:      outlet.ID,
+		Uuid:    outlet.Uuid,
+		Name:    outlet.Name,
+		Address: outlet.Address,
+		Type:    outlet.Type,
+	}, nil
 }
 
-func (s *OutletService) CreateOutlet(outlet *models.Outlet) (*models.Outlet, error) {
+func (s *OutletService) CreateOutlet(req *dtos.OutletCreateRequest) (*dtos.OutletResponse, error) {
+	outlet := &models.Outlet{
+		Name:    req.Name,
+		Address: req.Address,
+		Type:    req.Type,
+	}
 	if err := s.DB.Create(outlet).Error; err != nil {
 		log.Printf("Error creating outlet: %v", err)
 		return nil, errors.New("failed to create outlet")
 	}
-	return outlet, nil
+	return &dtos.OutletResponse{
+		ID:      outlet.ID,
+		Uuid:    outlet.Uuid,
+		Name:    outlet.Name,
+		Address: outlet.Address,
+		Type:    outlet.Type,
+	}, nil
 }
 
-func (s *OutletService) UpdateOutlet(Uuid uuid.UUID, updatedOutlet *models.Outlet) (*models.Outlet, error) {
+func (s *OutletService) UpdateOutlet(Uuid uuid.UUID, req *dtos.OutletUpdateRequest) (*dtos.OutletResponse, error) {
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ?", Uuid).First(&outlet).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -57,15 +75,21 @@ func (s *OutletService) UpdateOutlet(Uuid uuid.UUID, updatedOutlet *models.Outle
 	}
 
 	// Update fields
-	outlet.Name = updatedOutlet.Name
-	outlet.Address = updatedOutlet.Address
-	outlet.Type = updatedOutlet.Type
+	outlet.Name = req.Name
+	outlet.Address = req.Address
+	outlet.Type = req.Type
 
 	if err := s.DB.Save(&outlet).Error; err != nil {
 		log.Printf("Error updating outlet: %v", err)
 		return nil, errors.New("failed to update outlet")
 	}
-	return &outlet, nil
+	return &dtos.OutletResponse{
+		ID:      outlet.ID,
+		Uuid:    outlet.Uuid,
+		Name:    outlet.Name,
+		Address: outlet.Address,
+		Type:    outlet.Type,
+	}, nil
 }
 
 func (s *OutletService) DeleteOutlet(Uuid uuid.UUID) error {
