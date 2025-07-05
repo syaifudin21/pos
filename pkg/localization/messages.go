@@ -113,10 +113,6 @@ var messages = map[string]map[string]string{
 		"en": "Invalid product type specified",
 		"id": "Jenis produk yang ditentukan tidak valid",
 	},
-	"invalid_external_id_format": {
-		"en": "Invalid External ID format",
-		"id": "Format ID Eksternal tidak valid",
-	},
 	"purchase_order_created_successfully": {
 		"en": "Purchase order created successfully",
 		"id": "Pesanan pembelian berhasil dibuat",
@@ -188,6 +184,10 @@ var messages = map[string]map[string]string{
 	"invalid_product_uuid_format": {
 		"en": "Invalid Product Uuid format",
 		"id": "Format UUID Produk tidak valid",
+	},
+	"user_deleted_successfully": {
+		"en": "User deleted successfully",
+		"id": "Pengguna berhasil dihapus",
 	},
 }
 

@@ -59,9 +59,9 @@ func (h *ProductHandler) GetAllProducts(c echo.Context) error {
 }
 
 func (h *ProductHandler) GetProductByID(c echo.Context) error {
-	id, err := uuid.Parse(c.Param("external_id"))
+	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_external_id_format")
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
 	user := c.Get("user").(*jwt.Token)
@@ -99,7 +99,7 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("uuid"))
 	if err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_external_id_format")
+		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 	product := new(dtos.ProductUpdateRequest)
 	if err := c.Bind(product); err != nil {

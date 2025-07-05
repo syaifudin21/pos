@@ -181,6 +181,24 @@ func (s *AuthService) UpdateUser(userID uint, updates *dtos.UpdateUserRequest) (
 	return &user, nil
 }
 
+func (s *AuthService) DeleteUser(userID uint) error {
+	var user models.User
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		log.Printf("Error finding user for deletion: %v", err)
+		return errors.New("failed to retrieve user for deletion")
+	}
+
+	if err := s.DB.Delete(&user).Error; err != nil {
+		log.Printf("Error deleting user: %v", err)
+		return errors.New("failed to delete user")
+	}
+
+	return nil
+}
+
 func isValidRole(role string) bool {
 	for _, r := range models.AllowedUserRoles {
 		if r == role {

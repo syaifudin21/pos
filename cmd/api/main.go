@@ -89,6 +89,7 @@ func main() {
 	userAdminGroup.PUT("/:uuid", authHandler.UpdateUser)
 	userAdminGroup.PUT("/:uuid/block", authHandler.BlockUser)
 	userAdminGroup.PUT("/:uuid/unblock", authHandler.UnblockUser)
+	userAdminGroup.DELETE("/:uuid", authHandler.DeleteUser)
 
 	// Initialize product and outlet services and handlers
 	productService := services.NewProductService(database.DB)

@@ -84,7 +84,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 
 		poItem := models.PurchaseOrderItem{
 			PurchaseOrderID:   po.ID,
-			PurchaseOrderUuid: po.Uuid, // Set the ExternalID here
+			PurchaseOrderUuid: po.Uuid, // Set the UUID here
 			ProductID:         product.ID,
 			Quantity:          float64(item.Quantity),
 			Price:             item.Price,
@@ -120,7 +120,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 	}, nil
 }
 
-// GetPurchaseOrderByExternalID retrieves a purchase order by its external ID.
+// GetPurchaseOrderByUuid retrieves a purchase order by its UUID.
 func (s *PurchaseOrderService) GetPurchaseOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.PurchaseOrderResponse, error) {
 	ownerID, err := s.GetOwnerID(userID)
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *PurchaseOrderService) GetPurchaseOrderByUuid(uuid uuid.UUID, userID uin
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("purchase order not found")
 		}
-		log.Printf("Error getting purchase order by ExternalID: %v", err)
+		log.Printf("Error getting purchase order by UUID: %v", err)
 		return nil, errors.New("failed to retrieve purchase order")
 	}
 	return &dtos.PurchaseOrderResponse{

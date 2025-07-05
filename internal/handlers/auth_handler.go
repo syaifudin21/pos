@@ -176,3 +176,22 @@ func (h *AuthHandler) UpdateUser(c echo.Context) error {
 
 	return JSONSuccess(c, http.StatusOK, "user_updated_successfully", dtos.UserResponse{ID: updatedUser.ID, Uuid: updatedUser.Uuid, Username: updatedUser.Username, Role: updatedUser.Role})
 }
+
+func (h *AuthHandler) DeleteUser(c echo.Context) error {
+	userUuidParam := c.Param("uuid")
+	userUuid, err := uuid.Parse(userUuidParam)
+	if err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_user_uuid_format")
+	}
+
+	user, err := h.AuthService.GetUserByuuid(userUuid)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	if err := h.AuthService.DeleteUser(user.ID); err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "user_deleted_successfully", nil)
+}

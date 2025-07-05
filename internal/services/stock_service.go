@@ -157,18 +157,18 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 
 // DeductStockForSale handles stock deduction based on product type.
 // For FnB main products, it deducts from components based on recipe.
-func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uuid.UUID, quantity float64, userID uint) error {
+func (s *StockService) DeductStockForSale(outletUuid, productUuid uuid.UUID, quantity float64, userID uint) error {
 	ownerID, err := s.GetOwnerID(userID)
 	if err != nil {
 		return err
 	}
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ? AND user_id = ?", outletExternalID, ownerID).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, ownerID).First(&outlet).Error; err != nil {
 		return errors.New("outlet not found")
 	}
 
 	var product models.Product
-	if err := s.DB.Where("uuid = ? AND user_id = ?", productExternalID, ownerID).First(&product).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", productUuid, ownerID).First(&product).Error; err != nil {
 		return errors.New("product not found")
 	}
 
