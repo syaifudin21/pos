@@ -173,6 +173,26 @@ func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uu
 			}
 			log.Printf("DeductStockForSale: After deduction - Product %s (component of %s), New Stock: %f", recipe.Component.Name, product.Name, componentStock.Quantity)
 		}
+	} else if product.Type == "retail_item" {
+		var retailStock models.Stock
+		if err := s.DB.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outlet.ID, product.ID, userID).First(&retailStock).Error; err != nil {
+			log.Printf("DeductStockForSale: Retail item stock not found for product %s in outlet %s. Error: %v", product.Name, outlet.Name, err)
+			return errors.New("retail item stock not found")
+		}
+
+		log.Printf("DeductStockForSale: Before deduction - Product %s, Current Stock: %f", product.Name, retailStock.Quantity)
+
+		if retailStock.Quantity < quantity {
+			log.Printf("DeductStockForSale: Insufficient stock for retail item %s. Available: %f, Required: %f", product.Name, retailStock.Quantity, quantity)
+			return errors.New("insufficient stock for retail item")
+		}
+
+		retailStock.Quantity -= quantity
+		if err := s.DB.Save(&retailStock).Error; err != nil {
+			log.Printf("Error deducting retail item stock for product %s: %v", product.Name, err)
+			return errors.New("failed to deduct retail item stock")
+		}
+		log.Printf("DeductStockForSale: After deduction - Product %s, New Stock: %f", product.Name, retailStock.Quantity)
 	}
 
 	return nil

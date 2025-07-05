@@ -9,10 +9,10 @@ import (
 var jwtSecret = []byte("your_secret_key") // TODO: Use environment variable
 
 type Claims struct {
-	Username string    `json:"username"`
-	Role     string    `json:"role"`
-	OutletID *uint     `json:"outlet_id,omitempty"`
-	ID       uint `json:"id"` // User's uuid
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	OutletID *uint  `json:"outlet_id,omitempty"`
+	ID       uint   `json:"id"` // User's uuid
 	jwt.RegisteredClaims
 }
 
