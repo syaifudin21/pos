@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/pkg/utils"
 	"gorm.io/gorm"
 )
@@ -18,7 +19,7 @@ func NewAuthService(db *gorm.DB) *AuthService {
 	return &AuthService{DB: db}
 }
 
-func (s *AuthService) RegisterUser(username, password, role string, outletID *uint) (*models.User, error) {
+func (s *AuthService) RegisterUser(username, password, role string, outletID *uint, creatorID *uint, email *string, phoneNumber *string) (*models.User, error) {
 	// Check if username already exists
 	var existingUser models.User
 	if s.DB.Where("username = ?", username).First(&existingUser).Error == nil {
@@ -32,9 +33,20 @@ func (s *AuthService) RegisterUser(username, password, role string, outletID *ui
 	}
 
 	user := models.User{
-		Username: username,
-		Password: hashedPassword,
-		Role:     role,
+		Username:    username,
+		Password:    hashedPassword,
+		Role:        role,
+		OutletID:    outletID,
+		CreatorID:   creatorID,
+	}
+
+	// Assign email if not nil
+	if email != nil {
+		user.Email = *email
+	}
+	// Assign phoneNumber if not nil
+	if phoneNumber != nil {
+		user.PhoneNumber = *phoneNumber
 	}
 
 	if err := s.DB.Create(&user).Error; err != nil {
@@ -122,4 +134,62 @@ func (s *AuthService) GetUserByuuid(userUuid uuid.UUID) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (s *AuthService) GetAllUsers(adminID uint) ([]models.User, error) {
+	var users []models.User
+	if err := s.DB.Where("creator_id = ?", adminID).Find(&users).Error; err != nil {
+		log.Printf("Error getting all users: %v", err)
+		return nil, errors.New("failed to retrieve users")
+	}
+	return users, nil
+}
+
+func (s *AuthService) UpdateUser(userID uint, updates *dtos.UpdateUserRequest) (*models.User, error) {
+	var user models.User
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		log.Printf("Error finding user for update: %v", err)
+		return nil, errors.New("failed to retrieve user for update")
+	}
+
+	// Update fields if provided
+	if updates.Username != nil {
+		user.Username = *updates.Username
+	}
+	if updates.Password != nil {
+		hashedPassword, err := utils.HashPassword(*updates.Password)
+		if err != nil {
+			log.Printf("Error hashing new password: %v", err)
+			return nil, errors.New("failed to hash new password")
+		}
+		user.Password = hashedPassword
+	}
+	if updates.Role != nil {
+		if !isValidRole(*updates.Role) {
+			return nil, errors.New("invalid role specified")
+		}
+		user.Role = *updates.Role
+	}
+
+	// Handle OutletID update
+	user.OutletID = updates.OutletID // Can be nil to remove association
+
+	if err := s.DB.Save(&user).Error; err != nil {
+		log.Printf("Error updating user: %v", err)
+		return nil, errors.New("failed to update user")
+	}
+
+	return &user, nil
+}
+
+func isValidRole(role string) bool {
+	for _, r := range models.AllowedUserRoles {
+		if r == role {
+			return true
+		}
+	}
+	return false
 }
