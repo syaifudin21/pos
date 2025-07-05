@@ -18,7 +18,7 @@ func NewOutletService(db *gorm.DB) *OutletService {
 	return &OutletService{DB: db}
 }
 
-func (s *OutletService) GetAllOutlets(userID uuid.UUID) ([]models.Outlet, error) {
+func (s *OutletService) GetAllOutlets(userID uint) ([]models.Outlet, error) {
 	var outlets []models.Outlet
 	if err := s.DB.Where("user_id = ?", userID).Find(&outlets).Error; err != nil {
 		log.Printf("Error getting all outlets: %v", err)
@@ -27,7 +27,7 @@ func (s *OutletService) GetAllOutlets(userID uuid.UUID) ([]models.Outlet, error)
 	return outlets, nil
 }
 
-func (s *OutletService) GetOutletByUuid(Uuid uuid.UUID, userID uuid.UUID) (*dtos.OutletResponse, error) {
+func (s *OutletService) GetOutletByUuid(Uuid uuid.UUID, userID uint) (*dtos.OutletResponse, error) {
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, userID).First(&outlet).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -45,7 +45,7 @@ func (s *OutletService) GetOutletByUuid(Uuid uuid.UUID, userID uuid.UUID) (*dtos
 	}, nil
 }
 
-func (s *OutletService) CreateOutlet(req *dtos.OutletCreateRequest, userID uuid.UUID) (*dtos.OutletResponse, error) {
+func (s *OutletService) CreateOutlet(req *dtos.OutletCreateRequest, userID uint) (*dtos.OutletResponse, error) {
 	outlet := &models.Outlet{
 		Name:    req.Name,
 		Address: req.Address,
@@ -65,7 +65,7 @@ func (s *OutletService) CreateOutlet(req *dtos.OutletCreateRequest, userID uuid.
 	}, nil
 }
 
-func (s *OutletService) UpdateOutlet(Uuid uuid.UUID, req *dtos.OutletUpdateRequest, userID uuid.UUID) (*dtos.OutletResponse, error) {
+func (s *OutletService) UpdateOutlet(Uuid uuid.UUID, req *dtos.OutletUpdateRequest, userID uint) (*dtos.OutletResponse, error) {
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, userID).First(&outlet).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -93,7 +93,7 @@ func (s *OutletService) UpdateOutlet(Uuid uuid.UUID, req *dtos.OutletUpdateReque
 	}, nil
 }
 
-func (s *OutletService) DeleteOutlet(Uuid uuid.UUID, userID uuid.UUID) error {
+func (s *OutletService) DeleteOutlet(Uuid uuid.UUID, userID uint) error {
 	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, userID).Delete(&models.Outlet{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("outlet not found")

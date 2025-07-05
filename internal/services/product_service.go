@@ -18,7 +18,7 @@ func NewProductService(db *gorm.DB) *ProductService {
 	return &ProductService{DB: db}
 }
 
-func (s *ProductService) GetAllProducts(userID uuid.UUID) ([]models.Product, error) {
+func (s *ProductService) GetAllProducts(userID uint) ([]models.Product, error) {
 	var products []models.Product
 	if err := s.DB.Where("user_id = ?", userID).Find(&products).Error; err != nil {
 		log.Printf("Error getting all products: %v", err)
@@ -27,7 +27,7 @@ func (s *ProductService) GetAllProducts(userID uuid.UUID) ([]models.Product, err
 	return products, nil
 }
 
-func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uuid.UUID) (*dtos.ProductResponse, error) {
+func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.ProductResponse, error) {
 	var product models.Product
 	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, userID).First(&product).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -47,7 +47,7 @@ func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uuid.UUID) (*dt
 	}, nil
 }
 
-func (s *ProductService) CreateProduct(req *dtos.ProductCreateRequest, userID uuid.UUID) (*dtos.ProductResponse, error) {
+func (s *ProductService) CreateProduct(req *dtos.ProductCreateRequest, userID uint) (*dtos.ProductResponse, error) {
 	product := &models.Product{
 		Name:        req.Name,
 		Description: req.Description,
@@ -71,7 +71,7 @@ func (s *ProductService) CreateProduct(req *dtos.ProductCreateRequest, userID uu
 	}, nil
 }
 
-func (s *ProductService) UpdateProduct(Uuid uuid.UUID, req *dtos.ProductUpdateRequest, userID uuid.UUID) (*dtos.ProductResponse, error) {
+func (s *ProductService) UpdateProduct(Uuid uuid.UUID, req *dtos.ProductUpdateRequest, userID uint) (*dtos.ProductResponse, error) {
 	var product models.Product
 	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, userID).First(&product).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -103,7 +103,7 @@ func (s *ProductService) UpdateProduct(Uuid uuid.UUID, req *dtos.ProductUpdateRe
 	}, nil
 }
 
-func (s *ProductService) DeleteProduct(Uuid uuid.UUID, userID uuid.UUID) error {
+func (s *ProductService) DeleteProduct(Uuid uuid.UUID, userID uint) error {
 	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, userID).Delete(&models.Product{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("product not found")
@@ -115,7 +115,7 @@ func (s *ProductService) DeleteProduct(Uuid uuid.UUID, userID uuid.UUID) error {
 }
 
 // GetProductsByOutlet retrieves all products available in a specific outlet (i.e., have stock).
-func (s *ProductService) GetProductsByOutlet(outletUuid uuid.UUID, userID uuid.UUID) ([]dtos.ProductOutletResponse, error) {
+func (s *ProductService) GetProductsByOutlet(outletUuid uuid.UUID, userID uint) ([]dtos.ProductOutletResponse, error) {
 	var products []dtos.ProductOutletResponse
 
 	// Find the outlet first

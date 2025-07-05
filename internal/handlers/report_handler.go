@@ -20,7 +20,8 @@ func NewReportHandler(reportService *services.ReportService) *ReportHandler {
 }
 
 func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
-	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
+	outletUuidParam := c.Param("outlet_uuid")
+	outletUuid, err := uuid.Parse(outletUuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
@@ -50,7 +51,8 @@ func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
 }
 
 func (h *ReportHandler) GetSalesByProductReport(c echo.Context) error {
-	productUuid, err := uuid.Parse(c.Param("product_uuid"))
+	productUuidParam := c.Param("product_uuid")
+	productUuid, err := uuid.Parse(productUuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_product_uuid_format")
 	}

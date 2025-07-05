@@ -19,7 +19,8 @@ func NewRecipeHandler(recipeService *services.RecipeService) *RecipeHandler {
 	return &RecipeHandler{RecipeService: recipeService}
 }
 func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
-	uuid, err := uuid.Parse(c.Param("uuid"))
+	uuidParam := c.Param("uuid")
+	parsedUuid, err := uuid.Parse(uuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
@@ -28,7 +29,7 @@ func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	recipe, err := h.RecipeService.GetRecipeByUuid(uuid, userID)
+	recipe, err := h.RecipeService.GetRecipeByUuid(parsedUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -36,7 +37,8 @@ func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 }
 
 func (h *RecipeHandler) GetRecipesByMainProduct(c echo.Context) error {
-	mainProductUuid, err := uuid.Parse(c.Param("main_product_uuid"))
+	mainProductUuidParam := c.Param("main_product_uuid")
+	mainProductUuid, err := uuid.Parse(mainProductUuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_main_product_uuid_format")
 	}
@@ -80,7 +82,8 @@ func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
 	return JSONSuccess(c, http.StatusCreated, "recipe_created_successfully", createdRecipe)
 }
 func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
-	uuid, err := uuid.Parse(c.Param("uuid"))
+	uuidParam := c.Param("uuid")
+	parsedUuid, err := uuid.Parse(uuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
@@ -93,7 +96,7 @@ func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	updatedRecipe, err := h.RecipeService.UpdateRecipe(uuid, req.MainProductUuid, req.ComponentUuid, req.Quantity, userID)
+	updatedRecipe, err := h.RecipeService.UpdateRecipe(parsedUuid, req.MainProductUuid, req.ComponentUuid, req.Quantity, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -101,7 +104,8 @@ func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 }
 
 func (h *RecipeHandler) DeleteRecipe(c echo.Context) error {
-	uuid, err := uuid.Parse(c.Param("uuid"))
+	uuidParam := c.Param("uuid")
+	parsedUuid, err := uuid.Parse(uuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
@@ -110,7 +114,7 @@ func (h *RecipeHandler) DeleteRecipe(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	err = h.RecipeService.DeleteRecipe(uuid, userID)
+	err = h.RecipeService.DeleteRecipe(parsedUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

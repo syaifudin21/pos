@@ -19,7 +19,7 @@ func NewReportService(db *gorm.DB) *ReportService {
 }
 
 // SalesByOutletReport generates a sales report for a specific outlet within a date range.
-func (s *ReportService) SalesByOutletReport(outletUuid uuid.UUID, startDate, endDate time.Time, userID uuid.UUID) ([]models.Order, error) {
+func (s *ReportService) SalesByOutletReport(outletUuid uuid.UUID, startDate, endDate time.Time, userID uint) ([]models.Order, error) {
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
@@ -39,7 +39,7 @@ func (s *ReportService) SalesByOutletReport(outletUuid uuid.UUID, startDate, end
 }
 
 // SalesByProductReport generates a sales report for a specific product within a date range.
-func (s *ReportService) SalesByProductReport(productUuid uuid.UUID, startDate, endDate time.Time, userID uuid.UUID) ([]models.OrderItem, error) {
+func (s *ReportService) SalesByProductReport(productUuid uuid.UUID, startDate, endDate time.Time, userID uint) ([]models.OrderItem, error) {
 	var product models.Product
 	if err := s.DB.Where("uuid = ? AND user_id = ?", productUuid, userID).First(&product).Error; err != nil {
 		return nil, errors.New("product not found")

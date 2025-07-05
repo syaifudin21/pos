@@ -41,7 +41,8 @@ func (h *SupplierHandler) GetAllSuppliers(c echo.Context) error {
 	return JSONSuccess(c, http.StatusOK, "Suppliers retrieved successfully", supplierResponses)
 }
 func (h *SupplierHandler) GetSupplierByuuid(c echo.Context) error {
-	uuid, err := uuid.Parse(c.Param("uuid"))
+	uuidParam := c.Param("uuid")
+	parsedUuid, err := uuid.Parse(uuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
@@ -50,7 +51,7 @@ func (h *SupplierHandler) GetSupplierByuuid(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	supplier, err := h.SupplierService.GetSupplierByuuid(uuid, userID)
+	supplier, err := h.SupplierService.GetSupplierByuuid(parsedUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -75,7 +76,8 @@ func (h *SupplierHandler) CreateSupplier(c echo.Context) error {
 }
 
 func (h *SupplierHandler) UpdateSupplier(c echo.Context) error {
-	uuid, err := uuid.Parse(c.Param("uuid"))
+	uuidParam := c.Param("uuid")
+	parsedUuid, err := uuid.Parse(uuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
@@ -88,7 +90,7 @@ func (h *SupplierHandler) UpdateSupplier(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	result, err := h.SupplierService.UpdateSupplier(uuid, req, userID)
+	result, err := h.SupplierService.UpdateSupplier(parsedUuid, req, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -96,7 +98,8 @@ func (h *SupplierHandler) UpdateSupplier(c echo.Context) error {
 }
 
 func (h *SupplierHandler) DeleteSupplier(c echo.Context) error {
-	uuid, err := uuid.Parse(c.Param("uuid"))
+	uuidParam := c.Param("uuid")
+	parsedUuid, err := uuid.Parse(uuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
@@ -105,7 +108,7 @@ func (h *SupplierHandler) DeleteSupplier(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	err = h.SupplierService.DeleteSupplier(uuid, userID)
+	err = h.SupplierService.DeleteSupplier(parsedUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

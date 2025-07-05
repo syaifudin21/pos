@@ -37,7 +37,8 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c echo.Context) error {
 }
 
 func (h *PurchaseOrderHandler) GetPurchaseOrderByUuid(c echo.Context) error {
-	uuid, err := uuid.Parse(c.Param("uuid"))
+	uuidParam := c.Param("uuid")
+	parsedUuid, err := uuid.Parse(uuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
@@ -46,7 +47,7 @@ func (h *PurchaseOrderHandler) GetPurchaseOrderByUuid(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	po, err := h.PurchaseOrderService.GetPurchaseOrderByUuid(uuid, userID)
+	po, err := h.PurchaseOrderService.GetPurchaseOrderByUuid(parsedUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -54,7 +55,8 @@ func (h *PurchaseOrderHandler) GetPurchaseOrderByUuid(c echo.Context) error {
 }
 
 func (h *PurchaseOrderHandler) GetPurchaseOrdersByOutlet(c echo.Context) error {
-	OutletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
+	OutletUuidParam := c.Param("outlet_uuid")
+	OutletUuid, err := uuid.Parse(OutletUuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
@@ -71,7 +73,8 @@ func (h *PurchaseOrderHandler) GetPurchaseOrdersByOutlet(c echo.Context) error {
 }
 
 func (h *PurchaseOrderHandler) ReceivePurchaseOrder(c echo.Context) error {
-	uuid, err := uuid.Parse(c.Param("uuid"))
+	uuidParam := c.Param("uuid")
+	parsedUuid, err := uuid.Parse(uuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
@@ -80,7 +83,7 @@ func (h *PurchaseOrderHandler) ReceivePurchaseOrder(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	po, err := h.PurchaseOrderService.ReceivePurchaseOrder(uuid, userID)
+	po, err := h.PurchaseOrderService.ReceivePurchaseOrder(parsedUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

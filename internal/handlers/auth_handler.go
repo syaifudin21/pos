@@ -46,7 +46,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return JSONSuccess(c, http.StatusCreated, "user_registered_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role, OutletID: user.OutletID})
+	return JSONSuccess(c, http.StatusCreated, "user_registered_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role})
 }
 
 func (h *AuthHandler) Login(c echo.Context) error {
@@ -64,16 +64,22 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return JSONSuccess(c, http.StatusOK, "login_successful", dtos.LoginResponse{Token: token, User: dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role, OutletID: user.OutletID}})
+	return JSONSuccess(c, http.StatusOK, "login_successful", dtos.LoginResponse{Token: token, User: dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role}})
 }
 
 func (h *AuthHandler) BlockUser(c echo.Context) error {
-	useruuid, err := uuid.Parse(c.Param("uuid"))
+	userUuidParam := c.Param("uuid")
+	userUuid, err := uuid.Parse(userUuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_user_uuid_format")
 	}
 
-	if err := h.AuthService.BlockUser(useruuid); err != nil {
+	user, err := h.AuthService.GetUserByuuid(userUuid)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	if err := h.AuthService.BlockUser(user.ID); err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
@@ -81,12 +87,18 @@ func (h *AuthHandler) BlockUser(c echo.Context) error {
 }
 
 func (h *AuthHandler) UnblockUser(c echo.Context) error {
-	useruuid, err := uuid.Parse(c.Param("uuid"))
+	userUuidParam := c.Param("uuid")
+	userUuid, err := uuid.Parse(userUuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_user_uuid_format")
 	}
 
-	if err := h.AuthService.UnblockUser(useruuid); err != nil {
+	user, err := h.AuthService.GetUserByuuid(userUuid)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	if err := h.AuthService.UnblockUser(user.ID); err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 var jwtSecret = []byte("your_secret_key") // TODO: Use environment variable
@@ -13,18 +12,17 @@ type Claims struct {
 	Username string    `json:"username"`
 	Role     string    `json:"role"`
 	OutletID *uint     `json:"outlet_id,omitempty"`
-	ID       uuid.UUID `json:"id"` // User's uuid
+	ID       uint `json:"id"` // User's uuid
 	jwt.RegisteredClaims
 }
 
 // GenerateToken generates a new JWT token.
-func GenerateToken(username, role string, outletID *uint, userUuid uuid.UUID) (string, error) {
+func GenerateToken(username, role string, userID uint) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		Username: username,
 		Role:     role,
-		OutletID: outletID,
-		ID:       userUuid,
+		ID:       userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},

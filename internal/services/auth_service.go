@@ -35,7 +35,6 @@ func (s *AuthService) RegisterUser(username, password, role string, outletID *ui
 		Username: username,
 		Password: hashedPassword,
 		Role:     role,
-		OutletID: outletID,
 	}
 
 	if err := s.DB.Create(&user).Error; err != nil {
@@ -64,7 +63,7 @@ func (s *AuthService) LoginUser(username, password string) (string, *models.User
 		return "", nil, errors.New("invalid credentials")
 	}
 
-	token, err := utils.GenerateToken(user.Username, user.Role, user.OutletID, user.Uuid)
+	token, err := utils.GenerateToken(user.Username, user.Role, user.ID)
 	if err != nil {
 		log.Printf("Error generating token: %v", err)
 		return "", nil, errors.New("failed to generate token")
@@ -73,9 +72,9 @@ func (s *AuthService) LoginUser(username, password string) (string, *models.User
 	return token, &user, nil
 }
 
-func (s *AuthService) BlockUser(userUuid uuid.UUID) error {
+func (s *AuthService) BlockUser(userID uint) error {
 	var user models.User
-	if err := s.DB.Where("uuid = ?", userUuid).First(&user).Error; err != nil {
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("user not found")
 		}
@@ -91,9 +90,9 @@ func (s *AuthService) BlockUser(userUuid uuid.UUID) error {
 	return nil
 }
 
-func (s *AuthService) UnblockUser(useruuid uuid.UUID) error {
+func (s *AuthService) UnblockUser(userID uint) error {
 	var user models.User
-	if err := s.DB.Where("uuid = ?", useruuid).First(&user).Error; err != nil {
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("user not found")
 		}
@@ -109,9 +108,17 @@ func (s *AuthService) UnblockUser(useruuid uuid.UUID) error {
 	return nil
 }
 
-func (s *AuthService) GetUserByuuid(uuid uuid.UUID) (*models.User, error) {
+func (s *AuthService) GetUserByID(userID uint) (*models.User, error) {
 	var user models.User
-	if err := s.DB.Where("uuid = ?", uuid).First(&user).Error; err != nil {
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (s *AuthService) GetUserByuuid(userUuid uuid.UUID) (*models.User, error) {
+	var user models.User
+	if err := s.DB.Where("uuid = ?", userUuid).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

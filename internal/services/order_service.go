@@ -14,23 +14,24 @@ import (
 type OrderService struct {
 	DB           *gorm.DB
 	StockService *StockService // Dependency on StockService
+	IpaymuService *IpaymuService // Dependency on IpaymuService
 }
 
-func NewOrderService(db *gorm.DB, stockService *StockService) *OrderService {
-	return &OrderService{DB: db, StockService: stockService}
+func NewOrderService(db *gorm.DB, stockService *StockService, ipaymuService *IpaymuService) *OrderService {
+	return &OrderService{DB: db, StockService: stockService, IpaymuService: ipaymuService}
 }
 
 // CreateOrder creates a new order and deducts stock.
-func (s *OrderService) CreateOrder(outletUuid, userUuid uuid.UUID, items []dtos.OrderItemRequest) (*dtos.OrderResponse, error) {
+func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dtos.OrderItemRequest, paymentMethod string) (*dtos.OrderResponse, error) {
 	// Find Outlet
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
 	// Find User
 	var user models.User
-	if err := s.DB.Where("uuid = ?", userUuid).First(&user).Error; err != nil {
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		return nil, errors.New("user not found")
 	}
 
@@ -41,10 +42,11 @@ func (s *OrderService) CreateOrder(outletUuid, userUuid uuid.UUID, items []dtos.
 	}
 
 	order := models.Order{
-		OutletID:    outlet.ID,
-		UserID:      user.ID,
-		Status:      "completed", // Assuming immediate completion for simplicity
-		TotalAmount: 0,
+		OutletID:      outlet.ID,
+		UserID:        user.ID,
+		Status:        "completed", // Assuming immediate completion for simplicity
+		TotalAmount:   0,
+		PaymentMethod: paymentMethod,
 	}
 
 	if err := tx.Create(&order).Error; err != nil {
@@ -56,13 +58,13 @@ func (s *OrderService) CreateOrder(outletUuid, userUuid uuid.UUID, items []dtos.
 	totalAmount := 0.0
 	for _, item := range items {
 		var product models.Product
-		if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, userUuid).First(&product).Error; err != nil {
+		if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, userID).First(&product).Error; err != nil {
 			tx.Rollback()
 			return nil, errors.New("product not found")
 		}
 
 		// Deduct stock using StockService
-		if err := s.StockService.DeductStockForSale(outletUuid, item.ProductUuid, float64(item.Quantity), userUuid); err != nil {
+		if err := s.StockService.DeductStockForSale(outletUuid, item.ProductUuid, float64(item.Quantity), userID); err != nil {
 			tx.Rollback()
 			return nil, err // Return specific stock deduction error
 		}
@@ -89,24 +91,44 @@ func (s *OrderService) CreateOrder(outletUuid, userUuid uuid.UUID, items []dtos.
 		return nil, errors.New("failed to update order total amount")
 	}
 
+	// Process payment if method is iPaymu
+	if paymentMethod == "ipaymu" {
+		// Fetch order items with product details for iPaymu
+		var fullOrderItems []models.OrderItem
+		if err := tx.Preload("Product").Where("order_id = ?", order.ID).Find(&fullOrderItems).Error; err != nil {
+			tx.Rollback()
+			log.Printf("Error preloading order items for iPaymu: %v", err)
+			return nil, errors.New("failed to prepare order for iPaymu payment")
+		}
+
+		ipaymuResp, err := s.IpaymuService.ProcessIpaymuPayment(&order, &user, fullOrderItems)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		// You might want to store ipaymuResp.Data.URL or transaction ID in the order for later reference
+		log.Printf("iPaymu Payment URL: %s", ipaymuResp.Data.URL)
+	}
+
 	tx.Commit()
 
 	// Construct DTO response
 	return &dtos.OrderResponse{
-		ID:          order.ID,
-		Uuid:        order.Uuid,
-		OutletID:    order.OutletID,
-		OutletUuid:  outlet.Uuid,
-		UserID:      order.UserID,
-		UserUuid:    user.Uuid,
-		OrderDate:   order.CreatedAt.Format(time.RFC3339),
-		TotalAmount: order.TotalAmount,
-		Status:      order.Status,
+		ID:            order.ID,
+		Uuid:          order.Uuid,
+		OutletID:      order.OutletID,
+		OutletUuid:    outlet.Uuid,
+		UserID:        order.UserID,
+		UserUuid:      user.Uuid,
+		OrderDate:     order.CreatedAt.Format(time.RFC3339),
+		TotalAmount:   order.TotalAmount,
+		PaymentMethod: order.PaymentMethod,
+		Status:        order.Status,
 	}, nil
 }
 
 // GetOrder retrieves an order by its Uuid.
-func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uuid.UUID) (*dtos.OrderResponse, error) {
+func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderResponse, error) {
 	var order models.Order
 	if err := s.DB.Preload("Outlet").Preload("User").Where("uuid = ? AND user_id = ?", uuid, userID).First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -117,20 +139,21 @@ func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uuid.UUID) (*dtos.O
 	}
 
 	return &dtos.OrderResponse{
-		ID:          order.ID,
-		Uuid:        order.Uuid,
-		OutletID:    order.OutletID,
-		OutletUuid:  order.Outlet.Uuid,
-		UserID:      order.UserID,
-		UserUuid:    order.User.Uuid,
-		OrderDate:   order.CreatedAt.Format(time.RFC3339),
-		TotalAmount: order.TotalAmount,
-		Status:      order.Status,
+		ID:            order.ID,
+		Uuid:          order.Uuid,
+		OutletID:      order.OutletID,
+		OutletUuid:    order.Outlet.Uuid,
+		UserID:        order.UserID,
+		UserUuid:      order.User.Uuid,
+		OrderDate:     order.CreatedAt.Format(time.RFC3339),
+		TotalAmount:   order.TotalAmount,
+		PaymentMethod: order.PaymentMethod,
+		Status:        order.Status,
 	}, nil
 }
 
 // GetOrdersByOutlet retrieves all orders for a specific outlet.
-func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uuid.UUID) ([]dtos.OrderResponse, error) {
+func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uint) ([]dtos.OrderResponse, error) {
 	var orders []models.Order
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
@@ -145,15 +168,16 @@ func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uuid.UUID)
 	var orderResponses []dtos.OrderResponse
 	for _, order := range orders {
 		orderResponses = append(orderResponses, dtos.OrderResponse{
-			ID:          order.ID,
-			Uuid:        order.Uuid,
-			OutletID:    order.OutletID,
-			OutletUuid:  outlet.Uuid, // Use the fetched outlet's UUID
-			UserID:      order.UserID,
-			UserUuid:    order.User.Uuid,
-			OrderDate:   order.CreatedAt.Format(time.RFC3339),
-			TotalAmount: order.TotalAmount,
-			Status:      order.Status,
+			ID:            order.ID,
+			Uuid:          order.Uuid,
+			OutletID:      order.OutletID,
+			OutletUuid:    outlet.Uuid, // Use the fetched outlet's UUID
+			UserID:        order.UserID,
+			UserUuid:      order.User.Uuid,
+			OrderDate:     order.CreatedAt.Format(time.RFC3339),
+			TotalAmount:   order.TotalAmount,
+			PaymentMethod: order.PaymentMethod,
+			Status:        order.Status,
 		})
 	}
 	return orderResponses, nil

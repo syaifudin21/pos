@@ -33,7 +33,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	// For now, let's use the outlet ID from the request
 	outletUuid := req.OutletUuid
 
-	order, err := h.OrderService.CreateOrder(outletUuid, userID, req.Items)
+	order, err := h.OrderService.CreateOrder(outletUuid, userID, req.Items, req.PaymentMethod)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -42,7 +42,8 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 }
 
 func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
-	uuid, err := uuid.Parse(c.Param("uuid"))
+	uuidParam := c.Param("uuid")
+	parsedUuid, err := uuid.Parse(uuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
@@ -51,14 +52,15 @@ func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	order, err := h.OrderService.GetOrderByUuid(uuid, userID)
+	order, err := h.OrderService.GetOrderByUuid(parsedUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 	return JSONSuccess(c, http.StatusOK, "order_retrieved_successfully", order)
 }
 func (h *OrderHandler) GetOrdersByOutlet(c echo.Context) error {
-	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
+	outletUuidParam := c.Param("outlet_uuid")
+	outletUuid, err := uuid.Parse(outletUuidParam)
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
