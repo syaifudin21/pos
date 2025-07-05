@@ -32,13 +32,16 @@ func main() {
 		&models.Outlet{},
 		&models.Product{},
 		&models.Recipe{},
+		&models.User{},
+		&models.Outlet{},
+		&models.Product{},
+		&models.Recipe{},
 		&models.Stock{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Supplier{},
 		&models.PurchaseOrder{},
 		&models.PurchaseOrderItem{},
-		// &models.BaseModel{},
 	) // BaseModel is included for its UUID type to be recognized by GORM
 	if err != nil {
 		log.Fatalf("Failed to auto-migrate database: %v", err)

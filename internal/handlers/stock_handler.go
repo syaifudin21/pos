@@ -3,10 +3,12 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type StockHandler struct {
@@ -27,7 +29,11 @@ func (h *StockHandler) GetStockByOutletAndProduct(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_product_uuid_format")
 	}
 
-	stock, err := h.StockService.GetStockByOutletAndProduct(outletUuid, productUuid)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	stock, err := h.StockService.GetStockByOutletAndProduct(outletUuid, productUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -40,7 +46,11 @@ func (h *StockHandler) GetOutletStocks(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
-	stocks, err := h.StockService.GetOutletStocks(outletUuid)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	stocks, err := h.StockService.GetOutletStocks(outletUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -62,7 +72,11 @@ func (h *StockHandler) UpdateStock(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	stock, err := h.StockService.UpdateStock(outletUuid, productUuid, req.Quantity)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	stock, err := h.StockService.UpdateStock(outletUuid, productUuid, req.Quantity, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -75,7 +89,11 @@ func (h *StockHandler) UpdateGlobalStock(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	stock, err := h.StockService.UpdateGlobalStock(req.OutletUuid, req.Productuuid, req.Quantity)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	stock, err := h.StockService.UpdateGlobalStock(req.OutletUuid, req.Productuuid, req.Quantity, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

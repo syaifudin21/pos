@@ -3,10 +3,12 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type SupplierHandler struct {
@@ -18,7 +20,11 @@ func NewSupplierHandler(supplierService *services.SupplierService) *SupplierHand
 }
 
 func (h *SupplierHandler) GetAllSuppliers(c echo.Context) error {
-	suppliers, err := h.SupplierService.GetAllSuppliers()
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	suppliers, err := h.SupplierService.GetAllSuppliers(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -39,7 +45,12 @@ func (h *SupplierHandler) GetSupplierByuuid(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
-	supplier, err := h.SupplierService.GetSupplierByuuid(uuid)
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	supplier, err := h.SupplierService.GetSupplierByuuid(uuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -52,7 +63,11 @@ func (h *SupplierHandler) CreateSupplier(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "Invalid request payload")
 	}
 
-	createdSupplier, err := h.SupplierService.CreateSupplier(req)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	createdSupplier, err := h.SupplierService.CreateSupplier(req, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -69,7 +84,11 @@ func (h *SupplierHandler) UpdateSupplier(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "Invalid request payload")
 	}
 
-	result, err := h.SupplierService.UpdateSupplier(uuid, req)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	result, err := h.SupplierService.UpdateSupplier(uuid, req, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -81,7 +100,12 @@ func (h *SupplierHandler) DeleteSupplier(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
-	err = h.SupplierService.DeleteSupplier(uuid)
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	err = h.SupplierService.DeleteSupplier(uuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

@@ -19,22 +19,22 @@ func NewStockService(db *gorm.DB) *StockService {
 }
 
 // GetStockByOutletAndProduct retrieves stock for a specific product in an outlet.
-func (s *StockService) GetStockByOutletAndProduct(outletUuid, productUuid uuid.UUID) (*dtos.StockResponse, error) {
+func (s *StockService) GetStockByOutletAndProduct(outletUuid, productUuid uuid.UUID, userID uuid.UUID) (*dtos.StockResponse, error) {
 	var stock models.Stock
 	var outlet models.Outlet
 	var product models.Product
 
-	err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error
+	err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error
 	if err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
-	err = s.DB.Where("uuid = ?", productUuid).First(&product).Error
+	err = s.DB.Where("uuid = ? AND user_id = ?", productUuid, userID).First(&product).Error
 	if err != nil {
 		return nil, errors.New("product not found")
 	}
 
-	err = s.DB.Where("outlet_id = ? AND product_id = ?", outlet.ID, product.ID).First(&stock).Error
+	err = s.DB.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outlet.ID, product.ID, userID).First(&stock).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -52,14 +52,14 @@ func (s *StockService) GetStockByOutletAndProduct(outletUuid, productUuid uuid.U
 }
 
 // GetOutletStocks retrieves all stocks for a given outlet.
-func (s *StockService) GetOutletStocks(outletUuid uuid.UUID) ([]dtos.StockResponse, error) {
+func (s *StockService) GetOutletStocks(outletUuid uuid.UUID, userID uuid.UUID) ([]dtos.StockResponse, error) {
 	var stocks []models.Stock
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
-	if err := s.DB.Preload("Product").Where("outlet_id = ?", outlet.ID).Find(&stocks).Error; err != nil {
+	if err := s.DB.Preload("Product").Where("outlet_id = ? AND user_id = ?", outlet.ID, userID).Find(&stocks).Error; err != nil {
 		log.Printf("Error getting outlet stocks: %v", err)
 		return nil, errors.New("failed to retrieve outlet stocks")
 	}
@@ -78,25 +78,26 @@ func (s *StockService) GetOutletStocks(outletUuid uuid.UUID) ([]dtos.StockRespon
 
 // UpdateStock updates the quantity of a product in an outlet.
 // This is a direct update, useful for initial setup or corrections.
-func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity float64) (*dtos.StockResponse, error) {
+func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity float64, userID uuid.UUID) (*dtos.StockResponse, error) {
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
 	var product models.Product
-	if err := s.DB.Where("uuid = ?", productUuid).First(&product).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", productUuid, userID).First(&product).Error; err != nil {
 		return nil, errors.New("product not found")
 	}
 
 	var stock models.Stock
-	if err := s.DB.Where("outlet_id = ? AND product_id = ?", outlet.ID, product.ID).First(&stock).Error; err != nil {
+	if err := s.DB.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outlet.ID, product.ID, userID).First(&stock).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Create new stock entry if not found
 			stock = models.Stock{
 				OutletID:  outlet.ID,
 				ProductID: product.ID,
 				Quantity:  quantity,
+				UserID:    userID,
 			}
 			if err := s.DB.Create(&stock).Error; err != nil {
 				log.Printf("Error creating stock: %v", err)
@@ -125,14 +126,14 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 
 // DeductStockForSale handles stock deduction based on product type.
 // For FnB main products, it deducts from components based on recipe.
-func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uuid.UUID, quantity float64) error {
+func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uuid.UUID, quantity float64, userID uuid.UUID) error {
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletExternalID).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletExternalID, userID).First(&outlet).Error; err != nil {
 		return errors.New("outlet not found")
 	}
 
 	var product models.Product
-	if err := s.DB.Where("uuid = ?", productExternalID).First(&product).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", productExternalID, userID).First(&product).Error; err != nil {
 		return errors.New("product not found")
 	}
 
@@ -141,7 +142,7 @@ func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uu
 	if product.Type == "fnb_main_product" {
 		// Deduct components based on recipe
 		var recipes []models.Recipe
-		if err := s.DB.Where("main_product_id = ?", product.ID).Find(&recipes).Error; err != nil {
+		if err := s.DB.Where("main_product_id = ? AND user_id = ?", product.ID, userID).Find(&recipes).Error; err != nil {
 			log.Printf("Error finding recipes for product %s: %v", product.Name, err)
 			return errors.New("failed to retrieve product recipe")
 		}
@@ -153,7 +154,7 @@ func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uu
 		for _, recipe := range recipes {
 			requiredComponentQuantity := recipe.Quantity * quantity
 			var componentStock models.Stock
-			if err := s.DB.Where("outlet_id = ? AND product_id = ?", outlet.ID, recipe.ComponentID).First(&componentStock).Error; err != nil {
+			if err := s.DB.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outlet.ID, recipe.ComponentID, userID).First(&componentStock).Error; err != nil {
 				log.Printf("DeductStockForSale: Component stock not found for product %s (component of %s) in outlet %s. Error: %v", recipe.Component.Name, product.Name, outlet.Name, err)
 				return errors.New("component stock not found")
 			}
@@ -177,31 +178,32 @@ func (s *StockService) DeductStockForSale(outletExternalID, productExternalID uu
 	return nil
 }
 
-func (s *StockService) UpdateGlobalStock(outletUuid, productUuid uuid.UUID, quantity float64) (*dtos.StockResponse, error) {
-	return s.UpdateStock(outletUuid, productUuid, quantity)
+func (s *StockService) UpdateGlobalStock(outletUuid, productUuid uuid.UUID, quantity float64, userID uuid.UUID) (*dtos.StockResponse, error) {
+	return s.UpdateStock(outletUuid, productUuid, quantity, userID)
 }
 
 // AdjustStock adds or subtracts quantity from an existing stock entry.
 // If stock does not exist, it creates a new one.
-func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityChange float64) (*dtos.StockResponse, error) {
+func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityChange float64, userID uuid.UUID) (*dtos.StockResponse, error) {
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
 	var product models.Product
-	if err := s.DB.Where("uuid = ?", productUuid).First(&product).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", productUuid, userID).First(&product).Error; err != nil {
 		return nil, errors.New("product not found")
 	}
 
 	var stock models.Stock
-	if err := s.DB.Where("outlet_id = ? AND product_id = ?", outlet.ID, product.ID).First(&stock).Error; err != nil {
+	if err := s.DB.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outlet.ID, product.ID, userID).First(&stock).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Create new stock entry if not found
 			stock = models.Stock{
 				OutletID:  outlet.ID,
 				ProductID: product.ID,
 				Quantity:  quantityChange,
+				UserID:    userID,
 			}
 			if err := s.DB.Create(&stock).Error; err != nil {
 				log.Printf("Error creating stock: %v", err)
@@ -227,3 +229,4 @@ func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityCh
 		Quantity:    stock.Quantity,
 	}, nil
 }
+

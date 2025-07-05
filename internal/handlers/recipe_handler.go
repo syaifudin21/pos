@@ -3,10 +3,12 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type RecipeHandler struct {
@@ -21,7 +23,12 @@ func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	recipe, err := h.RecipeService.GetRecipeByUuid(uuid)
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	recipe, err := h.RecipeService.GetRecipeByUuid(uuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -33,7 +40,12 @@ func (h *RecipeHandler) GetRecipesByMainProduct(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_main_product_uuid_format")
 	}
-	recipes, err := h.RecipeService.GetRecipesByMainProduct(mainProductUuid)
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	recipes, err := h.RecipeService.GetRecipesByMainProduct(mainProductUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -57,7 +69,11 @@ func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	createdRecipe, err := h.RecipeService.CreateRecipe(req.MainProductUuid, req.ComponentUuid, req.Quantity)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	createdRecipe, err := h.RecipeService.CreateRecipe(req.MainProductUuid, req.ComponentUuid, req.Quantity, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -73,7 +89,11 @@ func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	updatedRecipe, err := h.RecipeService.UpdateRecipe(uuid, req.MainProductUuid, req.ComponentUuid, req.Quantity)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	updatedRecipe, err := h.RecipeService.UpdateRecipe(uuid, req.MainProductUuid, req.ComponentUuid, req.Quantity, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -85,7 +105,12 @@ func (h *RecipeHandler) DeleteRecipe(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	err = h.RecipeService.DeleteRecipe(uuid)
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	err = h.RecipeService.DeleteRecipe(uuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

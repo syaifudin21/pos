@@ -21,14 +21,14 @@ func NewPurchaseOrderService(db *gorm.DB, stockService *StockService) *PurchaseO
 }
 
 // CreatePurchaseOrder creates a new purchase order.
-func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid.UUID, items []dtos.PurchaseItemRequest) (*dtos.PurchaseOrderResponse, error) {
+func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid.UUID, items []dtos.PurchaseItemRequest, userID uuid.UUID) (*dtos.PurchaseOrderResponse, error) {
 	var supplier models.Supplier
-	if err := s.DB.Where("uuid = ?", supplierUuid).First(&supplier).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", supplierUuid, userID).First(&supplier).Error; err != nil {
 		return nil, errors.New("supplier not found")
 	}
 
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
@@ -42,6 +42,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 		OutletID:    outlet.ID,
 		Status:      "pending",
 		TotalAmount: 0,
+		UserID:      userID,
 	}
 
 	if err := tx.Create(&po).Error; err != nil {
@@ -53,7 +54,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 	totalAmount := 0.0
 	for _, item := range items {
 		var product models.Product
-		if err := tx.Where("uuid = ?", item.ProductUuid).First(&product).Error; err != nil {
+		if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, userID).First(&product).Error; err != nil {
 			tx.Rollback()
 			return nil, errors.New("product not found")
 		}
@@ -97,9 +98,9 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 }
 
 // GetPurchaseOrderByExternalID retrieves a purchase order by its external ID.
-func (s *PurchaseOrderService) GetPurchaseOrderByUuid(uuid uuid.UUID) (*dtos.PurchaseOrderResponse, error) {
+func (s *PurchaseOrderService) GetPurchaseOrderByUuid(uuid uuid.UUID, userID uuid.UUID) (*dtos.PurchaseOrderResponse, error) {
 	var po models.PurchaseOrder
-	if err := s.DB.Preload("Supplier").Preload("Outlet").Where("uuid = ?", uuid).First(&po).Error; err != nil {
+	if err := s.DB.Preload("Supplier").Preload("Outlet").Where("uuid = ? AND user_id = ?", uuid, userID).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("purchase order not found")
 		}
@@ -120,14 +121,14 @@ func (s *PurchaseOrderService) GetPurchaseOrderByUuid(uuid uuid.UUID) (*dtos.Pur
 }
 
 // GetPurchaseOrdersByOutlet retrieves all purchase orders for a specific outlet.
-func (s *PurchaseOrderService) GetPurchaseOrdersByOutlet(outletUuid uuid.UUID) ([]dtos.PurchaseOrderResponse, error) {
+func (s *PurchaseOrderService) GetPurchaseOrdersByOutlet(outletUuid uuid.UUID, userID uuid.UUID) ([]dtos.PurchaseOrderResponse, error) {
 	var pos []models.PurchaseOrder
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
-	if err := s.DB.Preload("Supplier").Where("outlet_id = ?", outlet.ID).Find(&pos).Error; err != nil {
+	if err := s.DB.Preload("Supplier").Where("outlet_id = ? AND user_id = ?", outlet.ID, userID).Find(&pos).Error; err != nil {
 		log.Printf("Error getting purchase orders by outlet: %v", err)
 		return nil, errors.New("failed to retrieve purchase orders")
 	}
@@ -150,9 +151,9 @@ func (s *PurchaseOrderService) GetPurchaseOrdersByOutlet(outletUuid uuid.UUID) (
 }
 
 // ReceivePurchaseOrder updates stock based on a completed purchase order.
-func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID) (*dtos.PurchaseOrderResponse, error) {
+func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID, userID uuid.UUID) (*dtos.PurchaseOrderResponse, error) {
 	var po models.PurchaseOrder
-	if err := s.DB.Preload("Outlet").Preload("PurchaseOrderItems.Product").Where("uuid = ?", poUuid).First(&po).Error; err != nil {
+	if err := s.DB.Preload("Outlet").Preload("PurchaseOrderItems.Product").Where("uuid = ? AND user_id = ?", poUuid, userID).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("purchase order not found")
 		}
@@ -171,7 +172,7 @@ func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID) (*dtos.Pur
 
 	for _, item := range po.PurchaseOrderItems {
 		// Add stock using StockService
-		_, err := s.StockService.AdjustStock(po.Outlet.Uuid, item.Product.Uuid, item.Quantity) // Use AdjustStock to accumulate
+		_, err := s.StockService.AdjustStock(po.Outlet.Uuid, item.Product.Uuid, item.Quantity, userID)
 		if err != nil {
 			tx.Rollback()
 			log.Printf("Error updating stock for received PO: %v", err)

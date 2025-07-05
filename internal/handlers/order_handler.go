@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
@@ -24,14 +25,15 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	claims := c.Get("claims").(*utils.Claims)
-	userUuid := claims.ID // Assuming user's uuid is stored in claims.ID
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
 
 	// For simplicity, assuming outlet ID is passed in the request or derived from user's outlet
 	// For now, let's use the outlet ID from the request
 	outletUuid := req.OutletUuid
 
-	order, err := h.OrderService.CreateOrder(outletUuid, userUuid, req.Items)
+	order, err := h.OrderService.CreateOrder(outletUuid, userID, req.Items)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -45,7 +47,11 @@ func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	order, err := h.OrderService.GetOrderByUuid(uuid)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	order, err := h.OrderService.GetOrderByUuid(uuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -57,7 +63,11 @@ func (h *OrderHandler) GetOrdersByOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
-	orders, err := h.OrderService.GetOrdersByOutlet(outletUuid)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	orders, err := h.OrderService.GetOrdersByOutlet(outletUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

@@ -18,18 +18,18 @@ func NewProductService(db *gorm.DB) *ProductService {
 	return &ProductService{DB: db}
 }
 
-func (s *ProductService) GetAllProducts() ([]models.Product, error) {
+func (s *ProductService) GetAllProducts(userID uuid.UUID) ([]models.Product, error) {
 	var products []models.Product
-	if err := s.DB.Find(&products).Error; err != nil {
+	if err := s.DB.Where("user_id = ?", userID).Find(&products).Error; err != nil {
 		log.Printf("Error getting all products: %v", err)
 		return nil, errors.New("failed to retrieve products")
 	}
 	return products, nil
 }
 
-func (s *ProductService) GetProductByUuid(Uuid uuid.UUID) (*dtos.ProductResponse, error) {
+func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uuid.UUID) (*dtos.ProductResponse, error) {
 	var product models.Product
-	if err := s.DB.Where("uuid = ?", Uuid).First(&product).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, userID).First(&product).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("product not found")
 		}
@@ -47,13 +47,14 @@ func (s *ProductService) GetProductByUuid(Uuid uuid.UUID) (*dtos.ProductResponse
 	}, nil
 }
 
-func (s *ProductService) CreateProduct(req *dtos.ProductCreateRequest) (*dtos.ProductResponse, error) {
+func (s *ProductService) CreateProduct(req *dtos.ProductCreateRequest, userID uuid.UUID) (*dtos.ProductResponse, error) {
 	product := &models.Product{
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       req.Price,
 		SKU:         req.SKU,
 		Type:        req.Type,
+		UserID:      userID,
 	}
 	if err := s.DB.Create(product).Error; err != nil {
 		log.Printf("Error creating product: %v", err)
@@ -70,9 +71,9 @@ func (s *ProductService) CreateProduct(req *dtos.ProductCreateRequest) (*dtos.Pr
 	}, nil
 }
 
-func (s *ProductService) UpdateProduct(Uuid uuid.UUID, req *dtos.ProductUpdateRequest) (*dtos.ProductResponse, error) {
+func (s *ProductService) UpdateProduct(Uuid uuid.UUID, req *dtos.ProductUpdateRequest, userID uuid.UUID) (*dtos.ProductResponse, error) {
 	var product models.Product
-	if err := s.DB.Where("uuid = ?", Uuid).First(&product).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, userID).First(&product).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("product not found")
 		}
@@ -102,8 +103,8 @@ func (s *ProductService) UpdateProduct(Uuid uuid.UUID, req *dtos.ProductUpdateRe
 	}, nil
 }
 
-func (s *ProductService) DeleteProduct(Uuid uuid.UUID) error {
-	if err := s.DB.Where("uuid = ?", Uuid).Delete(&models.Product{}).Error; err != nil {
+func (s *ProductService) DeleteProduct(Uuid uuid.UUID, userID uuid.UUID) error {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", Uuid, userID).Delete(&models.Product{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("product not found")
 		}
@@ -114,12 +115,12 @@ func (s *ProductService) DeleteProduct(Uuid uuid.UUID) error {
 }
 
 // GetProductsByOutlet retrieves all products available in a specific outlet (i.e., have stock).
-func (s *ProductService) GetProductsByOutlet(outletUuid uuid.UUID) ([]dtos.ProductOutletResponse, error) {
+func (s *ProductService) GetProductsByOutlet(outletUuid uuid.UUID, userID uuid.UUID) ([]dtos.ProductOutletResponse, error) {
 	var products []dtos.ProductOutletResponse
 
 	// Find the outlet first
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
@@ -127,7 +128,7 @@ func (s *ProductService) GetProductsByOutlet(outletUuid uuid.UUID) ([]dtos.Produ
 	if err := s.DB.Table("products").
 		Select("products.uuid as product_uuid, products.name as product_name, products.sku as product_sku, products.price, products.type, stocks.quantity").
 		Joins("JOIN stocks ON products.id = stocks.product_id").
-		Where("stocks.outlet_id = ? AND stocks.quantity > 0", outlet.ID).
+		Where("stocks.outlet_id = ? AND stocks.quantity > 0 AND products.user_id = ?", outlet.ID, userID).
 		Find(&products).Error; err != nil {
 		log.Printf("Error getting products by outlet: %v", err)
 		return nil, errors.New("failed to retrieve products for outlet")

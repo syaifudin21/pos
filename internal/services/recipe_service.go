@@ -19,9 +19,9 @@ func NewRecipeService(db *gorm.DB) *RecipeService {
 }
 
 // GetRecipeByUuid retrieves a recipe by its Uuid.
-func (s *RecipeService) GetRecipeByUuid(uuid uuid.UUID) (*dtos.RecipeResponse, error) {
+func (s *RecipeService) GetRecipeByUuid(uuid uuid.UUID, userID uuid.UUID) (*dtos.RecipeResponse, error) {
 	var recipe models.Recipe
-	if err := s.DB.Preload("MainProduct").Preload("Component").Where("uuid = ?", uuid).First(&recipe).Error; err != nil {
+	if err := s.DB.Preload("MainProduct").Preload("Component").Where("uuid = ? AND user_id = ?", uuid, userID).First(&recipe).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("recipe not found")
 		}
@@ -40,14 +40,14 @@ func (s *RecipeService) GetRecipeByUuid(uuid uuid.UUID) (*dtos.RecipeResponse, e
 }
 
 // GetRecipesByMainProduct retrieves all recipes for a given main product.
-func (s *RecipeService) GetRecipesByMainProduct(mainProductUuid uuid.UUID) ([]dtos.RecipeResponse, error) {
+func (s *RecipeService) GetRecipesByMainProduct(mainProductUuid uuid.UUID, userID uuid.UUID) ([]dtos.RecipeResponse, error) {
 	var mainProduct models.Product
-	if err := s.DB.Where("uuid = ?", mainProductUuid).First(&mainProduct).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", mainProductUuid, userID).First(&mainProduct).Error; err != nil {
 		return nil, errors.New("main product not found")
 	}
 
 	var recipes []models.Recipe
-	if err := s.DB.Preload("MainProduct").Preload("Component").Where("main_product_id = ?", mainProduct.ID).Find(&recipes).Error; err != nil {
+	if err := s.DB.Preload("MainProduct").Preload("Component").Where("main_product_id = ? AND user_id = ?", mainProduct.ID, userID).Find(&recipes).Error; err != nil {
 		log.Printf("Error getting recipes by main product: %v", err)
 		return nil, errors.New("failed to retrieve recipes")
 	}
@@ -67,15 +67,15 @@ func (s *RecipeService) GetRecipesByMainProduct(mainProductUuid uuid.UUID) ([]dt
 }
 
 // CreateRecipe creates a new recipe.
-func (s *RecipeService) CreateRecipe(mainProductUuid, componentUuid uuid.UUID, quantity float64) (*dtos.RecipeResponse, error) {
+func (s *RecipeService) CreateRecipe(mainProductUuid, componentUuid uuid.UUID, quantity float64, userID uuid.UUID) (*dtos.RecipeResponse, error) {
 	var mainProduct models.Product
-	if err := s.DB.Where("uuid = ?", mainProductUuid).First(&mainProduct).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", mainProductUuid, userID).First(&mainProduct).Error; err != nil {
 		return nil, errors.New("main product not found")
 	}
 
 	var component models.Product
 
-	if err := s.DB.Where("uuid = ?", componentUuid).First(&component).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", componentUuid, userID).First(&component).Error; err != nil {
 		return nil, errors.New("component product not found")
 	}
 
@@ -88,6 +88,7 @@ func (s *RecipeService) CreateRecipe(mainProductUuid, componentUuid uuid.UUID, q
 		MainProductID: mainProduct.ID,
 		ComponentID:   component.ID,
 		Quantity:      quantity,
+		UserID:        userID,
 	}
 
 	if err := s.DB.Create(&recipe).Error; err != nil {
@@ -106,9 +107,9 @@ func (s *RecipeService) CreateRecipe(mainProductUuid, componentUuid uuid.UUID, q
 }
 
 // UpdateRecipe updates an existing recipe.
-func (s *RecipeService) UpdateRecipe(uuid uuid.UUID, mainProductUuid, componentUuid uuid.UUID, quantity float64) (*dtos.RecipeResponse, error) {
+func (s *RecipeService) UpdateRecipe(uuid uuid.UUID, mainProductUuid, componentUuid uuid.UUID, quantity float64, userID uuid.UUID) (*dtos.RecipeResponse, error) {
 	var recipe models.Recipe
-	if err := s.DB.Where("uuid = ?", uuid).First(&recipe).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, userID).First(&recipe).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("recipe not found")
 		}
@@ -117,12 +118,12 @@ func (s *RecipeService) UpdateRecipe(uuid uuid.UUID, mainProductUuid, componentU
 	}
 
 	var mainProduct models.Product
-	if err := s.DB.Where("uuid = ?", mainProductUuid).First(&mainProduct).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", mainProductUuid, userID).First(&mainProduct).Error; err != nil {
 		return nil, errors.New("main product not found")
 	}
 
 	var component models.Product
-	if err := s.DB.Where("uuid = ?", componentUuid).First(&component).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", componentUuid, userID).First(&component).Error; err != nil {
 		return nil, errors.New("component product not found")
 	}
 
@@ -151,8 +152,8 @@ func (s *RecipeService) UpdateRecipe(uuid uuid.UUID, mainProductUuid, componentU
 }
 
 // DeleteRecipe deletes a recipe by its Uuid.
-func (s *RecipeService) DeleteRecipe(uuid uuid.UUID) error {
-	if err := s.DB.Where("uuid = ?", uuid).Delete(&models.Recipe{}).Error; err != nil {
+func (s *RecipeService) DeleteRecipe(uuid uuid.UUID, userID uuid.UUID) error {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, userID).Delete(&models.Recipe{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("recipe not found")
 		}

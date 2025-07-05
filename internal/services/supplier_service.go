@@ -18,18 +18,18 @@ func NewSupplierService(db *gorm.DB) *SupplierService {
 	return &SupplierService{DB: db}
 }
 
-func (s *SupplierService) GetAllSuppliers() ([]models.Supplier, error) {
+func (s *SupplierService) GetAllSuppliers(userID uuid.UUID) ([]models.Supplier, error) {
 	var suppliers []models.Supplier
-	if err := s.DB.Find(&suppliers).Error; err != nil {
+	if err := s.DB.Where("user_id = ?", userID).Find(&suppliers).Error; err != nil {
 		log.Printf("Error getting all suppliers: %v", err)
 		return nil, errors.New("failed to retrieve suppliers")
 	}
 	return suppliers, nil
 }
 
-func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID) (*dtos.SupplierResponse, error) {
+func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID, userID uuid.UUID) (*dtos.SupplierResponse, error) {
 	var supplier models.Supplier
-	if err := s.DB.Where("uuid = ?", uuid).First(&supplier).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, userID).First(&supplier).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("supplier not found")
 		}
@@ -45,11 +45,12 @@ func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID) (*dtos.SupplierRespo
 	}, nil
 }
 
-func (s *SupplierService) CreateSupplier(req *dtos.CreateSupplierRequest) (*dtos.SupplierResponse, error) {
+func (s *SupplierService) CreateSupplier(req *dtos.CreateSupplierRequest, userID uuid.UUID) (*dtos.SupplierResponse, error) {
 	supplier := &models.Supplier{
 		Name:    req.Name,
 		Contact: req.Contact,
 		Address: req.Address,
+		UserID:  userID,
 	}
 	if err := s.DB.Create(supplier).Error; err != nil {
 		log.Printf("Error creating supplier: %v", err)
@@ -64,9 +65,9 @@ func (s *SupplierService) CreateSupplier(req *dtos.CreateSupplierRequest) (*dtos
 	}, nil
 }
 
-func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, req *dtos.UpdateSupplierRequest) (*dtos.SupplierResponse, error) {
+func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, req *dtos.UpdateSupplierRequest, userID uuid.UUID) (*dtos.SupplierResponse, error) {
 	var supplier models.Supplier
-	if err := s.DB.Where("uuid = ?", uuid).First(&supplier).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, userID).First(&supplier).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("supplier not found")
 		}
@@ -92,8 +93,8 @@ func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, req *dtos.UpdateSupplie
 	}, nil
 }
 
-func (s *SupplierService) DeleteSupplier(uuid uuid.UUID) error {
-	if err := s.DB.Where("uuid = ?", uuid).Delete(&models.Supplier{}).Error; err != nil {
+func (s *SupplierService) DeleteSupplier(uuid uuid.UUID, userID uuid.UUID) error {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, userID).Delete(&models.Supplier{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("supplier not found")
 		}

@@ -1,5 +1,9 @@
 package models
 
+import (
+	"github.com/google/uuid"
+)
+
 type Stock struct {
 	BaseModel
 	OutletID  uint    `gorm:"not null" json:"outlet_id"`
@@ -7,4 +11,6 @@ type Stock struct {
 	ProductID uint    `gorm:"not null" json:"product_id"`
 	Product   Product `json:"product"`
 	Quantity  float64 `gorm:"not null" json:"quantity"`
+	UserID    uuid.UUID `gorm:"type:uuid;not null" json:"user_id"`
+	User      User    `json:"user"`
 }

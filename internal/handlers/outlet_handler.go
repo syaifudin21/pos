@@ -3,10 +3,12 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type OutletHandler struct {
@@ -27,7 +29,11 @@ func NewOutletHandler(outletService *services.OutletService) *OutletHandler {
 // @Failure 500 {object} ErrorResponse
 // @Router /outlets [get]
 func (h *OutletHandler) GetAllOutlets(c echo.Context) error {
-	outlets, err := h.OutletService.GetAllOutlets()
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	outlets, err := h.OutletService.GetAllOutlets(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -49,7 +55,12 @@ func (h *OutletHandler) GetOutletByID(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	outlet, err := h.OutletService.GetOutletByUuid(id)
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	outlet, err := h.OutletService.GetOutletByUuid(id, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -62,13 +73,17 @@ func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	createdOutlet, err := h.OutletService.CreateOutlet(outlet)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	createdOutlet, err := h.OutletService.CreateOutlet(outlet, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 	return JSONSuccess(c, http.StatusCreated, "outlet_created_successfully", dtos.OutletResponse{
 		ID:      createdOutlet.ID,
-		Uuid:    createdOutlet.Uuid,
+			Uuid:    createdOutlet.Uuid,
 		Name:    createdOutlet.Name,
 		Address: createdOutlet.Address,
 		Type:    createdOutlet.Type,
@@ -98,7 +113,11 @@ func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	result, err := h.OutletService.UpdateOutlet(id, outlet)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	result, err := h.OutletService.UpdateOutlet(id, outlet, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -122,7 +141,12 @@ func (h *OutletHandler) DeleteOutlet(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	err = h.OutletService.DeleteOutlet(id)
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	err = h.OutletService.DeleteOutlet(id, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

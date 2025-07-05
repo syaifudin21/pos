@@ -4,9 +4,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type ReportHandler struct {
@@ -35,7 +37,11 @@ func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_end_date_format")
 	}
 
-	orders, err := h.ReportService.SalesByOutletReport(outletUuid, startDate, endDate)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	orders, err := h.ReportService.SalesByOutletReport(outletUuid, startDate, endDate, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -61,7 +67,11 @@ func (h *ReportHandler) GetSalesByProductReport(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_end_date_format")
 	}
 
-	orderItems, err := h.ReportService.SalesByProductReport(productUuid, startDate, endDate)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	orderItems, err := h.ReportService.SalesByProductReport(productUuid, startDate, endDate, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

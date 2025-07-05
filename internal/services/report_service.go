@@ -19,15 +19,15 @@ func NewReportService(db *gorm.DB) *ReportService {
 }
 
 // SalesByOutletReport generates a sales report for a specific outlet within a date range.
-func (s *ReportService) SalesByOutletReport(outletUuid uuid.UUID, startDate, endDate time.Time) ([]models.Order, error) {
+func (s *ReportService) SalesByOutletReport(outletUuid uuid.UUID, startDate, endDate time.Time, userID uuid.UUID) ([]models.Order, error) {
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
 	var orders []models.Order
 	err := s.DB.Preload("OrderItems.Product").
-		Where("outlet_id = ? AND created_at BETWEEN ? AND ?", outlet.ID, startDate, endDate.Add(24*time.Hour)).
+		Where("outlet_id = ? AND user_id = ? AND created_at BETWEEN ? AND ?", outlet.ID, userID, startDate, endDate.Add(24*time.Hour)).
 		Find(&orders).Error
 
 	if err != nil {
@@ -39,15 +39,15 @@ func (s *ReportService) SalesByOutletReport(outletUuid uuid.UUID, startDate, end
 }
 
 // SalesByProductReport generates a sales report for a specific product within a date range.
-func (s *ReportService) SalesByProductReport(productUuid uuid.UUID, startDate, endDate time.Time) ([]models.OrderItem, error) {
+func (s *ReportService) SalesByProductReport(productUuid uuid.UUID, startDate, endDate time.Time, userID uuid.UUID) ([]models.OrderItem, error) {
 	var product models.Product
-	if err := s.DB.Where("uuid = ?", productUuid).First(&product).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", productUuid, userID).First(&product).Error; err != nil {
 		return nil, errors.New("product not found")
 	}
 
 	var orderItems []models.OrderItem
 	err := s.DB.Preload("Order.Outlet").Preload("Order.User").
-		Where("product_id = ? AND created_at BETWEEN ? AND ?", product.ID, startDate, endDate.Add(24*time.Hour)).
+		Where("product_id = ? AND user_id = ? AND created_at BETWEEN ? AND ?", product.ID, userID, startDate, endDate.Add(24*time.Hour)).
 		Find(&orderItems).Error
 
 	if err != nil {

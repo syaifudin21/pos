@@ -34,13 +34,13 @@ func GenerateToken(username, role string, outletID *uint, userUuid uuid.UUID) (s
 }
 
 // ParseToken parses and validates a JWT token.
-func ParseToken(tokenString string) (*Claims, error) {
+func ParseToken(tokenString string) (*jwt.Token, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})
 
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
+	if token != nil && token.Valid {
+		return token, nil
 	}
 	return nil, err
 }

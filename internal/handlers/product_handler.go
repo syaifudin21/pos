@@ -3,11 +3,13 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 func isValidProductType(productType string) bool {
@@ -28,7 +30,11 @@ func NewProductHandler(productService *services.ProductService) *ProductHandler 
 }
 
 func (h *ProductHandler) GetAllProducts(c echo.Context) error {
-	products, err := h.ProductService.GetAllProducts()
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	products, err := h.ProductService.GetAllProducts(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -52,7 +58,12 @@ func (h *ProductHandler) GetProductByID(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_external_id_format")
 	}
-	product, err := h.ProductService.GetProductByUuid(id)
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	product, err := h.ProductService.GetProductByUuid(id, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -69,7 +80,11 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_product_type_specified")
 	}
 
-	createdProduct, err := h.ProductService.CreateProduct(product)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	createdProduct, err := h.ProductService.CreateProduct(product, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -90,7 +105,11 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_product_type_specified")
 	}
 
-	result, err := h.ProductService.UpdateProduct(id, product)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	result, err := h.ProductService.UpdateProduct(id, product, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -102,7 +121,12 @@ func (h *ProductHandler) DeleteProduct(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	err = h.ProductService.DeleteProduct(id)
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	err = h.ProductService.DeleteProduct(id, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -115,7 +139,11 @@ func (h *ProductHandler) GetProductsByOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
-	products, err := h.ProductService.GetProductsByOutlet(outletUuid)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	products, err := h.ProductService.GetProductsByOutlet(outletUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

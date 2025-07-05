@@ -26,10 +26,12 @@ func Authorize(obj, act string) echo.MiddlewareFunc {
 				tokenString = tokenString[7:]
 			}
 
-			claims, err := utils.ParseToken(tokenString)
+			token, err := utils.ParseToken(tokenString)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, handlers.ErrorResponse{Message: "Invalid or expired token"})
 			}
+
+			claims := token.Claims.(*utils.Claims)
 
 			// Get DB instance from context
 			db, ok := c.Get("db").(*gorm.DB)
@@ -60,7 +62,7 @@ func Authorize(obj, act string) echo.MiddlewareFunc {
 			}
 
 			// Store user claims in context for later use
-			c.Set("claims", claims)
+			c.Set("user", token)
 
 			return next(c)
 		}

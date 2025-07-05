@@ -3,10 +3,12 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type PurchaseOrderHandler struct {
@@ -22,7 +24,11 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	po, err := h.PurchaseOrderService.CreatePurchaseOrder(req.SupplierUuid, req.OutletUuid, req.Items)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	po, err := h.PurchaseOrderService.CreatePurchaseOrder(req.SupplierUuid, req.OutletUuid, req.Items, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -36,7 +42,11 @@ func (h *PurchaseOrderHandler) GetPurchaseOrderByUuid(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	po, err := h.PurchaseOrderService.GetPurchaseOrderByUuid(uuid)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	po, err := h.PurchaseOrderService.GetPurchaseOrderByUuid(uuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -49,7 +59,11 @@ func (h *PurchaseOrderHandler) GetPurchaseOrdersByOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
-	pos, err := h.PurchaseOrderService.GetPurchaseOrdersByOutlet(OutletUuid)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	pos, err := h.PurchaseOrderService.GetPurchaseOrdersByOutlet(OutletUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -62,7 +76,11 @@ func (h *PurchaseOrderHandler) ReceivePurchaseOrder(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	po, err := h.PurchaseOrderService.ReceivePurchaseOrder(uuid)
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*utils.Claims)
+	userID := claims.ID
+
+	po, err := h.PurchaseOrderService.ReceivePurchaseOrder(uuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

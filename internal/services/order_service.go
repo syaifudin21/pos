@@ -24,7 +24,7 @@ func NewOrderService(db *gorm.DB, stockService *StockService) *OrderService {
 func (s *OrderService) CreateOrder(outletUuid, userUuid uuid.UUID, items []dtos.OrderItemRequest) (*dtos.OrderResponse, error) {
 	// Find Outlet
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userUuid).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
@@ -56,13 +56,13 @@ func (s *OrderService) CreateOrder(outletUuid, userUuid uuid.UUID, items []dtos.
 	totalAmount := 0.0
 	for _, item := range items {
 		var product models.Product
-		if err := tx.Where("uuid = ?", item.ProductUuid).First(&product).Error; err != nil {
+		if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, userUuid).First(&product).Error; err != nil {
 			tx.Rollback()
 			return nil, errors.New("product not found")
 		}
 
 		// Deduct stock using StockService
-		if err := s.StockService.DeductStockForSale(outletUuid, item.ProductUuid, float64(item.Quantity)); err != nil {
+		if err := s.StockService.DeductStockForSale(outletUuid, item.ProductUuid, float64(item.Quantity), userUuid); err != nil {
 			tx.Rollback()
 			return nil, err // Return specific stock deduction error
 		}
@@ -106,9 +106,9 @@ func (s *OrderService) CreateOrder(outletUuid, userUuid uuid.UUID, items []dtos.
 }
 
 // GetOrder retrieves an order by its Uuid.
-func (s *OrderService) GetOrderByUuid(uuid uuid.UUID) (*dtos.OrderResponse, error) {
+func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uuid.UUID) (*dtos.OrderResponse, error) {
 	var order models.Order
-	if err := s.DB.Preload("Outlet").Preload("User").Where("uuid = ?", uuid).First(&order).Error; err != nil {
+	if err := s.DB.Preload("Outlet").Preload("User").Where("uuid = ? AND user_id = ?", uuid, userID).First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("order not found")
 		}
@@ -130,14 +130,14 @@ func (s *OrderService) GetOrderByUuid(uuid uuid.UUID) (*dtos.OrderResponse, erro
 }
 
 // GetOrdersByOutlet retrieves all orders for a specific outlet.
-func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID) ([]dtos.OrderResponse, error) {
+func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uuid.UUID) ([]dtos.OrderResponse, error) {
 	var orders []models.Order
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ?", outletUuid).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
-	if err := s.DB.Preload("User").Where("outlet_id = ?", outlet.ID).Find(&orders).Error; err != nil {
+	if err := s.DB.Preload("User").Where("outlet_id = ? AND user_id = ?", outlet.ID, userID).Find(&orders).Error; err != nil {
 		log.Printf("Error getting orders by outlet: %v", err)
 		return nil, errors.New("failed to retrieve orders")
 	}
