@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/internal/validators"
 	"github.com/msyaifudin/pos/pkg/utils"
 )
 
@@ -81,6 +82,13 @@ func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateCreateRecipe(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
@@ -105,6 +113,13 @@ func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 	req := new(dtos.UpdateRecipeRequest)
 	if err := c.Bind(req); err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateUpdateRecipe(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
 	}
 
 	user := c.Get("user").(*jwt.Token)

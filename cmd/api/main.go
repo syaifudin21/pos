@@ -56,6 +56,9 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return internalmw.LanguageMiddleware(next)
+	})
 	// Inject DB into context for middleware
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {

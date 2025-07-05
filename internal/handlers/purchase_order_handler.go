@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/internal/validators"
 	"github.com/msyaifudin/pos/pkg/utils"
 )
 
@@ -22,6 +23,13 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c echo.Context) error {
 	req := new(dtos.CreatePurchaseOrderRequest)
 	if err := c.Bind(req); err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateCreatePurchaseOrder(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
 	}
 
 	user := c.Get("user").(*jwt.Token)

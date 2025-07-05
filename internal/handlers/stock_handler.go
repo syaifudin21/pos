@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/internal/validators"
 	"github.com/msyaifudin/pos/pkg/utils"
 )
 
@@ -82,6 +83,13 @@ func (h *StockHandler) UpdateStock(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateUpdateStock(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
@@ -102,6 +110,13 @@ func (h *StockHandler) UpdateGlobalStock(c echo.Context) error {
 	req := new(dtos.GlobalStockUpdateRequest)
 	if err := c.Bind(req); err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateGlobalStockUpdate(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
 	}
 
 	user := c.Get("user").(*jwt.Token)

@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/internal/validators"
 	"github.com/msyaifudin/pos/pkg/utils"
 )
 
@@ -83,6 +84,13 @@ func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateCreateOutlet(outlet, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
@@ -98,7 +106,7 @@ func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 	}
 	return JSONSuccess(c, http.StatusCreated, "outlet_created_successfully", dtos.OutletResponse{
 		ID:      createdOutlet.ID,
-			Uuid:    createdOutlet.Uuid,
+		Uuid:    createdOutlet.Uuid,
 		Name:    createdOutlet.Name,
 		Address: createdOutlet.Address,
 		Type:    createdOutlet.Type,
@@ -126,6 +134,13 @@ func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 	outlet := new(dtos.OutletUpdateRequest)
 	if err := c.Bind(outlet); err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateUpdateOutlet(outlet, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
 	}
 
 	user := c.Get("user").(*jwt.Token)

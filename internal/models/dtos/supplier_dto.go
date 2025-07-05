@@ -3,9 +3,9 @@ package dtos
 import "github.com/google/uuid"
 
 type CreateSupplierRequest struct {
-	Name    string `json:"name"`
-	Contact string `json:"contact,omitempty"`
-	Address string `json:"address,omitempty"`
+	Name    string `json:"name" validate:"required"`
+	Contact string `json:"contact" validate:"required"`
+	Address string `json:"address" validate:"required"`
 }
 
 type UpdateSupplierRequest struct {

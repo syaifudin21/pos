@@ -3,19 +3,19 @@ package dtos
 import "github.com/google/uuid"
 
 type ProductCreateRequest struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description,omitempty"`
-	Price       float64 `json:"price"`
-	SKU         string  `json:"sku,omitempty"`
-	Type        string  `json:"type"`
+	Name        string  `json:"name" validate:"required"`
+	Description string  `json:"description,omitempty" validate:"required"`
+	Price       float64 `json:"price" validate:"required"`
+	SKU         string  `json:"sku,omitempty" validate:"required"`
+	Type        string  `json:"type" validate:"required,oneof=retail_item fnb_main_product fnb_component"`
 }
 
 type ProductUpdateRequest struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description,omitempty"`
-	Price       float64 `json:"price"`
-	SKU         string  `json:"sku,omitempty"`
-	Type        string  `json:"type"`
+	Name        string  `json:"name" validate:"required"`
+	Description string  `json:"description,omitempty" validate:"required"`
+	Price       float64 `json:"price" validate:"required"`
+	SKU         string  `json:"sku,omitempty" validate:"required"`
+	Type        string  `json:"type" validate:"required,oneof=retail_item fnb_main_product fnb_component"`
 }
 
 type ProductResponse struct {

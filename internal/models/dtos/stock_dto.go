@@ -3,13 +3,13 @@ package dtos
 import "github.com/google/uuid"
 
 type UpdateStockRequest struct {
-	Quantity float64 `json:"quantity"`
+	Quantity float64 `json:"quantity" validate:"required"`
 }
 
 type GlobalStockUpdateRequest struct {
-	OutletUuid  uuid.UUID `json:"outlet_uuid"`
-	Productuuid uuid.UUID `json:"product_uuid"`
-	Quantity    float64   `json:"quantity"`
+	OutletUuid  uuid.UUID `json:"outlet_uuid" validate:"required"`
+	Productuuid uuid.UUID `json:"product_uuid" validate:"required"`
+	Quantity    float64   `json:"quantity" validate:"required"`
 }
 
 type StockResponse struct {

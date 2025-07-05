@@ -3,29 +3,29 @@ package dtos
 import "github.com/google/uuid"
 
 type CreateOrderRequest struct {
-	OutletUuid    uuid.UUID          `json:"outlet_uuid"`
-	Items         []OrderItemRequest `json:"items"`
-	PaymentMethod string             `json:"payment_method"`
+	OutletUuid    uuid.UUID          `json:"outlet_uuid" validate:"required"`
+	Items         []OrderItemRequest `json:"items" validate:"required"`
+	PaymentMethod string             `json:"payment_method" validate:"required"`
 }
 
 type OrderItemRequest struct {
-	ProductUuid uuid.UUID `json:"product_uuid"`
-	Quantity    int       `json:"quantity"`
+	ProductUuid uuid.UUID `json:"product_uuid" validate:"required"`
+	Quantity    int       `json:"quantity" validate:"required"`
 }
 
 // OrderResponse represents the response structure for an order.
 // This can be a simplified version of models.Order if not all fields are needed.
 type OrderResponse struct {
-	ID          uint      `json:"id"`
-	Uuid        uuid.UUID `json:"uuid"`
-	OutletID    uint      `json:"outlet_id"`
-	OutletUuid  uuid.UUID `json:"outlet_uuid"`
-	UserID      uint      `json:"user_id"`
-	UserUuid    uuid.UUID `json:"user_uuid"`
-	OrderDate   string    `json:"order_date"` // Consider formatting time.Time to string
-	TotalAmount float64   `json:"total_amount"`
+	ID            uint      `json:"id"`
+	Uuid          uuid.UUID `json:"uuid"`
+	OutletID      uint      `json:"outlet_id"`
+	OutletUuid    uuid.UUID `json:"outlet_uuid"`
+	UserID        uint      `json:"user_id"`
+	UserUuid      uuid.UUID `json:"user_uuid"`
+	OrderDate     string    `json:"order_date"` // Consider formatting time.Time to string
+	TotalAmount   float64   `json:"total_amount"`
 	PaymentMethod string    `json:"payment_method"`
-	Status      string    `json:"status"`
+	Status        string    `json:"status"`
 	// Add other fields if necessary, but keep it minimal
 }
 

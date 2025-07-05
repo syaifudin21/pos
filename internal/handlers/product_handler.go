@@ -6,20 +6,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/internal/validators"
 	"github.com/msyaifudin/pos/pkg/utils"
 )
-
-func isValidProductType(productType string) bool {
-	for _, pt := range models.AllowedProductTypes {
-		if pt == productType {
-			return true
-		}
-	}
-	return false
-}
 
 type ProductHandler struct {
 	ProductService *services.ProductService
@@ -81,8 +72,11 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	if !isValidProductType(product.Type) {
-		return JSONError(c, http.StatusBadRequest, "invalid_product_type_specified")
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateCreateProduct(product, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
 	}
 
 	user := c.Get("user").(*jwt.Token)
@@ -106,8 +100,11 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	if !isValidProductType(product.Type) {
-		return JSONError(c, http.StatusBadRequest, "invalid_product_type_specified")
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateUpdateProduct(product, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
 	}
 
 	user := c.Get("user").(*jwt.Token)

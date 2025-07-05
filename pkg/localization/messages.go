@@ -206,3 +206,166 @@ func GetLocalizedMessage(key, lang string) string {
 	// Return the key itself if no translation is found
 	return key
 }
+
+var validationMessages = map[string]map[string]string{
+	"name_required": {
+		"en": "Name is required",
+		"id": "Nama wajib diisi",
+	},
+	"contact_required": {
+		"en": "Contact is required",
+		"id": "Kontak wajib diisi",
+	},
+	"address_required": {
+		"en": "Address is required",
+		"id": "Alamat wajib diisi",
+	},
+	"product_name_required": {
+		"en": "Product name is required",
+		"id": "Nama produk wajib diisi",
+	},
+	"product_description_required": {
+		"en": "Product description is required",
+		"id": "Deskripsi produk wajib diisi",
+	},
+	"product_price_required": {
+		"en": "Product price is required",
+		"id": "Harga produk wajib diisi",
+	},
+	"product_sku_required": {
+		"en": "Product SKU is required",
+		"id": "SKU produk wajib diisi",
+	},
+	"product_type_required": {
+		"en": "Product type is required and must be one of retail_item, fnb_main_product, or fnb_component",
+		"id": "Tipe produk wajib diisi dan harus salah satu dari retail_item, fnb_main_product, atau fnb_component",
+	},
+	"username_required": {
+		"en": "Username is required",
+		"id": "Username wajib diisi",
+	},
+	"password_required": {
+		"en": "Password is required",
+		"id": "Password wajib diisi",
+	},
+	"role_required": {
+		"en": "Role is required",
+		"id": "Role wajib diisi",
+	},
+	"outlet_id_required": {
+		"en": "Outlet ID is required",
+		"id": "ID Outlet wajib diisi",
+	},
+	"email_required": {
+		"en": "Email is required",
+		"id": "Email wajib diisi",
+	},
+	"phone_number_required": {
+		"en": "Phone number is required",
+		"id": "Nomor telepon wajib diisi",
+	},
+	"outlet_uuid_required": {
+		"en": "Outlet UUID is required",
+		"id": "UUID Outlet wajib diisi",
+	},
+	"order_items_required": {
+		"en": "Order items are required",
+		"id": "Item pesanan wajib diisi",
+	},
+	"payment_method_required": {
+		"en": "Payment method is required",
+		"id": "Metode pembayaran wajib diisi",
+	},
+	"product_uuid_required": {
+		"en": "Product UUID is required",
+		"id": "UUID Produk wajib diisi",
+	},
+	"quantity_required": {
+		"en": "Quantity is required",
+		"id": "Kuantitas wajib diisi",
+	},
+	"supplier_uuid_required": {
+		"en": "Supplier UUID is required",
+		"id": "UUID Supplier wajib diisi",
+	},
+	"purchase_items_required": {
+		"en": "Purchase items are required",
+		"id": "Item pembelian wajib diisi",
+	},
+	"price_required": {
+		"en": "Price is required",
+		"id": "Harga wajib diisi",
+	},
+	"main_product_uuid_required": {
+		"en": "Main Product UUID is required",
+		"id": "UUID Produk Utama wajib diisi",
+	},
+	"component_uuid_required": {
+		"en": "Component UUID is required",
+		"id": "UUID Komponen wajib diisi",
+	},
+	"product_required": {
+		"en": "Product is required",
+		"id": "Produk wajib diisi",
+	},
+	"qty_required": {
+		"en": "Quantity is required",
+		"id": "Kuantitas wajib diisi",
+	},
+	"return_url_required": {
+		"en": "Return URL is required",
+		"id": "Return URL wajib diisi",
+	},
+	"cancel_url_required": {
+		"en": "Cancel URL is required",
+		"id": "Cancel URL wajib diisi",
+	},
+	"notify_url_required": {
+		"en": "Notify URL is required",
+		"id": "Notify URL wajib diisi",
+	},
+	"reference_id_required": {
+		"en": "Reference ID is required",
+		"id": "Reference ID wajib diisi",
+	},
+	"buyer_name_required": {
+		"en": "Buyer name is required",
+		"id": "Nama pembeli wajib diisi",
+	},
+	"buyer_email_required": {
+		"en": "Buyer email is required",
+		"id": "Email pembeli wajib diisi",
+	},
+	"buyer_phone_required": {
+		"en": "Buyer phone is required",
+		"id": "Nomor telepon pembeli wajib diisi",
+	},
+	"udf1_required": {
+		"en": "UDF1 is required",
+		"id": "UDF1 wajib diisi",
+	},
+	"role_invalid": {
+		"en": "Role must be one of admin, owner, manager, or cashier",
+		"id": "Role harus salah satu dari admin, owner, manager, atau cashier",
+	},
+	"password_strength": {
+		"en": "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character",
+		"id": "Kata sandi harus mengandung setidaknya satu huruf kapital, satu huruf kecil, satu angka, dan satu karakter spesial",
+	},
+}
+
+// GetLocalizedValidationMessage retrieves a validation message for a given key and language.
+// It falls back to English if the requested language is not found.
+func GetLocalizedValidationMessage(key, lang string) string {
+	if langMessages, ok := validationMessages[key]; ok {
+		if msg, ok := langMessages[lang]; ok {
+			return msg
+		}
+		// Fallback to English if specific language not found for the key
+		if msg, ok := langMessages["en"]; ok {
+			return msg
+		}
+	}
+	// Return the key itself if no translation is found
+	return key
+}

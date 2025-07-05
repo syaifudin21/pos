@@ -6,20 +6,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/internal/validators"
 	"github.com/msyaifudin/pos/pkg/utils"
 )
-
-func isValidRole(role string) bool {
-	for _, r := range models.AllowedUserRoles {
-		if r == role {
-			return true
-		}
-	}
-	return false
-}
 
 type AuthHandler struct {
 	AuthService *services.AuthService
@@ -35,13 +26,11 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	if req.Username == "" || req.Password == "" || req.Role == "" {
-		return JSONError(c, http.StatusBadRequest, "username_password_required")
-	}
-
-	// Only allow 'manager' and 'cashier' roles for this endpoint
-	if req.Role != "manager" && req.Role != "cashier" {
-		return JSONError(c, http.StatusBadRequest, "invalid_role_for_this_registration_endpoint")
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateRegisterRequest(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
 	}
 
 	// Get the ID of the currently logged-in admin from the JWT claims
@@ -62,8 +51,11 @@ func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	if req.Username == "" || req.Password == "" || req.Email == "" || req.PhoneNumber == "" {
-		return JSONError(c, http.StatusBadRequest, "username_password_email_phone_required")
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateRegisterAdminRequest(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
 	}
 
 	// Only allow 'admin' role for this endpoint
@@ -87,8 +79,11 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	if req.Username == "" || req.Password == "" {
-		return JSONError(c, http.StatusBadRequest, "username_password_required")
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateLoginRequest(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
 	}
 
 	token, user, err := h.AuthService.LoginUser(req.Username, req.Password)
@@ -158,23 +153,24 @@ func (h *AuthHandler) UpdateUser(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_user_uuid_format")
 	}
-
-	user, err := h.AuthService.GetUserByuuid(userUuid)
-	if err != nil {
-		return JSONError(c, MapErrorToStatusCode(err), err.Error())
-	}
-
 	req := new(dtos.UpdateUserRequest)
 	if err := c.Bind(req); err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
-	updatedUser, err := h.AuthService.UpdateUser(user.ID, req)
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateUpdateUserRequest(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
+	_, err = h.AuthService.GetUserByuuid(userUuid)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return JSONSuccess(c, http.StatusOK, "user_updated_successfully", dtos.UserResponse{ID: updatedUser.ID, Uuid: updatedUser.Uuid, Username: updatedUser.Username, Role: updatedUser.Role})
+	return JSONSuccess(c, http.StatusOK, "user_updated_successfully", nil)
 }
 
 func (h *AuthHandler) DeleteUser(c echo.Context) error {
