@@ -33,7 +33,12 @@ func (h *StockHandler) GetStockByOutletAndProduct(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	stock, err := h.StockService.GetStockByOutletAndProduct(outletUuid, productUuid, userID)
+	ownerID, err := h.StockService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	stock, err := h.StockService.GetStockByOutletAndProduct(outletUuid, productUuid, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -50,7 +55,12 @@ func (h *StockHandler) GetOutletStocks(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	stocks, err := h.StockService.GetOutletStocks(outletUuid, userID)
+	ownerID, err := h.StockService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	stocks, err := h.StockService.GetOutletStocks(outletUuid, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -76,7 +86,12 @@ func (h *StockHandler) UpdateStock(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	stock, err := h.StockService.UpdateStock(outletUuid, productUuid, req.Quantity, userID)
+	ownerID, err := h.StockService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	stock, err := h.StockService.UpdateStock(outletUuid, productUuid, req.Quantity, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -93,7 +108,12 @@ func (h *StockHandler) UpdateGlobalStock(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	stock, err := h.StockService.UpdateGlobalStock(req.OutletUuid, req.Productuuid, req.Quantity, userID)
+	ownerID, err := h.StockService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	stock, err := h.StockService.UpdateGlobalStock(req.OutletUuid, req.Productuuid, req.Quantity, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

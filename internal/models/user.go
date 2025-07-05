@@ -5,14 +5,12 @@ var AllowedUserRoles = []string{"admin", "owner", "manager", "cashier"}
 
 type User struct {
 	BaseModel
-	Username    string  `gorm:"unique;not null" json:"username"`
-	Password    string  `gorm:"not null" json:"-"`    // Password will not be marshaled to JSON
-	Email       string  `json:"email,omitempty"`
-	PhoneNumber string  `json:"phone_number,omitempty"`
-	Role        string  `gorm:"not null" json:"role"` // e.g., admin, manager, cashier
-	OutletID    *uint   `json:"outlet_id,omitempty"`  // Optional, for users tied to a specific outlet
-	Outlet      *Outlet `json:"outlet,omitempty"`
-	CreatorID   *uint   `json:"creator_id,omitempty"` // ID of the admin who created this user
-	Creator     *User   `json:"creator,omitempty"`    // Belongs to relationship with User itself
-	IsBlocked   bool    `gorm:"default:false" json:"is_blocked"`
+	Username    string `gorm:"unique;not null" json:"username"`
+	Password    string `gorm:"not null" json:"-"` // Password will not be marshaled to JSON
+	Email       string `json:"email,omitempty"`
+	PhoneNumber string `json:"phone_number,omitempty"`
+	Role        string `gorm:"not null" json:"role"` // e.g., admin, manager, cashier
+	CreatorID   *uint  `json:"creator_id,omitempty"` // ID of the admin who created this user
+	Creator     *User  `json:"creator,omitempty"`    // Belongs to relationship with User itself
+	IsBlocked   bool   `gorm:"default:false" json:"is_blocked"`
 }

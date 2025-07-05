@@ -29,7 +29,12 @@ func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	recipe, err := h.RecipeService.GetRecipeByUuid(parsedUuid, userID)
+	ownerID, err := h.RecipeService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	recipe, err := h.RecipeService.GetRecipeByUuid(parsedUuid, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -47,7 +52,12 @@ func (h *RecipeHandler) GetRecipesByMainProduct(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	recipes, err := h.RecipeService.GetRecipesByMainProduct(mainProductUuid, userID)
+	ownerID, err := h.RecipeService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	recipes, err := h.RecipeService.GetRecipesByMainProduct(mainProductUuid, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -75,7 +85,12 @@ func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	createdRecipe, err := h.RecipeService.CreateRecipe(req.MainProductUuid, req.ComponentUuid, req.Quantity, userID)
+	ownerID, err := h.RecipeService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	createdRecipe, err := h.RecipeService.CreateRecipe(req.MainProductUuid, req.ComponentUuid, req.Quantity, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -96,7 +111,12 @@ func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	updatedRecipe, err := h.RecipeService.UpdateRecipe(parsedUuid, req.MainProductUuid, req.ComponentUuid, req.Quantity, userID)
+	ownerID, err := h.RecipeService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	updatedRecipe, err := h.RecipeService.UpdateRecipe(parsedUuid, req.MainProductUuid, req.ComponentUuid, req.Quantity, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

@@ -28,7 +28,12 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	po, err := h.PurchaseOrderService.CreatePurchaseOrder(req.SupplierUuid, req.OutletUuid, req.Items, userID)
+	ownerID, err := h.PurchaseOrderService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	po, err := h.PurchaseOrderService.CreatePurchaseOrder(req.SupplierUuid, req.OutletUuid, req.Items, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -47,7 +52,12 @@ func (h *PurchaseOrderHandler) GetPurchaseOrderByUuid(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	po, err := h.PurchaseOrderService.GetPurchaseOrderByUuid(parsedUuid, userID)
+	ownerID, err := h.PurchaseOrderService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	po, err := h.PurchaseOrderService.GetPurchaseOrderByUuid(parsedUuid, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -65,7 +75,12 @@ func (h *PurchaseOrderHandler) GetPurchaseOrdersByOutlet(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	pos, err := h.PurchaseOrderService.GetPurchaseOrdersByOutlet(OutletUuid, userID)
+	ownerID, err := h.PurchaseOrderService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	pos, err := h.PurchaseOrderService.GetPurchaseOrdersByOutlet(OutletUuid, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

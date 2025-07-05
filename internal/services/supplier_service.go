@@ -18,9 +18,30 @@ func NewSupplierService(db *gorm.DB) *SupplierService {
 	return &SupplierService{DB: db}
 }
 
+// GetOwnerID retrieves the owner's ID for a given user.
+// If the user is a manager or cashier, it returns their creator's ID.
+// Otherwise, it returns the user's own ID.
+func (s *SupplierService) GetOwnerID(userID uint) (uint, error) {
+	var user models.User
+	if err := s.DB.First(&user, userID).Error; err != nil {
+		log.Printf("Error finding user: %v", err)
+		return 0, errors.New("user not found")
+	}
+
+	if (user.Role == "manager" || user.Role == "cashier") && user.CreatorID != nil {
+		return *user.CreatorID, nil
+	}
+
+	return userID, nil
+}
+
 func (s *SupplierService) GetAllSuppliers(userID uint) ([]models.Supplier, error) {
+	ownerID, err := s.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
 	var suppliers []models.Supplier
-	if err := s.DB.Where("user_id = ?", userID).Find(&suppliers).Error; err != nil {
+	if err := s.DB.Where("user_id = ?", ownerID).Find(&suppliers).Error; err != nil {
 		log.Printf("Error getting all suppliers: %v", err)
 		return nil, errors.New("failed to retrieve suppliers")
 	}
@@ -28,8 +49,12 @@ func (s *SupplierService) GetAllSuppliers(userID uint) ([]models.Supplier, error
 }
 
 func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID, userID uint) (*dtos.SupplierResponse, error) {
+	ownerID, err := s.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
 	var supplier models.Supplier
-	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, userID).First(&supplier).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, ownerID).First(&supplier).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("supplier not found")
 		}
@@ -46,11 +71,15 @@ func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID, userID uint) (*dtos.
 }
 
 func (s *SupplierService) CreateSupplier(req *dtos.CreateSupplierRequest, userID uint) (*dtos.SupplierResponse, error) {
+	ownerID, err := s.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
 	supplier := &models.Supplier{
 		Name:    req.Name,
 		Contact: req.Contact,
 		Address: req.Address,
-		UserID:  userID,
+		UserID:  ownerID,
 	}
 	if err := s.DB.Create(supplier).Error; err != nil {
 		log.Printf("Error creating supplier: %v", err)
@@ -66,8 +95,12 @@ func (s *SupplierService) CreateSupplier(req *dtos.CreateSupplierRequest, userID
 }
 
 func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, req *dtos.UpdateSupplierRequest, userID uint) (*dtos.SupplierResponse, error) {
+	ownerID, err := s.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
 	var supplier models.Supplier
-	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, userID).First(&supplier).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, ownerID).First(&supplier).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("supplier not found")
 		}
@@ -94,7 +127,11 @@ func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, req *dtos.UpdateSupplie
 }
 
 func (s *SupplierService) DeleteSupplier(uuid uuid.UUID, userID uint) error {
-	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, userID).Delete(&models.Supplier{}).Error; err != nil {
+	ownerID, err := s.GetOwnerID(userID)
+	if err != nil {
+		return err
+	}
+	if err := s.DB.Where("uuid = ? AND user_id = ?", uuid, ownerID).Delete(&models.Supplier{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("supplier not found")
 		}

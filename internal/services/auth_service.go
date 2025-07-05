@@ -33,11 +33,10 @@ func (s *AuthService) RegisterUser(username, password, role string, outletID *ui
 	}
 
 	user := models.User{
-		Username:    username,
-		Password:    hashedPassword,
-		Role:        role,
-		OutletID:    outletID,
-		CreatorID:   creatorID,
+		Username:  username,
+		Password:  hashedPassword,
+		Role:      role,
+		CreatorID: creatorID,
 	}
 
 	// Assign email if not nil
@@ -173,9 +172,6 @@ func (s *AuthService) UpdateUser(userID uint, updates *dtos.UpdateUserRequest) (
 		}
 		user.Role = *updates.Role
 	}
-
-	// Handle OutletID update
-	user.OutletID = updates.OutletID // Can be nil to remove association
 
 	if err := s.DB.Save(&user).Error; err != nil {
 		log.Printf("Error updating user: %v", err)

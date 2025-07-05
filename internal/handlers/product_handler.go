@@ -34,7 +34,12 @@ func (h *ProductHandler) GetAllProducts(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	products, err := h.ProductService.GetAllProducts(userID)
+	ownerID, err := h.ProductService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	products, err := h.ProductService.GetAllProducts(ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

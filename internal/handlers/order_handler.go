@@ -29,11 +29,16 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
+	ownerID, err := h.OrderService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
 	// For simplicity, assuming outlet ID is passed in the request or derived from user's outlet
 	// For now, let's use the outlet ID from the request
 	outletUuid := req.OutletUuid
 
-	order, err := h.OrderService.CreateOrder(outletUuid, userID, req.Items, req.PaymentMethod)
+	order, err := h.OrderService.CreateOrder(outletUuid, ownerID, req.Items, req.PaymentMethod)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -52,7 +57,12 @@ func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	order, err := h.OrderService.GetOrderByUuid(parsedUuid, userID)
+	ownerID, err := h.OrderService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	order, err := h.OrderService.GetOrderByUuid(parsedUuid, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -69,7 +79,12 @@ func (h *OrderHandler) GetOrdersByOutlet(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	orders, err := h.OrderService.GetOrdersByOutlet(outletUuid, userID)
+	ownerID, err := h.OrderService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	orders, err := h.OrderService.GetOrdersByOutlet(outletUuid, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

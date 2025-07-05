@@ -24,7 +24,12 @@ func (h *SupplierHandler) GetAllSuppliers(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	suppliers, err := h.SupplierService.GetAllSuppliers(userID)
+	ownerID, err := h.SupplierService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	suppliers, err := h.SupplierService.GetAllSuppliers(ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -51,7 +56,12 @@ func (h *SupplierHandler) GetSupplierByuuid(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	supplier, err := h.SupplierService.GetSupplierByuuid(parsedUuid, userID)
+	ownerID, err := h.SupplierService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	supplier, err := h.SupplierService.GetSupplierByuuid(parsedUuid, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -68,7 +78,12 @@ func (h *SupplierHandler) CreateSupplier(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	createdSupplier, err := h.SupplierService.CreateSupplier(req, userID)
+	ownerID, err := h.SupplierService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	createdSupplier, err := h.SupplierService.CreateSupplier(req, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

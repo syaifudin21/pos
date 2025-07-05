@@ -33,7 +33,12 @@ func (h *OutletHandler) GetAllOutlets(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	outlets, err := h.OutletService.GetAllOutlets(userID)
+	ownerID, err := h.OutletService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	outlets, err := h.OutletService.GetAllOutlets(ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -60,7 +65,12 @@ func (h *OutletHandler) GetOutletByID(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	outlet, err := h.OutletService.GetOutletByUuid(id, userID)
+	ownerID, err := h.OutletService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	outlet, err := h.OutletService.GetOutletByUuid(id, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -77,7 +87,12 @@ func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	createdOutlet, err := h.OutletService.CreateOutlet(outlet, userID)
+	ownerID, err := h.OutletService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	createdOutlet, err := h.OutletService.CreateOutlet(outlet, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -117,7 +132,12 @@ func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 	claims := user.Claims.(*utils.Claims)
 	userID := claims.ID
 
-	result, err := h.OutletService.UpdateOutlet(id, outlet, userID)
+	ownerID, err := h.OutletService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	result, err := h.OutletService.UpdateOutlet(id, outlet, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

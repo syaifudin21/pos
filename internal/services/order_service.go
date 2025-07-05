@@ -21,11 +21,32 @@ func NewOrderService(db *gorm.DB, stockService *StockService, ipaymuService *Ipa
 	return &OrderService{DB: db, StockService: stockService, IpaymuService: ipaymuService}
 }
 
+// GetOwnerID retrieves the owner's ID for a given user.
+// If the user is a manager or cashier, it returns their creator's ID.
+// Otherwise, it returns the user's own ID.
+func (s *OrderService) GetOwnerID(userID uint) (uint, error) {
+	var user models.User
+	if err := s.DB.First(&user, userID).Error; err != nil {
+		log.Printf("Error finding user: %v", err)
+		return 0, errors.New("user not found")
+	}
+
+	if (user.Role == "manager" || user.Role == "cashier") && user.CreatorID != nil {
+		return *user.CreatorID, nil
+	}
+
+	return userID, nil
+}
+
 // CreateOrder creates a new order and deducts stock.
 func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dtos.OrderItemRequest, paymentMethod string) (*dtos.OrderResponse, error) {
+	ownerID, err := s.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
 	// Find Outlet
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, ownerID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
@@ -43,7 +64,7 @@ func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dt
 
 	order := models.Order{
 		OutletID:      outlet.ID,
-		UserID:        user.ID,
+		UserID:        ownerID,
 		Status:        "completed", // Assuming immediate completion for simplicity
 		TotalAmount:   0,
 		PaymentMethod: paymentMethod,
@@ -58,13 +79,13 @@ func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dt
 	totalAmount := 0.0
 	for _, item := range items {
 		var product models.Product
-		if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, userID).First(&product).Error; err != nil {
+		if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, ownerID).First(&product).Error; err != nil {
 			tx.Rollback()
 			return nil, errors.New("product not found")
 		}
 
 		// Deduct stock using StockService
-		if err := s.StockService.DeductStockForSale(outletUuid, item.ProductUuid, float64(item.Quantity), userID); err != nil {
+		if err := s.StockService.DeductStockForSale(outletUuid, item.ProductUuid, float64(item.Quantity), ownerID); err != nil {
 			tx.Rollback()
 			return nil, err // Return specific stock deduction error
 		}
@@ -129,8 +150,12 @@ func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dt
 
 // GetOrder retrieves an order by its Uuid.
 func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderResponse, error) {
+	ownerID, err := s.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
 	var order models.Order
-	if err := s.DB.Preload("Outlet").Preload("User").Where("uuid = ? AND user_id = ?", uuid, userID).First(&order).Error; err != nil {
+	if err := s.DB.Preload("Outlet").Preload("User").Where("uuid = ? AND user_id = ?", uuid, ownerID).First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("order not found")
 		}
@@ -154,13 +179,17 @@ func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderR
 
 // GetOrdersByOutlet retrieves all orders for a specific outlet.
 func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uint) ([]dtos.OrderResponse, error) {
+	ownerID, err := s.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
 	var orders []models.Order
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, ownerID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
-	if err := s.DB.Preload("User").Where("outlet_id = ? AND user_id = ?", outlet.ID, userID).Find(&orders).Error; err != nil {
+	if err := s.DB.Preload("User").Where("outlet_id = ? AND user_id = ?", outlet.ID, ownerID).Find(&orders).Error; err != nil {
 		log.Printf("Error getting orders by outlet: %v", err)
 		return nil, errors.New("failed to retrieve orders")
 	}
