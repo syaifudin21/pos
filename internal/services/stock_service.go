@@ -206,7 +206,7 @@ func (s *StockService) DeductStockForSale(outletUuid, productUuid uuid.UUID, qua
 				log.Printf("Error deducting component stock for product %s: %v", recipe.Component.Name, err)
 				return errors.New("failed to deduct component stock")
 			}
-			log.Printf("DeductStockForSale: After deduction - Product %s, New Stock: %f", recipe.Component.Name, product.Name, componentStock.Quantity)
+			log.Printf("DeductStockForSale: After deduction - Component %s, Product %s, New Stock: %f", recipe.Component.Name, product.Name, componentStock.Quantity)
 		}
 	} else if product.Type == "retail_item" {
 		var retailStock models.Stock
