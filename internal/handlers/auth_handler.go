@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -88,7 +89,11 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	token, user, err := h.AuthService.LoginUser(req.Username, req.Password)
 	if err != nil {
-		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+		statusCode := MapErrorToStatusCode(err)
+		if err.Error() == "user not verified" {
+			return JSONError(c, statusCode, err.Error(), os.Getenv("HOST"))
+		}
+		return JSONError(c, statusCode, err.Error())
 	}
 
 	return JSONSuccess(c, http.StatusOK, "login_successful", dtos.LoginResponse{Token: token, User: dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role}})

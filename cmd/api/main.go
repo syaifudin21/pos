@@ -82,12 +82,18 @@ func main() {
 	// Initialize services and handlers
 	authService := services.NewAuthService(database.DB)
 	authHandler := handlers.NewAuthHandler(authService)
+	googleOAuthService := services.NewGoogleOAuthService(database.DB, authService)
+	googleOAuthHandler := handlers.NewGoogleOAuthHandler(googleOAuthService)
 
 	// Auth routes
 	authGroup := e.Group("/auth")
 	authGroup.POST("/register", authHandler.RegisterAdmin)
 	authGroup.POST("/verify-otp", authHandler.VerifyOTP)
 	authGroup.POST("/login", authHandler.Login)
+
+	// Google OAuth2 routes
+	authGroup.GET("/google/login", googleOAuthHandler.GoogleLogin)
+	authGroup.GET("/google/callback", googleOAuthHandler.GoogleCallback)
 
 	// User management routes (admin only)
 	userAdminGroup := e.Group("/users")

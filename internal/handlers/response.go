@@ -23,10 +23,15 @@ func JSONSuccess(c echo.Context, statusCode int, messageKey string, data interfa
 	return c.JSON(statusCode, SuccessResponse{Message: localizedMessage, Data: data})
 }
 
-// JSONError sends an error JSON response.
-func JSONError(c echo.Context, statusCode int, messageKey string) error {
+// JSONError sends an error JSON response or redirects.
+func JSONError(c echo.Context, statusCode int, messageKey string, redirectURL ...string) error {
 	lang := c.Request().Header.Get("Accept-Language")
 	localizedMessage := localization.GetLocalizedMessage(messageKey, lang)
+
+	if len(redirectURL) > 0 && redirectURL[0] != "" {
+		return c.Redirect(http.StatusTemporaryRedirect, redirectURL[0])
+	}
+
 	return c.JSON(statusCode, ErrorResponse{Message: localizedMessage})
 }
 
@@ -35,7 +40,7 @@ func MapErrorToStatusCode(err error) int {
 	switch err.Error() {
 	case "user not found", "outlet not found", "product not found", "supplier not found", "recipe not found", "stock not found", "order not found", "purchase order not found":
 		return http.StatusNotFound
-	case "invalid credentials", "unauthorized":
+	case "invalid credentials", "unauthorized", "user not verified":
 		return http.StatusUnauthorized
 	case "username already exists", "invalid input", "validation error":
 		return http.StatusBadRequest
