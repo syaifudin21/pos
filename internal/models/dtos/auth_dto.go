@@ -3,8 +3,7 @@ package dtos
 import "github.com/google/uuid"
 
 type RegisterRequest struct {
-	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required,passwordstrength"`
+	Password string `json:"password" validate:"required"`
 	Role     string `json:"role" validate:"required"`
 	OutletID *uint  `json:"outlet_id,omitempty" validate:"required"`
 }
@@ -35,8 +34,12 @@ type UpdateUserRequest struct {
 }
 
 type RegisterAdminRequest struct {
-	Username    string `json:"username" validate:"required"`
 	Password    string `json:"password" validate:"required,passwordstrength"`
 	Email       string `json:"email" validate:"required,email"`
 	PhoneNumber string `json:"phone_number" validate:"required"`
+}
+
+type VerifyOTPRequest struct {
+	Email string `json:"email" validate:"required,email"`
+	OTP   string `json:"otp" validate:"required,len=6"`
 }

@@ -28,7 +28,8 @@ func main() {
 	// Initialize database
 	database.InitDB()
 
-	// Auto-migrate models
+	// Drop and Auto-migrate models (for development, to clear OTP table)
+	database.DB.Migrator().DropTable(&models.OTP{})
 	err := database.DB.AutoMigrate(
 		&models.User{},
 		&models.Outlet{},
@@ -44,6 +45,7 @@ func main() {
 		&models.Supplier{},
 		&models.PurchaseOrder{},
 		&models.PurchaseOrderItem{},
+		&models.OTP{},
 	) // BaseModel is included for its UUID type to be recognized by GORM
 	if err != nil {
 		log.Fatalf("Failed to auto-migrate database: %v", err)
@@ -84,6 +86,7 @@ func main() {
 	// Auth routes
 	authGroup := e.Group("/auth")
 	authGroup.POST("/register", authHandler.RegisterAdmin)
+	authGroup.POST("/verify-otp", authHandler.VerifyOTP)
 	authGroup.POST("/login", authHandler.Login)
 
 	// User management routes (admin only)

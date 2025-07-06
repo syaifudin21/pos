@@ -1,5 +1,9 @@
 package models
 
+import (
+	"time"
+)
+
 // AllowedUserRoles defines the list of roles that a user can have.
 var AllowedUserRoles = []string{"admin", "owner", "manager", "cashier"}
 
@@ -13,4 +17,6 @@ type User struct {
 	CreatorID   *uint  `json:"creator_id,omitempty"` // ID of the admin who created this user
 	Creator     *User  `json:"creator,omitempty"`    // Belongs to relationship with User itself
 	IsBlocked   bool   `gorm:"default:false" json:"is_blocked"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
+	PhoneVerifiedAt *time.Time `json:"phone_verified_at,omitempty"`
 }

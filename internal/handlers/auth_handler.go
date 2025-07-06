@@ -37,7 +37,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
 	creatorID := claims.ID
 
-	user, err := h.AuthService.RegisterUser(req.Username, req.Password, req.Role, req.OutletID, &creatorID, nil, nil)
+	user, err := h.AuthService.RegisterUser(req.Password, req.Role, req.OutletID, &creatorID, nil, nil)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -65,7 +65,7 @@ func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
 
 	// No creatorID for the first admin, or if registered by a super-admin outside the system
 	// For now, let's assume no creatorID for admin registration via this endpoint
-	user, err := h.AuthService.RegisterUser(req.Username, req.Password, "admin", nil, nil, &req.Email, &req.PhoneNumber)
+	user, err := h.AuthService.RegisterUser(req.Password, "admin", nil, nil, &req.Email, &req.PhoneNumber)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -190,4 +190,25 @@ func (h *AuthHandler) DeleteUser(c echo.Context) error {
 	}
 
 	return JSONSuccess(c, http.StatusOK, "user_deleted_successfully", nil)
+}
+
+func (h *AuthHandler) VerifyOTP(c echo.Context) error {
+	req := new(dtos.VerifyOTPRequest)
+	if err := c.Bind(req); err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateVerifyOTPRequest(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
+	user, err := h.AuthService.VerifyOTP(req.Email, req.OTP)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "otp_verified_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role})
 }

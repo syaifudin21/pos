@@ -52,7 +52,6 @@ func ValidateRegisterRequest(req *dtos.RegisterRequest, lang string) []string {
 		"passwordstrength": func(_ string) string { return localization.GetLocalizedValidationMessage("password_strength", lang) },
 	}
 	fieldToMessage := map[string]string{
-		"Username": "username_required",
 		"Password": "password_required",
 		"Role":     "role_required",
 	}
@@ -129,8 +128,6 @@ func ValidateRegisterAdminRequest(req *dtos.RegisterAdminRequest, lang string) [
 	var messages []string
 	for _, err := range err.(validator.ValidationErrors) {
 		switch err.Field() {
-		case "Username":
-			messages = append(messages, localization.GetLocalizedValidationMessage("username_required", lang))
 		case "Password":
 			if err.Tag() == "passwordstrength" {
 				messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
@@ -141,6 +138,24 @@ func ValidateRegisterAdminRequest(req *dtos.RegisterAdminRequest, lang string) [
 			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
 		case "PhoneNumber":
 			messages = append(messages, localization.GetLocalizedValidationMessage("phone_number_required", lang))
+		}
+	}
+	return messages
+}
+
+func ValidateVerifyOTPRequest(req *dtos.VerifyOTPRequest, lang string) []string {
+	err := authValidator.Struct(req)
+	if err == nil {
+		return nil
+	}
+
+	var messages []string
+	for _, err := range err.(validator.ValidationErrors) {
+		switch err.Field() {
+		case "Email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
+		case "OTP":
+			messages = append(messages, localization.GetLocalizedValidationMessage("otp_invalid", lang))
 		}
 	}
 	return messages

@@ -189,6 +189,10 @@ var messages = map[string]map[string]string{
 		"en": "User deleted successfully",
 		"id": "Pengguna berhasil dihapus",
 	},
+	"user_not_verified": {
+		"en": "User not verified",
+		"id": "Pengguna belum terverifikasi",
+	},
 }
 
 // GetLocalizedMessage retrieves a message for a given key and language.
