@@ -216,6 +216,12 @@ func main() {
 	outletPoGroup.Use(internalmw.Authorize("purchase_orders", "read"))
 	outletPoGroup.GET("", poHandler.GetPurchaseOrdersByOutlet)
 
+	// Initialize iPaymu handler
+	ipaymuHandler := handlers.NewIpaymuHandler(ipaymuService)
+	// Payment routes
+	paymentGroup := e.Group("/api/payment")
+	paymentGroup.POST("/ipaymu/direct-payment", ipaymuHandler.CreateDirectPayment)
+
 	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {

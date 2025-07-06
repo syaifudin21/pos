@@ -116,21 +116,21 @@ func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dt
 
 	// Process payment if method is iPaymu
 	if paymentMethod == "ipaymu" {
-		// Fetch order items with product details for iPaymu
-		var fullOrderItems []models.OrderItem
-		if err := tx.Preload("Product").Where("order_id = ?", order.ID).Find(&fullOrderItems).Error; err != nil {
-			tx.Rollback()
-			log.Printf("Error preloading order items for iPaymu: %v", err)
-			return nil, errors.New("failed to prepare order for iPaymu payment")
-		}
+		// // Fetch order items with product details for iPaymu
+		// var fullOrderItems []models.OrderItem
+		// if err := tx.Preload("Product").Where("order_id = ?", order.ID).Find(&fullOrderItems).Error; err != nil {
+		// 	tx.Rollback()
+		// 	log.Printf("Error preloading order items for iPaymu: %v", err)
+		// 	return nil, errors.New("failed to prepare order for iPaymu payment")
+		// }
 
-		ipaymuResp, err := s.IpaymuService.ProcessIpaymuPayment(&order, &user, fullOrderItems)
-		if err != nil {
-			tx.Rollback()
-			return nil, err
-		}
-		// You might want to store ipaymuResp.Data.URL or transaction ID in the order for later reference
-		log.Printf("iPaymu Payment URL: %s", ipaymuResp.Data.URL)
+		// ipaymuResp, err := s.IpaymuService.ProcessIpaymuPayment(&order, &user, fullOrderItems)
+		// if err != nil {
+		// 	tx.Rollback()
+		// 	return nil, err
+		// }
+		// // You might want to store ipaymuResp.Data.URL or transaction ID in the order for later reference
+		// log.Printf("iPaymu Payment URL: %s", ipaymuResp.Data.URL)
 	}
 
 	tx.Commit()

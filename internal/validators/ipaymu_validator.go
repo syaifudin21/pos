@@ -8,7 +8,7 @@ import (
 
 var ipaymuValidator = validator.New()
 
-func ValidateIpaymuRequest(req *dtos.IpaymuRequest, lang string) []string {
+func ValidateCreateDirectPayment(req *dtos.CreateDirectPaymentRequest, lang string) []string {
 	err := ipaymuValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -23,22 +23,18 @@ func ValidateIpaymuRequest(req *dtos.IpaymuRequest, lang string) []string {
 			messages = append(messages, localization.GetLocalizedValidationMessage("qty_required", lang))
 		case "Price":
 			messages = append(messages, localization.GetLocalizedValidationMessage("price_required", lang))
-		case "ReturnUrl":
-			messages = append(messages, localization.GetLocalizedValidationMessage("return_url_required", lang))
-		case "CancelUrl":
-			messages = append(messages, localization.GetLocalizedValidationMessage("cancel_url_required", lang))
-		case "NotifyUrl":
-			messages = append(messages, localization.GetLocalizedValidationMessage("notify_url_required", lang))
-		case "ReferenceId":
-			messages = append(messages, localization.GetLocalizedValidationMessage("reference_id_required", lang))
-		case "BuyerName":
-			messages = append(messages, localization.GetLocalizedValidationMessage("buyer_name_required", lang))
-		case "BuyerEmail":
-			messages = append(messages, localization.GetLocalizedValidationMessage("buyer_email_required", lang))
-		case "BuyerPhone":
-			messages = append(messages, localization.GetLocalizedValidationMessage("buyer_phone_required", lang))
-		case "Udf1":
-			messages = append(messages, localization.GetLocalizedValidationMessage("udf1_required", lang))
+		case "Name":
+			messages = append(messages, localization.GetLocalizedValidationMessage("name_required", lang))
+		case "Email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
+		case "Phone":
+			messages = append(messages, localization.GetLocalizedValidationMessage("phone_required", lang))
+		case "Callback":
+			messages = append(messages, localization.GetLocalizedValidationMessage("callback_required", lang))
+		case "Method":
+			messages = append(messages, localization.GetLocalizedValidationMessage("method_required", lang))
+		case "Channel":
+			messages = append(messages, localization.GetLocalizedValidationMessage("channel_required", lang))
 		}
 	}
 	return messages
