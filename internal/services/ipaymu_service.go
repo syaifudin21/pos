@@ -13,19 +13,24 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/msyaifudin/pos/internal/models"
+	"gorm.io/gorm"
 )
 
 type IpaymuService struct {
 	BaseURL string
 	Va      string
 	ApiKey  string
+	DB      *gorm.DB
 }
 
-func NewIpaymuService() *IpaymuService {
+func NewIpaymuService(db *gorm.DB) *IpaymuService {
 	return &IpaymuService{
 		BaseURL: os.Getenv("IPAYMU_BASE_URL"),
 		Va:      os.Getenv("IPAYMU_VA"),
 		ApiKey:  os.Getenv("IPAYMU_API_KEY"),
+		DB:      db,
 	}
 }
 
@@ -119,12 +124,21 @@ func (s *IpaymuService) send(endPoint string, body interface{}, contentType, met
 
 // CreateDirectPayment creates a direct payment request to Ipaymu
 func (s *IpaymuService) CreateDirectPayment(
+	ServiceName string,
+	ServiceRefID string,
 	product []string,
 	qty []int,
 	price []int,
-	name, email, phone, callback, method, channel string,
+	name, email, phone, method, channel string,
 	account *string,
 ) (map[string]interface{}, error) {
+	// Hitung total amount dari seluruh produk
+	amount := 0
+	for i := range product {
+		if i < len(qty) && i < len(price) {
+			amount += qty[i] * price[i]
+		}
+	}
 	body := map[string]interface{}{
 		"product":        product,
 		"qty":            qty,
@@ -135,9 +149,9 @@ func (s *IpaymuService) CreateDirectPayment(
 		"expired":        24,
 		"expiredType":    "hours",
 		"referenceId":    1,
-		"returnUrl":      os.Getenv("IPAYMU_NOTIFY_URL"), // set if needed
-		"notifyUrl":      callback,
-		"amount":         price[0] * qty[0],
+		"returnUrl":      os.Getenv("IPAYMU_RETURN_URL"), // set if needed
+		"notifyUrl":      os.Getenv("IPAYMU_NOTIFY_URL"),
+		"amount":         amount,
 		"paymentMethod":  method,
 		"paymentChannel": channel,
 		"feeDirection":   "BUYER",
@@ -145,6 +159,77 @@ func (s *IpaymuService) CreateDirectPayment(
 	if account != nil {
 		body["account"] = *account
 	}
+	endPoint := "/api/v2/payment/direct"
 
-	return s.send("/api/v2/payment/direct", body, "application/json", "POST")
+	res, err := s.send(endPoint, body, "application/json", "POST")
+	if err != nil {
+		return nil, err
+	}
+
+	// Ambil referenceIpaymu, totalStr, reqBodyStr, bodyBytes dari response
+	var referenceIpaymu string
+	var totalStr string
+
+	// Ambil referenceIpaymu dan totalStr dari response
+	if data, ok := res["Data"].(map[string]interface{}); ok {
+		if ref, ok := data["TransactionId"]; ok {
+			referenceIpaymu = fmt.Sprintf("%v", ref)
+		}
+		if total, ok := data["Total"]; ok {
+			totalStr = fmt.Sprintf("%v", total)
+		}
+	}
+
+	log := models.IpaymuLog{
+		ServiceName:     ServiceName,
+		ServiceRefID:    ServiceRefID,
+		PaymentMethod:   method,
+		PaymentChannel:  channel,
+		RequestAt:       time.Now(),
+		ReferenceIpaymu: referenceIpaymu,
+	}
+	// Ubah totalStr ke float64
+	var amountFloat float64
+	if totalStr != "" {
+		fmt.Sscanf(totalStr, "%f", &amountFloat)
+	}
+	log.Amount = amountFloat
+	if s.DB != nil {
+		s.DB.Create(&log)
+	}
+
+	return res, nil
+
+}
+
+// UpdateIpaymuLogStatus updates the IpaymuLog status and timestamps based on notification
+func (s *IpaymuService) NotifyDirectPayment(TrxId int, Status string, SettlementStatus string) error {
+	// INSERT_YOUR_CODE
+	var log models.IpaymuLog
+	if err := s.DB.Where("reference_ipaymu = ?", fmt.Sprintf("%v", TrxId)).First(&log).Error; err != nil {
+		return err
+	}
+
+	fmt.Println("Debug Signature:", log) // Debugging output
+
+	dateNow := time.Now()
+
+	updated := false
+
+	if Status == "berhasil" {
+		log.SuccessAt = &dateNow
+		updated = true
+	}
+	if SettlementStatus == "settled" {
+		log.SettlementAt = &dateNow
+		updated = true
+	}
+
+	if updated {
+		if err := s.DB.Save(&log).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

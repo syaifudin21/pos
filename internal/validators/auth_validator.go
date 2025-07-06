@@ -47,20 +47,26 @@ func ValidateRegisterRequest(req *dtos.RegisterRequest, lang string) []string {
 	}
 
 	var messages []string
+	tagToMessage := map[string]func(field string) string{
+		"required":         func(field string) string { return localization.GetLocalizedValidationMessage(field+"_required", lang) },
+		"passwordstrength": func(_ string) string { return localization.GetLocalizedValidationMessage("password_strength", lang) },
+	}
+	fieldToMessage := map[string]string{
+		"Username": "username_required",
+		"Password": "password_required",
+		"Role":     "role_required",
+	}
+
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Username":
-			messages = append(messages, localization.GetLocalizedValidationMessage("username_required", lang))
-		case "Password":
-			if err.Tag() == "passwordstrength" {
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			// Special case for password strength
+			if err.Field() == "Password" && err.Tag() == "passwordstrength" {
 				messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
-			} else {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_required", lang))
+				continue
 			}
-		case "Role":
-			messages = append(messages, localization.GetLocalizedValidationMessage("role_required", lang))
-		case "OutletID":
-			messages = append(messages, localization.GetLocalizedValidationMessage("outlet_id_required", lang))
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+		} else if fn, ok := tagToMessage[err.Tag()]; ok {
+			messages = append(messages, fn(err.Field()))
 		}
 	}
 	return messages

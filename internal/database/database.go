@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/msyaifudin/pos/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -27,6 +28,11 @@ func InitDB() {
 
 	if err := db.Use(&UpdateByCallback{}); err != nil {
 		log.Fatalf("Gagal register plugin UpdateByCallback: %v", err)
+	}
+
+	// AutoMigrate IpaymuLog
+	if err := db.AutoMigrate(&models.IpaymuLog{}); err != nil {
+		log.Fatalf("Gagal migrasi tabel IpaymuLog: %v", err)
 	}
 
 	DB = db

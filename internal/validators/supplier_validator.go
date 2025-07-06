@@ -15,14 +15,14 @@ func ValidateCreateSupplier(req *dtos.CreateSupplierRequest, lang string) []stri
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"Name":    "name_required",
+		"Contact": "contact_required",
+		"Address": "address_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Name":
-			messages = append(messages, localization.GetLocalizedValidationMessage("name_required", lang))
-		case "Contact":
-			messages = append(messages, localization.GetLocalizedValidationMessage("contact_required", lang))
-		case "Address":
-			messages = append(messages, localization.GetLocalizedValidationMessage("address_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages
@@ -35,14 +35,14 @@ func ValidateUpdateSupplier(req *dtos.UpdateSupplierRequest, lang string) []stri
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"Name":    "name_required",
+		"Contact": "contact_required",
+		"Address": "address_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Name":
-			messages = append(messages, localization.GetLocalizedValidationMessage("name_required", lang))
-		case "Contact":
-			messages = append(messages, localization.GetLocalizedValidationMessage("contact_required", lang))
-		case "Address":
-			messages = append(messages, localization.GetLocalizedValidationMessage("address_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages

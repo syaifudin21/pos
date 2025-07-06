@@ -15,14 +15,14 @@ func ValidateCreateOutlet(req *dtos.OutletCreateRequest, lang string) []string {
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"Name":    "name_required",
+		"Address": "address_required",
+		"Type":    "product_type_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Name":
-			messages = append(messages, localization.GetLocalizedValidationMessage("name_required", lang))
-		case "Address":
-			messages = append(messages, localization.GetLocalizedValidationMessage("address_required", lang))
-		case "Type":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_type_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages
@@ -35,14 +35,14 @@ func ValidateUpdateOutlet(req *dtos.OutletUpdateRequest, lang string) []string {
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"Name":    "name_required",
+		"Address": "address_required",
+		"Type":    "product_type_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Name":
-			messages = append(messages, localization.GetLocalizedValidationMessage("name_required", lang))
-		case "Address":
-			messages = append(messages, localization.GetLocalizedValidationMessage("address_required", lang))
-		case "Type":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_type_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages

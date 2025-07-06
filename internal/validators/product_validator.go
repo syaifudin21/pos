@@ -15,18 +15,16 @@ func ValidateCreateProduct(req *dtos.ProductCreateRequest, lang string) []string
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"Name":        "product_name_required",
+		"Description": "product_description_required",
+		"Price":       "product_price_required",
+		"SKU":         "product_sku_required",
+		"Type":        "product_type_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Name":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_name_required", lang))
-		case "Description":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_description_required", lang))
-		case "Price":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_price_required", lang))
-		case "SKU":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_sku_required", lang))
-		case "Type":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_type_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages
@@ -39,18 +37,16 @@ func ValidateUpdateProduct(req *dtos.ProductUpdateRequest, lang string) []string
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"Name":        "product_name_required",
+		"Description": "product_description_required",
+		"Price":       "product_price_required",
+		"SKU":         "product_sku_required",
+		"Type":        "product_type_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Name":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_name_required", lang))
-		case "Description":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_description_required", lang))
-		case "Price":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_price_required", lang))
-		case "SKU":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_sku_required", lang))
-		case "Type":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_type_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages

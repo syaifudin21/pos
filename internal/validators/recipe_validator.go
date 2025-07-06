@@ -15,14 +15,14 @@ func ValidateCreateRecipe(req *dtos.CreateRecipeRequest, lang string) []string {
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"MainProductUuid": "main_product_uuid_required",
+		"ComponentUuid":   "component_uuid_required",
+		"Quantity":        "quantity_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "MainProductUuid":
-			messages = append(messages, localization.GetLocalizedValidationMessage("main_product_uuid_required", lang))
-		case "ComponentUuid":
-			messages = append(messages, localization.GetLocalizedValidationMessage("component_uuid_required", lang))
-		case "Quantity":
-			messages = append(messages, localization.GetLocalizedValidationMessage("quantity_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages
@@ -35,14 +35,14 @@ func ValidateUpdateRecipe(req *dtos.UpdateRecipeRequest, lang string) []string {
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"MainProductUuid": "main_product_uuid_required",
+		"ComponentUuid":   "component_uuid_required",
+		"Quantity":        "quantity_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "MainProductUuid":
-			messages = append(messages, localization.GetLocalizedValidationMessage("main_product_uuid_required", lang))
-		case "ComponentUuid":
-			messages = append(messages, localization.GetLocalizedValidationMessage("component_uuid_required", lang))
-		case "Quantity":
-			messages = append(messages, localization.GetLocalizedValidationMessage("quantity_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages

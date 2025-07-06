@@ -15,14 +15,14 @@ func ValidateCreateOrder(req *dtos.CreateOrderRequest, lang string) []string {
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"OutletUuid":    "outlet_uuid_required",
+		"Items":         "order_items_required",
+		"PaymentMethod": "payment_method_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "OutletUuid":
-			messages = append(messages, localization.GetLocalizedValidationMessage("outlet_uuid_required", lang))
-		case "Items":
-			messages = append(messages, localization.GetLocalizedValidationMessage("order_items_required", lang))
-		case "PaymentMethod":
-			messages = append(messages, localization.GetLocalizedValidationMessage("payment_method_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages
@@ -35,12 +35,13 @@ func ValidateOrderItem(req *dtos.OrderItemRequest, lang string) []string {
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"ProductUuid": "product_uuid_required",
+		"Quantity":    "quantity_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "ProductUuid":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_uuid_required", lang))
-		case "Quantity":
-			messages = append(messages, localization.GetLocalizedValidationMessage("quantity_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages

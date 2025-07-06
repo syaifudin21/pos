@@ -11,6 +11,8 @@ import (
 
 	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/handlers"
+
+	// removed: "github.com/msyaifudin/pos/internal/handlers/ipaymu_notify_handler"
 	internalmw "github.com/msyaifudin/pos/internal/middleware"
 	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/services"
@@ -73,7 +75,7 @@ func main() {
 	})
 
 	// Initialize iPaymu service
-	ipaymuService := services.NewIpaymuService()
+	ipaymuService := services.NewIpaymuService(database.DB)
 
 	// Initialize services and handlers
 	authService := services.NewAuthService(database.DB)
@@ -221,6 +223,7 @@ func main() {
 	// Payment routes
 	paymentGroup := e.Group("/api/payment")
 	paymentGroup.POST("/ipaymu/direct-payment", ipaymuHandler.CreateDirectPayment)
+	paymentGroup.POST("/ipaymu/notify", ipaymuHandler.IpaymuNotify)
 
 	// Start server
 	port := os.Getenv("PORT")

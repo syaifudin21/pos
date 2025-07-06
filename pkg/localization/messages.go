@@ -208,6 +208,160 @@ func GetLocalizedMessage(key, lang string) string {
 }
 
 var validationMessages = map[string]map[string]string{
+	// Ipaymu/Direct Payment/Service/Channel/Callback/Method/Phone/Email/Name/Qty/Price
+	"ServiceName_required": {
+		"en": "Service name is required",
+		"id": "Nama layanan wajib diisi",
+	},
+	"ServiceRefID_required": {
+		"en": "Service reference ID is required",
+		"id": "ID referensi layanan wajib diisi",
+	},
+	"Product is required": {
+		"en": "Product is required",
+		"id": "Produk wajib diisi",
+	},
+	"Product_required": {
+		"en": "Product is required",
+		"id": "Produk wajib diisi",
+	},
+	"Quantity is required": {
+		"en": "Quantity is required",
+		"id": "Kuantitas wajib diisi",
+	},
+	"Qty_required": {
+		"en": "Quantity is required",
+		"id": "Kuantitas wajib diisi",
+	},
+	"Price is required": {
+		"en": "Price is required",
+		"id": "Harga wajib diisi",
+	},
+	"Price_required": {
+		"en": "Price is required",
+		"id": "Harga wajib diisi",
+	},
+	"Name is required": {
+		"en": "Name is required",
+		"id": "Nama wajib diisi",
+	},
+	"Name_required": {
+		"en": "Name is required",
+		"id": "Nama wajib diisi",
+	},
+	"Email is required": {
+		"en": "Email is required",
+		"id": "Email wajib diisi",
+	},
+	"Email_required": {
+		"en": "Email is required",
+		"id": "Email wajib diisi",
+	},
+	"phone_required": {
+		"en": "Phone is required",
+		"id": "Nomor telepon wajib diisi",
+	},
+	"Phone_required": {
+		"en": "Phone is required",
+		"id": "Nomor telepon wajib diisi",
+	},
+	"callback_required": {
+		"en": "Callback is required",
+		"id": "Callback wajib diisi",
+	},
+	"Callback_required": {
+		"en": "Callback is required",
+		"id": "Callback wajib diisi",
+	},
+	"method_required": {
+		"en": "Method is required",
+		"id": "Metode wajib diisi",
+	},
+	"Method_required": {
+		"en": "Method is required",
+		"id": "Metode wajib diisi",
+	},
+	"channel_required": {
+		"en": "Channel is required",
+		"id": "Channel wajib diisi",
+	},
+	"Channel_required": {
+		"en": "Channel is required",
+		"id": "Channel wajib diisi",
+	},
+	// General
+	"required": {
+		"en": "This field is required",
+		"id": "Kolom ini wajib diisi",
+	},
+	"email_invalid": {
+		"en": "Invalid email format",
+		"id": "Format email tidak valid",
+	},
+	"uuid_invalid": {
+		"en": "Invalid UUID format",
+		"id": "Format UUID tidak valid",
+	},
+	"url_invalid": {
+		"en": "Invalid URL format",
+		"id": "Format URL tidak valid",
+	},
+	"greater_than_zero": {
+		"en": "Value must be greater than zero",
+		"id": "Nilai harus lebih dari nol",
+	},
+	// Ipaymu/Order/Qty/Price min
+	"product_min_one": {
+		"en": "Product must be at least 1",
+		"id": "Produk minimal 1",
+	},
+	"qty_min_one": {
+		"en": "Quantity must be at least 1",
+		"id": "Kuantitas minimal 1",
+	},
+	"price_min_one": {
+		"en": "Price must be at least 1",
+		"id": "Harga minimal 1",
+	},
+	// Dive/Required_if/Required_with
+	"dive_required": {
+		"en": "Nested field is required",
+		"id": "Kolom di dalam array wajib diisi",
+	},
+	"required_if": {
+		"en": "This field is required in this context",
+		"id": "Kolom ini wajib diisi dalam konteks ini",
+	},
+	"required_with": {
+		"en": "This field is required with another field",
+		"id": "Kolom ini wajib diisi bersama kolom lain",
+	},
+	// Dynamic keys for gt/min per field (for map lookup)
+	"Product_greater_than_zero": {
+		"en": "Product must be greater than zero",
+		"id": "Produk harus lebih dari nol",
+	},
+	"Qty_greater_than_zero": {
+		"en": "Quantity must be greater than zero",
+		"id": "Kuantitas harus lebih dari nol",
+	},
+	"Price_greater_than_zero": {
+		"en": "Price must be greater than zero",
+		"id": "Harga harus lebih dari nol",
+	},
+	"Product_dive_required": {
+		"en": "Product array item is required",
+		"id": "Item array produk wajib diisi",
+	},
+	"Qty_dive_required": {
+		"en": "Quantity array item is required",
+		"id": "Item array kuantitas wajib diisi",
+	},
+	"Price_dive_required": {
+		"en": "Price array item is required",
+		"id": "Item array harga wajib diisi",
+	},
+	// Add more as needed for other dynamic keys
 	"name_required": {
 		"en": "Name is required",
 		"id": "Nama wajib diisi",

@@ -15,10 +15,12 @@ func ValidateUpdateStock(req *dtos.UpdateStockRequest, lang string) []string {
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"Quantity": "quantity_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Quantity":
-			messages = append(messages, localization.GetLocalizedValidationMessage("quantity_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages
@@ -31,14 +33,14 @@ func ValidateGlobalStockUpdate(req *dtos.GlobalStockUpdateRequest, lang string) 
 	}
 
 	var messages []string
+	fieldToMessage := map[string]string{
+		"OutletUuid":  "outlet_uuid_required",
+		"Productuuid": "product_uuid_required",
+		"Quantity":    "quantity_required",
+	}
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "OutletUuid":
-			messages = append(messages, localization.GetLocalizedValidationMessage("outlet_uuid_required", lang))
-		case "Productuuid":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_uuid_required", lang))
-		case "Quantity":
-			messages = append(messages, localization.GetLocalizedValidationMessage("quantity_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
 		}
 	}
 	return messages

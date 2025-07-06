@@ -15,26 +15,77 @@ func ValidateCreateDirectPayment(req *dtos.CreateDirectPaymentRequest, lang stri
 	}
 
 	var messages []string
+	tagToMessage := map[string]func(field string) string{
+		"required": func(field string) string { return localization.GetLocalizedValidationMessage(field+"_required", lang) },
+		"email":    func(_ string) string { return localization.GetLocalizedValidationMessage("email_invalid", lang) },
+		"uuid":     func(_ string) string { return localization.GetLocalizedValidationMessage("uuid_invalid", lang) },
+		"url":      func(_ string) string { return localization.GetLocalizedValidationMessage("url_invalid", lang) },
+		"gt": func(field string) string {
+			return localization.GetLocalizedValidationMessage(field+"_greater_than_zero", lang)
+		},
+		"dive": func(field string) string {
+			return localization.GetLocalizedValidationMessage(field+"_dive_required", lang)
+		},
+		"required_if": func(field string) string {
+			return localization.GetLocalizedValidationMessage(field+"_required_if", lang)
+		},
+		"required_with": func(field string) string {
+			return localization.GetLocalizedValidationMessage(field+"_required_with", lang)
+		},
+	}
+	minFieldToMessage := map[string]string{
+		"Product": "product_min_one",
+		"Qty":     "qty_min_one",
+		"Price":   "price_min_one",
+	}
+	fieldToMessage := map[string]string{
+		"Product":  "product_required",
+		"Qty":      "qty_required",
+		"Price":    "price_required",
+		"Name":     "name_required",
+		"Email":    "email_required",
+		"Phone":    "phone_required",
+		"Callback": "callback_required",
+		"Method":   "method_required",
+		"Channel":  "channel_required",
+	}
+
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Product":
-			messages = append(messages, localization.GetLocalizedValidationMessage("product_required", lang))
-		case "Qty":
-			messages = append(messages, localization.GetLocalizedValidationMessage("qty_required", lang))
-		case "Price":
-			messages = append(messages, localization.GetLocalizedValidationMessage("price_required", lang))
-		case "Name":
-			messages = append(messages, localization.GetLocalizedValidationMessage("name_required", lang))
-		case "Email":
-			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
-		case "Phone":
-			messages = append(messages, localization.GetLocalizedValidationMessage("phone_required", lang))
-		case "Callback":
-			messages = append(messages, localization.GetLocalizedValidationMessage("callback_required", lang))
-		case "Method":
-			messages = append(messages, localization.GetLocalizedValidationMessage("method_required", lang))
-		case "Channel":
-			messages = append(messages, localization.GetLocalizedValidationMessage("channel_required", lang))
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+		}
+		if err.Tag() == "min" {
+			if msg, ok := minFieldToMessage[err.Field()]; ok {
+				messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			}
+		} else if fn, ok := tagToMessage[err.Tag()]; ok {
+			messages = append(messages, fn(err.Field()))
+		}
+	}
+	return messages
+}
+
+func ValidateIpaymuNotify(req *dtos.IpaymuNotifyRequest, lang string) []string {
+	err := ipaymuValidator.Struct(req)
+	if err == nil {
+		return nil
+	}
+
+	var messages []string
+	tagToMessage := map[string]func(field string) string{
+		"required": func(field string) string { return localization.GetLocalizedValidationMessage(field+"_required", lang) },
+		"uuid":     func(_ string) string { return localization.GetLocalizedValidationMessage("uuid_invalid", lang) },
+	}
+
+	fieldToMessage := map[string]string{
+		"ReferenceId": "reference_id_required",
+	}
+
+	for _, err := range err.(validator.ValidationErrors) {
+		if msg, ok := fieldToMessage[err.Field()]; ok {
+			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+		} else if fn, ok := tagToMessage[err.Tag()]; ok {
+			messages = append(messages, fn(err.Field()))
 		}
 	}
 	return messages
