@@ -510,6 +510,26 @@ var validationMessages = map[string]map[string]string{
 		"en": "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character",
 		"id": "Kata sandi harus mengandung setidaknya satu huruf kapital, satu huruf kecil, satu angka, dan satu karakter spesial",
 	},
+	"NewEmail_required": {
+		"en": "New email is required",
+		"id": "Email baru wajib diisi",
+	},
+	"OTP_required": {
+		"en": "OTP is required",
+		"id": "OTP wajib diisi",
+	},
+	"OldPassword_required": {
+		"en": "Old password is required",
+		"id": "Kata sandi lama wajib diisi",
+	},
+	"NewPassword_required": {
+		"en": "New password is required",
+		"id": "Kata sandi baru wajib diisi",
+	},
+	"OTP_invalid": {
+		"en": "Invalid OTP",
+		"id": "OTP tidak valid",
+	},
 }
 
 // GetLocalizedValidationMessage retrieves a validation message for a given key and language.

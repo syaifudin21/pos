@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -237,20 +239,26 @@ func (h *AuthHandler) UpdatePassword(c echo.Context) error {
 
 	req := new(dtos.UpdatePasswordRequest)
 	if err := c.Bind(req); err != nil {
+		log.Printf("UpdatePassword Handler: Invalid request payload: %v", err)
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
+	log.Printf("UpdatePassword Handler: UserID: %d, OldPassword: %s, NewPassword: %s", userID, req.OldPassword, req.NewPassword)
+
 	lang := c.Get("lang").(string)
 	if messages := validators.ValidateUpdatePasswordRequest(req, lang); messages != nil {
+		log.Printf("UpdatePassword Handler: Validation failed: %v", messages)
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"message": messages,
 		})
 	}
 
 	if err := h.AuthService.UpdatePassword(userID, req.OldPassword, req.NewPassword); err != nil {
+		log.Printf("UpdatePassword Handler: Service error: %v", err)
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
+	log.Println("UpdatePassword Handler: Password updated successfully")
 	return JSONSuccess(c, http.StatusOK, "password_updated_successfully", nil)
 }
 
@@ -277,12 +285,21 @@ func (h *AuthHandler) SendOTPForEmailUpdate(c echo.Context) error {
 	return JSONSuccess(c, http.StatusOK, "otp_sent_for_email_update", nil)
 }
 
+// Fungsi ini seharusnya bisa mengambil request body jika request yang dikirimkan bertipe JSON dan field-field pada body sesuai dengan struct dtos.UpdateEmailRequest.
+// Namun, jika req selalu kosong setelah c.Bind(req), kemungkinan penyebabnya adalah:
+// 1. Header Content-Type pada request tidak di-set ke "application/json".
+// 2. Field pada JSON body tidak sesuai dengan tag json di struct UpdateEmailRequest (harus "new_email" dan "otp").
+// 3. Body request kosong atau tidak valid JSON.
+// 4. Ada middleware yang memodifikasi body sebelum sampai ke handler.
+
+// Berikut contoh rewrite dengan log tambahan untuk membantu debug:
 func (h *AuthHandler) UpdateEmail(c echo.Context) error {
 	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
 	userID := claims.ID
 
 	req := new(dtos.UpdateEmailRequest)
 	if err := c.Bind(req); err != nil {
+		fmt.Printf("Bind error: %v\n", err)
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 

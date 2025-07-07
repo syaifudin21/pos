@@ -48,21 +48,15 @@ func ValidateRegisterRequest(req *dtos.RegisterRequest, lang string) []string {
 
 	var messages []string
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Name":
-			messages = append(messages, localization.GetLocalizedValidationMessage("name_required", lang))
-		case "Email":
-			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
-		case "Password":
-			if err.Tag() == "passwordstrength" {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
-			} else {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_required", lang))
-			}
-		case "Role":
-			messages = append(messages, localization.GetLocalizedValidationMessage("role_required", lang))
-		case "OutletID":
-			messages = append(messages, localization.GetLocalizedValidationMessage("outlet_id_required", lang))
+		switch err.Tag() {
+		case "required":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_required", lang))
+		case "email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_invalid", lang))
+		case "passwordstrength":
+			messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
+		default:
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_"+err.Tag(), lang))
 		}
 	}
 	return messages
@@ -76,15 +70,15 @@ func ValidateLoginRequest(req *dtos.LoginRequest, lang string) []string {
 
 	var messages []string
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Email":
-			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
-		case "Password":
-			if err.Tag() == "passwordstrength" {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
-			} else {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_required", lang))
-			}
+		switch err.Tag() {
+		case "required":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_required", lang))
+		case "email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_invalid", lang))
+		case "passwordstrength":
+			messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
+		default:
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_"+err.Tag(), lang))
 		}
 	}
 	return messages
@@ -98,21 +92,15 @@ func ValidateUpdateUserRequest(req *dtos.UpdateUserRequest, lang string) []strin
 
 	var messages []string
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Name":
-			messages = append(messages, localization.GetLocalizedValidationMessage("name_required", lang))
-		case "Email":
-			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
-		case "Password":
-			if err.Tag() == "passwordstrength" {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
-			} else {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_required", lang))
-			}
-		case "Role":
-			messages = append(messages, localization.GetLocalizedValidationMessage("role_invalid", lang))
-		case "OutletID":
-			messages = append(messages, localization.GetLocalizedValidationMessage("outlet_id_required", lang))
+		switch err.Tag() {
+		case "required":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_required", lang))
+		case "email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_invalid", lang))
+		case "passwordstrength":
+			messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
+		default:
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_"+err.Tag(), lang))
 		}
 	}
 	return messages
@@ -126,17 +114,15 @@ func ValidateRegisterAdminRequest(req *dtos.RegisterAdminRequest, lang string) [
 
 	var messages []string
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Password":
-			if err.Tag() == "passwordstrength" {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
-			} else {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_required", lang))
-			}
-		case "Email":
-			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
-		case "PhoneNumber":
-			messages = append(messages, localization.GetLocalizedValidationMessage("phone_number_required", lang))
+		switch err.Tag() {
+		case "required":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_required", lang))
+		case "email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_invalid", lang))
+		case "passwordstrength":
+			messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
+		default:
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_"+err.Tag(), lang))
 		}
 	}
 	return messages
@@ -150,11 +136,15 @@ func ValidateVerifyOTPRequest(req *dtos.VerifyOTPRequest, lang string) []string 
 
 	var messages []string
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Email":
-			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
-		case "OTP":
-			messages = append(messages, localization.GetLocalizedValidationMessage("otp_invalid", lang))
+		switch err.Tag() {
+		case "required":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_required", lang))
+		case "email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_invalid", lang))
+		case "len":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_invalid", lang))
+		default:
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_"+err.Tag(), lang))
 		}
 	}
 	return messages
@@ -168,15 +158,13 @@ func ValidateUpdatePasswordRequest(req *dtos.UpdatePasswordRequest, lang string)
 
 	var messages []string
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "OldPassword":
-			messages = append(messages, localization.GetLocalizedValidationMessage("old_password_required", lang))
-		case "NewPassword":
-			if err.Tag() == "passwordstrength" {
-				messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
-			} else {
-				messages = append(messages, localization.GetLocalizedValidationMessage("new_password_required", lang))
-			}
+		switch err.Tag() {
+		case "required":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_required", lang))
+		case "passwordstrength":
+			messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
+		default:
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_"+err.Tag(), lang))
 		}
 	}
 	return messages
@@ -190,9 +178,13 @@ func ValidateSendOTPRequest(req *dtos.SendOTPRequest, lang string) []string {
 
 	var messages []string
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "Email":
-			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
+		switch err.Tag() {
+		case "required":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_required", lang))
+		case "email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_invalid", lang))
+		default:
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_"+err.Tag(), lang))
 		}
 	}
 	return messages
@@ -206,11 +198,15 @@ func ValidateUpdateEmailRequest(req *dtos.UpdateEmailRequest, lang string) []str
 
 	var messages []string
 	for _, err := range err.(validator.ValidationErrors) {
-		switch err.Field() {
-		case "NewEmail":
-			messages = append(messages, localization.GetLocalizedValidationMessage("new_email_required", lang))
-		case "OTP":
-			messages = append(messages, localization.GetLocalizedValidationMessage("otp_invalid", lang))
+		switch err.Tag() {
+		case "required":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_required", lang))
+		case "email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_invalid", lang))
+		case "len":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_invalid", lang))
+		default:
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_"+err.Tag(), lang))
 		}
 	}
 	return messages

@@ -80,7 +80,7 @@ func Run() {
 
 	// Authenticated user routes
 	accountGroup := e.Group("/account")
-	accountGroup.Use(internalmw.Authorize("account", "manage")) // General authorization for account actions
+	accountGroup.Use(internalmw.SelfAuthorize())
 	accountGroup.GET("/profile", authHandler.GetProfile)
 	accountGroup.PUT("/password", authHandler.UpdatePassword)
 	accountGroup.POST("/email/otp", authHandler.SendOTPForEmailUpdate)

@@ -228,32 +228,42 @@ func (s *AuthService) GetAllUsers(adminID uint) ([]models.User, error) {
 }
 
 func (s *AuthService) UpdatePassword(userID uint, oldPassword, newPassword string) error {
+	log.Printf("AuthService.UpdatePassword: UserID: %d, OldPassword: %s, NewPassword: %s", userID, oldPassword, newPassword)
+
 	var user models.User
 	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("AuthService.UpdatePassword: User not found: %v", err)
 			return errors.New("user not found")
 		}
-		log.Printf("Error finding user for password update: %v", err)
+		log.Printf("AuthService.UpdatePassword: Error finding user for password update: %v", err)
 		return errors.New("failed to retrieve user for password update")
 	}
 
 	// If user has a password set, validate old password
-	if user.Password != "" && !utils.CheckPasswordHash(oldPassword, user.Password) {
-		return errors.New("invalid old password")
+	if user.Password != "" {
+		log.Printf("AuthService.UpdatePassword: User has existing password. Checking old password.")
+		if !utils.CheckPasswordHash(oldPassword, user.Password) {
+			log.Printf("AuthService.UpdatePassword: Invalid old password for user %d", userID)
+			return errors.New("invalid old password")
+		}
+	} else {
+		log.Printf("AuthService.UpdatePassword: User has no existing password. Skipping old password check.")
 	}
 
 	hashedPassword, err := utils.HashPassword(newPassword)
 	if err != nil {
-		log.Printf("Error hashing new password: %v", err)
+		log.Printf("AuthService.UpdatePassword: Error hashing new password: %v", err)
 		return errors.New("failed to hash new password")
 	}
 
 	user.Password = hashedPassword
 	if err := s.DB.Save(&user).Error; err != nil {
-		log.Printf("Error updating password: %v", err)
+		log.Printf("AuthService.UpdatePassword: Error updating password in DB: %v", err)
 		return errors.New("failed to update password")
 	}
 
+	log.Printf("AuthService.UpdatePassword: Password updated successfully for user %d", userID)
 	return nil
 }
 
