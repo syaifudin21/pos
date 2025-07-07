@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"log"
@@ -11,15 +11,12 @@ import (
 
 	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/handlers"
-
-	// removed: "github.com/msyaifudin/pos/internal/handlers/ipaymu_notify_handler"
 	internalmw "github.com/msyaifudin/pos/internal/middleware"
-	"github.com/msyaifudin/pos/internal/models"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/pkg/casbin"
 )
 
-func main() {
+func Run() {
 	// Load environment variables from .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
@@ -28,29 +25,7 @@ func main() {
 	// Initialize database
 	database.InitDB()
 
-	// Drop and Auto-migrate models (for development, to clear OTP table)
-	database.DB.Migrator().DropTable(&models.OTP{})
-	err := database.DB.AutoMigrate(
-		&models.User{},
-		&models.Outlet{},
-		&models.Product{},
-		&models.Recipe{},
-		&models.User{},
-		&models.Outlet{},
-		&models.Product{},
-		&models.Recipe{},
-		&models.Stock{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Supplier{},
-		&models.PurchaseOrder{},
-		&models.PurchaseOrderItem{},
-		&models.OTP{},
-	) // BaseModel is included for its UUID type to be recognized by GORM
-	if err != nil {
-		log.Fatalf("Failed to auto-migrate database: %v", err)
-	}
-	log.Println("Database migration completed")
+	
 
 	// Initialize Casbin
 	casbin.InitCasbin()
