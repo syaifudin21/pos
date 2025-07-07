@@ -372,3 +372,29 @@ func (h *AuthHandler) ResetPassword(c echo.Context) error {
 	log.Println("ResetPassword Handler: Password reset successfully")
 	return JSONSuccess(c, http.StatusOK, "password_reset_successful", nil)
 }
+
+func (h *AuthHandler) ResendVerificationEmail(c echo.Context) error {
+	req := new(dtos.ResendEmailRequest)
+	if err := c.Bind(req); err != nil {
+		log.Printf("ResendVerificationEmail Handler: Invalid request payload: %v", err)
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	log.Printf("ResendVerificationEmail Handler: Email: %s", req.Email)
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateResendEmailRequest(req, lang); messages != nil {
+		log.Printf("ResendVerificationEmail Handler: Validation failed: %v", messages)
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
+	if err := h.AuthService.ResendVerificationEmail(req.Email); err != nil {
+		log.Printf("ResendVerificationEmail Handler: Service error: %v", err)
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	log.Println("ResendVerificationEmail Handler: Verification email resent successfully")
+	return JSONSuccess(c, http.StatusOK, "verification_email_resent_successfully", nil)
+}

@@ -255,3 +255,23 @@ func ValidateResetPasswordRequest(req *dtos.ResetPasswordRequest, lang string) [
 	}
 	return messages
 }
+
+func ValidateResendEmailRequest(req *dtos.ResendEmailRequest, lang string) []string {
+	err := authValidator.Struct(req)
+	if err == nil {
+		return nil
+	}
+
+	var messages []string
+	for _, err := range err.(validator.ValidationErrors) {
+		switch err.Tag() {
+		case "required":
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_required", lang))
+		case "email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_invalid", lang))
+		default:
+			messages = append(messages, localization.GetLocalizedValidationMessage(err.Field()+"_"+err.Tag(), lang))
+		}
+	}
+	return messages
+}

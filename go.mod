@@ -6,6 +6,7 @@ toolchain go1.23.10
 
 require (
 	github.com/casbin/casbin/v2 v2.108.0
+	github.com/go-mail/mail v2.3.1+incompatible
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
@@ -43,4 +44,5 @@ require (
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/mail.v2 v2.3.1 // indirect
 )

@@ -510,3 +510,55 @@ func (s *AuthService) ResetPassword(email, otp, newPassword string) error {
 
 	return nil
 }
+
+func (s *AuthService) ResendVerificationEmail(email string) error {
+	var user models.User
+	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		log.Printf("Error finding user for resend verification email: %v", err)
+		return errors.New("failed to retrieve user")
+	}
+
+	if user.EmailVerifiedAt != nil {
+		return errors.New("email already verified")
+	}
+
+	// Generate new OTP
+	otpCode, err := GenerateOTP()
+	if err != nil {
+		log.Printf("Error generating OTP for resend: %v", err)
+		return errors.New("failed to generate OTP")
+	}
+
+	hashedOTP, err := utils.HashOTP(otpCode)
+	if err != nil {
+		log.Printf("Error hashing OTP for resend: %v", err)
+		return errors.New("failed to hash OTP")
+	}
+
+	// Delete any existing unverified OTPs for this user and purpose
+	s.DB.Where("user_id = ? AND purpose = ?", user.ID, "email_verification").Delete(&models.OTP{})
+
+	otpRecord := models.OTP{
+		UserID:    user.ID,
+		OTP:       hashedOTP,
+		Purpose:   "email_verification",
+		Target:    user.Email,
+		ExpiresAt: time.Now().Add(10 * time.Minute), // OTP valid for 10 minutes
+	}
+
+	if err := s.DB.Create(&otpRecord).Error; err != nil {
+		log.Printf("Error saving new OTP for resend: %v", err)
+		return errors.New("failed to save OTP")
+	}
+
+	// Send verification email
+	if err := SendVerificationEmail(user.Email, otpCode); err != nil {
+		log.Printf("Error sending verification email for resend: %v", err)
+		return errors.New("failed to send verification email")
+	}
+
+	return nil
+}

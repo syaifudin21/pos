@@ -28,6 +28,10 @@ func Run() {
 	// Initialize Casbin
 	casbin.InitCasbin()
 
+	// Initialize Email Queue and Worker
+	services.InitEmailQueue()
+	services.StartEmailWorker()
+
 	e := echo.New()
 
 	// Middleware
@@ -65,6 +69,7 @@ func Run() {
 	authGroup.POST("/login", authHandler.Login)
 	authGroup.POST("/forgot-password", authHandler.ForgotPassword)
 	authGroup.POST("/reset-password", authHandler.ResetPassword)
+	authGroup.POST("/resend-verification-email", authHandler.ResendVerificationEmail)
 
 	// Google OAuth2 routes
 	authGroup.GET("/google/login", googleOAuthHandler.GoogleLogin)
