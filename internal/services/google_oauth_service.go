@@ -82,7 +82,7 @@ func (s *GoogleOAuthService) HandleGoogleCallback(code string) (string, *models.
 			// Generate a random password for the new user
 			randomPassword := utils.GenerateRandomString(16) // You need to implement this utility
 			// Use the AuthService to register the user
-			registeredUser, regErr := s.AuthService.RegisterUser(randomPassword, "owner", nil, nil, &userInfo.Email, nil)
+			registeredUser, regErr := s.AuthService.RegisterUser(userInfo.Name, userInfo.Email, randomPassword, "owner", nil, nil, nil)
 			if regErr != nil {
 				log.Printf("Failed to auto-register user: %v", regErr)
 				return "", nil, errors.New("failed to auto-register user")
@@ -112,9 +112,9 @@ func (s *GoogleOAuthService) HandleGoogleCallback(code string) (string, *models.
 	}
 
 	// If user exists or was just registered, generate JWT token
-	tokenString, err := utils.GenerateToken(user.Username, user.Role, user.ID)
+	tokenString, err := utils.GenerateToken(user.Email, user.Role, user.ID)
 	if err != nil {
-		log.Printf("Failed to generate token for user %s: %v", user.Username, err)
+		log.Printf("Failed to generate token for user %s: %v", user.Email, err)
 		return "", nil, errors.New("failed to generate authentication token")
 	}
 

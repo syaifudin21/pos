@@ -2,10 +2,7 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"log"
-	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,32 +20,7 @@ func NewAuthService(db *gorm.DB) *AuthService {
 	return &AuthService{DB: db}
 }
 
-func (s *AuthService) RegisterUser(password, role string, outletID *uint, creatorID *uint, email *string, phoneNumber *string) (*models.User, error) {
-	var generatedUsername string
-	if email != nil {
-		parts := strings.Split(*email, "@")
-		if len(parts) > 0 {
-			generatedUsername = parts[0]
-		}
-	}
-
-	// Ensure username is unique
-	finalUsername := generatedUsername
-	for i := 0; ; i++ {
-		var existingUser models.User
-		err := s.DB.Where("username = ?", finalUsername).First(&existingUser).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			break // Username is unique
-		}
-		if err != nil {
-			log.Printf("Error checking username uniqueness: %v", err)
-			return nil, errors.New("failed to check username uniqueness")
-		}
-		// Username exists, append random digits
-		finalUsername = fmt.Sprintf("%s%05d", generatedUsername, rand.Intn(100000))
-	}
-	username := finalUsername
-
+func (s *AuthService) RegisterUser(name, email, password, role string, outletID *uint, creatorID *uint, phoneNumber *string) (*models.User, error) {
 	hashedPassword, err := utils.HashPassword(password)
 	if err != nil {
 		log.Printf("Error hashing password: %v", err)
@@ -56,17 +28,14 @@ func (s *AuthService) RegisterUser(password, role string, outletID *uint, creato
 	}
 
 	user := models.User{
-		Username:        username,
+		Name:            name,
+		Email:           email,
 		Password:        hashedPassword,
 		Role:            role,
 		CreatorID:       creatorID,
 		EmailVerifiedAt: nil, // User is not verified until OTP is confirmed
 	}
 
-	// Assign email if not nil
-	if email != nil {
-		user.Email = *email
-	}
 	// Assign phoneNumber if not nil
 	if phoneNumber != nil {
 		user.PhoneNumber = *phoneNumber
@@ -154,21 +123,6 @@ func (s *AuthService) VerifyOTP(email, otp string) (*models.User, error) {
 		return nil, errors.New("failed to delete OTP record")
 	}
 
-	// If the user is an admin, create a default cash payment method
-	if user.Role == "owner" {
-		paymentMethod := models.PaymentMethod{
-			Name:      "Cash",
-			Type:      "cash",
-			IsActive:  true,
-			CreatorID: &user.ID,
-		}
-		if err := tx.Create(&paymentMethod).Error; err != nil {
-			tx.Rollback()
-			log.Printf("Error creating payment method: %v", err)
-			return nil, errors.New("failed to create payment method")
-		}
-	}
-
 	if err := tx.Commit().Error; err != nil {
 		return nil, err
 	}
@@ -176,9 +130,9 @@ func (s *AuthService) VerifyOTP(email, otp string) (*models.User, error) {
 	return &user, nil
 }
 
-func (s *AuthService) LoginUser(username, password string) (string, *models.User, error) {
+func (s *AuthService) LoginUser(email, password string) (string, *models.User, error) {
 	var user models.User
-	if err := s.DB.Where("username = ?", username).First(&user).Error; err != nil {
+	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", nil, errors.New("invalid credentials")
 		}
@@ -198,7 +152,7 @@ func (s *AuthService) LoginUser(username, password string) (string, *models.User
 		return "", nil, errors.New("invalid credentials")
 	}
 
-	token, err := utils.GenerateToken(user.Username, user.Role, user.ID)
+	token, err := utils.GenerateToken(user.Email, user.Role, user.ID)
 	if err != nil {
 		log.Printf("Error generating token: %v", err)
 		return "", nil, errors.New("failed to generate token")
@@ -279,8 +233,11 @@ func (s *AuthService) UpdateUser(userID uint, updates *dtos.UpdateUserRequest) (
 	}
 
 	// Update fields if provided
-	if updates.Username != nil {
-		user.Username = *updates.Username
+	if updates.Name != nil {
+		user.Name = *updates.Name
+	}
+	if updates.Email != nil {
+		user.Email = *updates.Email
 	}
 	if updates.Password != nil {
 		hashedPassword, err := utils.HashPassword(*updates.Password)

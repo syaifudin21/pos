@@ -9,9 +9,10 @@ var AllowedUserRoles = []string{"admin", "owner", "manager", "cashier"}
 
 type User struct {
 	BaseModel
-	Username    string `gorm:"unique;not null" json:"username"`
+	Name        string `gorm:"not null" json:"name"`
+	Email       string `gorm:"unique;not null" json:"email"`
 	Password    string `gorm:"not null" json:"-"` // Password will not be marshaled to JSON
-	Email       string `json:"email,omitempty"`
+	
 	PhoneNumber string `json:"phone_number,omitempty"`
 	Role        string `gorm:"not null" json:"role"` // e.g., admin, manager, cashier
 	CreatorID   *uint  `json:"creator_id,omitempty"` // ID of the admin who created this user

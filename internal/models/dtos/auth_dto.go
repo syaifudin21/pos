@@ -3,20 +3,23 @@ package dtos
 import "github.com/google/uuid"
 
 type RegisterRequest struct {
+	Name     string `json:"name" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
 	Role     string `json:"role" validate:"required"`
-	OutletID *uint  `json:"outlet_id,omitempty" validate:"required"`
+	OutletID *uint  `json:"outlet_id,omitempty"`
 }
 
 type LoginRequest struct {
-	Username string `json:"username" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
 }
 
 type UserResponse struct {
 	ID       uint      `json:"id"`
 	Uuid     uuid.UUID `json:"uuid"`
-	Username string    `json:"username"`
+	Name     string    `json:"name"`
+	Email    string    `json:"email"`
 	Role     string    `json:"role"`
 	OutletID *uint     `json:"outlet_id,omitempty"`
 }
@@ -27,13 +30,15 @@ type LoginResponse struct {
 }
 
 type UpdateUserRequest struct {
-	Username *string `json:"username,omitempty" validate:"required"`
+	Name     *string `json:"name,omitempty" validate:"required"`
+	Email    *string `json:"email,omitempty" validate:"required,email"`
 	Password *string `json:"password,omitempty" validate:"required,passwordstrength"`
 	Role     *string `json:"role,omitempty" validate:"required,oneof=admin owner manager cashier"`
-	OutletID *uint   `json:"outlet_id,omitempty" validate:"required"`
+	OutletID *uint   `json:"outlet_id,omitempty"`
 }
 
 type RegisterAdminRequest struct {
+	Name        string `json:"name" validate:"required"`
 	Password    string `json:"password" validate:"required,passwordstrength"`
 	Email       string `json:"email" validate:"required,email"`
 	PhoneNumber string `json:"phone_number" validate:"required"`

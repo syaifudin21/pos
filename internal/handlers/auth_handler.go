@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -38,12 +37,12 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
 	creatorID := claims.ID
 
-	user, err := h.AuthService.RegisterUser(req.Password, req.Role, req.OutletID, &creatorID, nil, nil)
+	user, err := h.AuthService.RegisterUser(req.Name, req.Email, req.Password, req.Role, req.OutletID, &creatorID, nil)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return JSONSuccess(c, http.StatusCreated, "user_registered_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role})
+	return JSONSuccess(c, http.StatusCreated, "user_registered_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role})
 }
 
 func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
@@ -66,12 +65,12 @@ func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
 
 	// No creatorID for the first admin, or if registered by a super-admin outside the system
 	// For now, let's assume no creatorID for admin registration via this endpoint
-	user, err := h.AuthService.RegisterUser(req.Password, "admin", nil, nil, &req.Email, &req.PhoneNumber)
+	user, err := h.AuthService.RegisterUser(req.Name, req.Email, req.Password, "admin", nil, nil, &req.PhoneNumber)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return JSONSuccess(c, http.StatusCreated, "admin_registered_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role})
+	return JSONSuccess(c, http.StatusCreated, "admin_registered_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role})
 }
 
 func (h *AuthHandler) Login(c echo.Context) error {
@@ -87,16 +86,18 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		})
 	}
 
-	token, user, err := h.AuthService.LoginUser(req.Username, req.Password)
+	token, user, err := h.AuthService.LoginUser(req.Email, req.Password)
+
 	if err != nil {
 		statusCode := MapErrorToStatusCode(err)
+
 		if err.Error() == "user not verified" {
-			return JSONError(c, statusCode, err.Error(), os.Getenv("HOST"))
+			return JSONError(c, statusCode, err.Error())
 		}
 		return JSONError(c, statusCode, err.Error())
 	}
 
-	return JSONSuccess(c, http.StatusOK, "login_successful", dtos.LoginResponse{Token: token, User: dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role}})
+	return JSONSuccess(c, http.StatusOK, "login_successful", dtos.LoginResponse{Token: token, User: dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role}})
 }
 
 func (h *AuthHandler) BlockUser(c echo.Context) error {
@@ -147,7 +148,7 @@ func (h *AuthHandler) GetAllUsers(c echo.Context) error {
 	}
 	var userResponses []dtos.UserResponse
 	for _, user := range users {
-		userResponses = append(userResponses, dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role})
+		userResponses = append(userResponses, dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role})
 	}
 	return JSONSuccess(c, http.StatusOK, "users_retrieved_successfully", userResponses)
 }
@@ -215,5 +216,5 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return JSONSuccess(c, http.StatusOK, "otp_verified_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Username: user.Username, Role: user.Role})
+	return JSONSuccess(c, http.StatusOK, "otp_verified_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role})
 }
