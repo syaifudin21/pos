@@ -37,7 +37,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
 	creatorID := claims.ID
 
-	user, err := h.AuthService.RegisterUser(req.Name, req.Email, req.Password, req.Role, req.OutletID, &creatorID, nil)
+	user, err := h.AuthService.RegisterUser(req.Name, req.Email, req.Password, req.Role, req.OutletID, &creatorID, nil, false)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -65,7 +65,7 @@ func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
 
 	// No creatorID for the first admin, or if registered by a super-admin outside the system
 	// For now, let's assume no creatorID for admin registration via this endpoint
-	user, err := h.AuthService.RegisterUser(req.Name, req.Email, req.Password, "admin", nil, nil, &req.PhoneNumber)
+	user, err := h.AuthService.RegisterUser(req.Name, req.Email, req.Password, "admin", nil, nil, &req.PhoneNumber, false)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -217,4 +217,85 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 	}
 
 	return JSONSuccess(c, http.StatusOK, "otp_verified_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role})
+}
+
+func (h *AuthHandler) GetProfile(c echo.Context) error {
+	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
+	userID := claims.ID
+
+	user, err := h.AuthService.GetUserByID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "profile_retrieved_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role})
+}
+
+func (h *AuthHandler) UpdatePassword(c echo.Context) error {
+	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
+	userID := claims.ID
+
+	req := new(dtos.UpdatePasswordRequest)
+	if err := c.Bind(req); err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateUpdatePasswordRequest(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
+	if err := h.AuthService.UpdatePassword(userID, req.OldPassword, req.NewPassword); err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "password_updated_successfully", nil)
+}
+
+func (h *AuthHandler) SendOTPForEmailUpdate(c echo.Context) error {
+	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
+	userID := claims.ID
+
+	req := new(dtos.SendOTPRequest)
+	if err := c.Bind(req); err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateSendOTPRequest(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
+	if err := h.AuthService.SendOTPForEmailUpdate(userID, req.Email); err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "otp_sent_for_email_update", nil)
+}
+
+func (h *AuthHandler) UpdateEmail(c echo.Context) error {
+	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
+	userID := claims.ID
+
+	req := new(dtos.UpdateEmailRequest)
+	if err := c.Bind(req); err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateUpdateEmailRequest(req, lang); messages != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
+	if err := h.AuthService.UpdateEmail(userID, req.NewEmail, req.OTP); err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "email_updated_successfully", nil)
 }

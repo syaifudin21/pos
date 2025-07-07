@@ -48,3 +48,17 @@ type VerifyOTPRequest struct {
 	Email string `json:"email" validate:"required,email"`
 	OTP   string `json:"otp" validate:"required,len=6"`
 }
+
+type UpdatePasswordRequest struct {
+	OldPassword string `json:"old_password" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,passwordstrength"`
+}
+
+type UpdateEmailRequest struct {
+	NewEmail string `json:"new_email" validate:"required,email"`
+	OTP      string `json:"otp" validate:"required,len=6"`
+}
+
+type SendOTPRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}

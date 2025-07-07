@@ -159,3 +159,59 @@ func ValidateVerifyOTPRequest(req *dtos.VerifyOTPRequest, lang string) []string 
 	}
 	return messages
 }
+
+func ValidateUpdatePasswordRequest(req *dtos.UpdatePasswordRequest, lang string) []string {
+	err := authValidator.Struct(req)
+	if err == nil {
+		return nil
+	}
+
+	var messages []string
+	for _, err := range err.(validator.ValidationErrors) {
+		switch err.Field() {
+		case "OldPassword":
+			messages = append(messages, localization.GetLocalizedValidationMessage("old_password_required", lang))
+		case "NewPassword":
+			if err.Tag() == "passwordstrength" {
+				messages = append(messages, localization.GetLocalizedValidationMessage("password_strength", lang))
+			} else {
+				messages = append(messages, localization.GetLocalizedValidationMessage("new_password_required", lang))
+			}
+		}
+	}
+	return messages
+}
+
+func ValidateSendOTPRequest(req *dtos.SendOTPRequest, lang string) []string {
+	err := authValidator.Struct(req)
+	if err == nil {
+		return nil
+	}
+
+	var messages []string
+	for _, err := range err.(validator.ValidationErrors) {
+		switch err.Field() {
+		case "Email":
+			messages = append(messages, localization.GetLocalizedValidationMessage("email_required", lang))
+		}
+	}
+	return messages
+}
+
+func ValidateUpdateEmailRequest(req *dtos.UpdateEmailRequest, lang string) []string {
+	err := authValidator.Struct(req)
+	if err == nil {
+		return nil
+	}
+
+	var messages []string
+	for _, err := range err.(validator.ValidationErrors) {
+		switch err.Field() {
+		case "NewEmail":
+			messages = append(messages, localization.GetLocalizedValidationMessage("new_email_required", lang))
+		case "OTP":
+			messages = append(messages, localization.GetLocalizedValidationMessage("otp_invalid", lang))
+		}
+	}
+	return messages
+}

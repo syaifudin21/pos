@@ -25,8 +25,6 @@ func Run() {
 	// Initialize database
 	database.InitDB()
 
-	
-
 	// Initialize Casbin
 	casbin.InitCasbin()
 
@@ -79,6 +77,14 @@ func Run() {
 	userAdminGroup.PUT("/:uuid/block", authHandler.BlockUser)
 	userAdminGroup.PUT("/:uuid/unblock", authHandler.UnblockUser)
 	userAdminGroup.DELETE("/:uuid", authHandler.DeleteUser)
+
+	// Authenticated user routes
+	accountGroup := e.Group("/account")
+	accountGroup.Use(internalmw.Authorize("account", "manage")) // General authorization for account actions
+	accountGroup.GET("/profile", authHandler.GetProfile)
+	accountGroup.PUT("/password", authHandler.UpdatePassword)
+	accountGroup.POST("/email/otp", authHandler.SendOTPForEmailUpdate)
+	accountGroup.PUT("/email", authHandler.UpdateEmail)
 
 	// Initialize product and outlet services and handlers
 	productService := services.NewProductService(database.DB)

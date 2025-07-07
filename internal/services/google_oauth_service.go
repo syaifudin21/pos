@@ -19,8 +19,8 @@ import (
 )
 
 type GoogleOAuthService struct {
-	DB          *gorm.DB
-	AuthService *AuthService
+	DB                *gorm.DB
+	AuthService       *AuthService
 	GoogleOauthConfig *oauth2.Config
 }
 
@@ -63,9 +63,9 @@ func (s *GoogleOAuthService) HandleGoogleCallback(code string) (string, *models.
 	}
 
 	var userInfo struct {
-		Email string `json:"email"`
-		Name  string `json:"name"`
-		VerifiedEmail bool `json:"verified_email"`
+		Email         string `json:"email"`
+		Name          string `json:"name"`
+		VerifiedEmail bool   `json:"verified_email"`
 	}
 	if err := json.Unmarshal(contents, &userInfo); err != nil {
 		log.Printf("Failed to unmarshal user info: %v", err)
@@ -80,9 +80,9 @@ func (s *GoogleOAuthService) HandleGoogleCallback(code string) (string, *models.
 			// User does not exist, auto-register
 			log.Printf("User not found, auto-registering: %s", userInfo.Email)
 			// Generate a random password for the new user
-			randomPassword := utils.GenerateRandomString(16) // You need to implement this utility
+
 			// Use the AuthService to register the user
-			registeredUser, regErr := s.AuthService.RegisterUser(userInfo.Name, userInfo.Email, randomPassword, "owner", nil, nil, nil)
+			registeredUser, regErr := s.AuthService.RegisterUser(userInfo.Name, userInfo.Email, "", "admin", nil, nil, nil, true)
 			if regErr != nil {
 				log.Printf("Failed to auto-register user: %v", regErr)
 				return "", nil, errors.New("failed to auto-register user")

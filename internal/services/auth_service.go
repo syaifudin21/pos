@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msyaifudin/pos/internal/models"
-	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/pkg/utils"
 	"gorm.io/gorm"
 )
@@ -20,11 +19,15 @@ func NewAuthService(db *gorm.DB) *AuthService {
 	return &AuthService{DB: db}
 }
 
-func (s *AuthService) RegisterUser(name, email, password, role string, outletID *uint, creatorID *uint, phoneNumber *string) (*models.User, error) {
-	hashedPassword, err := utils.HashPassword(password)
-	if err != nil {
-		log.Printf("Error hashing password: %v", err)
-		return nil, errors.New("failed to hash password")
+func (s *AuthService) RegisterUser(name, email, password, role string, outletID *uint, creatorID *uint, phoneNumber *string, isGoogleAuth bool) (*models.User, error) {
+	var hashedPassword string
+	if password != "" {
+		hashed, err := utils.HashPassword(password)
+		if err != nil {
+			log.Printf("Error hashing password: %v", err)
+			return nil, errors.New("failed to hash password")
+		}
+		hashedPassword = hashed
 	}
 
 	user := models.User{
@@ -46,36 +49,38 @@ func (s *AuthService) RegisterUser(name, email, password, role string, outletID 
 		return nil, errors.New("failed to create user")
 	}
 
-	// Generate and store OTP
-	otpCode, err := GenerateOTP()
-	if err != nil {
-		log.Printf("Error generating OTP: %v", err)
-		return nil, errors.New("failed to generate OTP")
-	}
+	if !isGoogleAuth {
+		// Generate and store OTP
+		otpCode, err := GenerateOTP()
+		if err != nil {
+			log.Printf("Error generating OTP: %v", err)
+			return nil, errors.New("failed to generate OTP")
+		}
 
-	hashedOTP, err := utils.HashOTP(otpCode)
-	if err != nil {
-		log.Printf("Error hashing OTP: %v", err)
-		return nil, errors.New("failed to hash OTP")
-	}
+		hashedOTP, err := utils.HashOTP(otpCode)
+		if err != nil {
+			log.Printf("Error hashing OTP: %v", err)
+			return nil, errors.New("failed to hash OTP")
+		}
 
-	otpRecord := models.OTP{
-		UserID:    user.ID,
-		OTP:       hashedOTP,
-		Purpose:   "email_verification",
-		Target:    user.Email,
-		ExpiresAt: time.Now().Add(10 * time.Minute), // OTP valid for 10 minutes
-	}
+		otpRecord := models.OTP{
+			UserID:    user.ID,
+			OTP:       hashedOTP,
+			Purpose:   "email_verification",
+			Target:    user.Email,
+			ExpiresAt: time.Now().Add(10 * time.Minute), // OTP valid for 10 minutes
+		}
 
-	if err := s.DB.Create(&otpRecord).Error; err != nil {
-		log.Printf("Error saving OTP: %v", err)
-		return nil, errors.New("failed to save OTP")
-	}
+		if err := s.DB.Create(&otpRecord).Error; err != nil {
+			log.Printf("Error saving OTP: %v", err)
+			return nil, errors.New("failed to save OTP")
+		}
 
-	// Send verification email
-	if err := SendVerificationEmail(user.Email, otpCode); err != nil {
-		log.Printf("Error sending verification email: %v", err)
-		// For now, we'll just log the error and not fail the registration
+		// Send verification email
+		if err := SendVerificationEmail(user.Email, otpCode); err != nil {
+			log.Printf("Error sending verification email: %v", err)
+			// For now, we'll just log the error and not fail the registration
+		}
 	}
 
 	return &user, nil
@@ -148,7 +153,7 @@ func (s *AuthService) LoginUser(email, password string) (string, *models.User, e
 		return "", nil, errors.New("user is blocked")
 	}
 
-	if !utils.CheckPasswordHash(password, user.Password) {
+	if user.Password != "" && !utils.CheckPasswordHash(password, user.Password) {
 		return "", nil, errors.New("invalid credentials")
 	}
 
@@ -222,45 +227,147 @@ func (s *AuthService) GetAllUsers(adminID uint) ([]models.User, error) {
 	return users, nil
 }
 
-func (s *AuthService) UpdateUser(userID uint, updates *dtos.UpdateUserRequest) (*models.User, error) {
+func (s *AuthService) UpdatePassword(userID uint, oldPassword, newPassword string) error {
 	var user models.User
 	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
+			return errors.New("user not found")
 		}
-		log.Printf("Error finding user for update: %v", err)
-		return nil, errors.New("failed to retrieve user for update")
+		log.Printf("Error finding user for password update: %v", err)
+		return errors.New("failed to retrieve user for password update")
 	}
 
-	// Update fields if provided
-	if updates.Name != nil {
-		user.Name = *updates.Name
-	}
-	if updates.Email != nil {
-		user.Email = *updates.Email
-	}
-	if updates.Password != nil {
-		hashedPassword, err := utils.HashPassword(*updates.Password)
-		if err != nil {
-			log.Printf("Error hashing new password: %v", err)
-			return nil, errors.New("failed to hash new password")
-		}
-		user.Password = hashedPassword
-	}
-	if updates.Role != nil {
-		if !isValidRole(*updates.Role) {
-			return nil, errors.New("invalid role specified")
-		}
-		user.Role = *updates.Role
+	// If user has a password set, validate old password
+	if user.Password != "" && !utils.CheckPasswordHash(oldPassword, user.Password) {
+		return errors.New("invalid old password")
 	}
 
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		log.Printf("Error hashing new password: %v", err)
+		return errors.New("failed to hash new password")
+	}
+
+	user.Password = hashedPassword
 	if err := s.DB.Save(&user).Error; err != nil {
-		log.Printf("Error updating user: %v", err)
-		return nil, errors.New("failed to update user")
+		log.Printf("Error updating password: %v", err)
+		return errors.New("failed to update password")
 	}
 
-	return &user, nil
+	return nil
 }
+
+func (s *AuthService) SendOTPForEmailUpdate(userID uint, newEmail string) error {
+	var user models.User
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		log.Printf("Error finding user for email update OTP: %v", err)
+		return errors.New("failed to retrieve user")
+	}
+
+	// Check if new email is already in use by another user
+	var existingUser models.User
+	if err := s.DB.Where("email = ? AND id != ?", newEmail, userID).First(&existingUser).Error; err == nil {
+		return errors.New("email already in use by another account")
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Printf("Error checking new email existence: %v", err)
+		return errors.New("database error checking email")
+	}
+
+	// Generate and store OTP
+	otpCode, err := GenerateOTP()
+	if err != nil {
+		log.Printf("Error generating OTP: %v", err)
+		return errors.New("failed to generate OTP")
+	}
+
+	hashedOTP, err := utils.HashOTP(otpCode)
+	if err != nil {
+		log.Printf("Error hashing OTP: %v", err)
+		return errors.New("failed to hash OTP")
+	}
+
+	// Delete any existing OTPs for email update for this user
+	s.DB.Where("user_id = ? AND purpose = ?", userID, "email_update").Delete(&models.OTP{})
+
+	otpRecord := models.OTP{
+		UserID:    userID,
+		OTP:       hashedOTP,
+		Purpose:   "email_update",
+		Target:    newEmail,
+		ExpiresAt: time.Now().Add(10 * time.Minute), // OTP valid for 10 minutes
+	}
+
+	if err := s.DB.Create(&otpRecord).Error; err != nil {
+		log.Printf("Error saving OTP for email update: %v", err)
+		return errors.New("failed to save OTP")
+	}
+
+	// Send verification email
+	if err := SendVerificationEmail(newEmail, otpCode); err != nil {
+		log.Printf("Error sending verification email for email update: %v", err)
+		return errors.New("failed to send verification email")
+	}
+
+	return nil
+}
+
+func (s *AuthService) UpdateEmail(userID uint, newEmail, otp string) error {
+	var user models.User
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		log.Printf("Error finding user for email update: %v", err)
+		return errors.New("failed to retrieve user")
+	}
+
+	var otpRecord models.OTP
+	if err := s.DB.Where("user_id = ? AND purpose = ? AND target = ?", userID, "email_update", newEmail).First(&otpRecord).Error; err != nil {
+		return errors.New("OTP not found or invalid for this email")
+	}
+
+	// Check if OTP is expired
+	if time.Now().After(otpRecord.ExpiresAt) {
+		s.DB.Delete(&otpRecord) // Delete expired OTP
+		return errors.New("OTP expired")
+	}
+
+	// Check if OTP matches
+	if !utils.CheckOTPHash(otp, otpRecord.OTP) {
+		return errors.New("invalid OTP")
+	}
+
+	tx := s.DB.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	user.Email = newEmail
+	user.EmailVerifiedAt = func() *time.Time { t := time.Now(); return &t }() // Mark new email as verified
+	if err := tx.Save(&user).Error; err != nil {
+		tx.Rollback()
+		log.Printf("Error updating user email: %v", err)
+		return errors.New("failed to update email")
+	}
+
+	// Delete OTP after successful verification
+	if err := tx.Delete(&otpRecord).Error; err != nil {
+		tx.Rollback()
+		log.Printf("Error deleting OTP record after email update: %v", err)
+		return errors.New("failed to delete OTP record")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return tx.Error
+	}
+
+	return nil
+}
+
+
 
 func (s *AuthService) DeleteUser(userID uint) error {
 	var user models.User
