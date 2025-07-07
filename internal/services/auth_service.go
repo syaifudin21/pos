@@ -377,8 +377,6 @@ func (s *AuthService) UpdateEmail(userID uint, newEmail, otp string) error {
 	return nil
 }
 
-
-
 func (s *AuthService) DeleteUser(userID uint) error {
 	var user models.User
 	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
@@ -404,4 +402,111 @@ func isValidRole(role string) bool {
 		}
 	}
 	return false
+}
+
+func (s *AuthService) SendOTPForPasswordReset(email string) error {
+	var user models.User
+	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		log.Printf("Error finding user for password reset OTP: %v", err)
+		return errors.New("failed to retrieve user")
+	}
+
+	// Generate and store OTP
+	otpCode, err := GenerateOTP()
+	if err != nil {
+		log.Printf("Error generating OTP: %v", err)
+		return errors.New("failed to generate OTP")
+	}
+
+	hashedOTP, err := utils.HashOTP(otpCode)
+	if err != nil {
+		log.Printf("Error hashing OTP: %v", err)
+		return errors.New("failed to hash OTP")
+	}
+
+	// Delete any existing OTPs for password reset for this user
+	s.DB.Where("user_id = ? AND purpose = ?", user.ID, "password_reset").Delete(&models.OTP{})
+
+	otpRecord := models.OTP{
+		UserID:    user.ID,
+		OTP:       hashedOTP,
+		Purpose:   "password_reset",
+		Target:    user.Email,
+		ExpiresAt: time.Now().Add(10 * time.Minute), // OTP valid for 10 minutes
+	}
+
+	if err := s.DB.Create(&otpRecord).Error; err != nil {
+		log.Printf("Error saving OTP for password reset: %v", err)
+		return errors.New("failed to save OTP")
+	}
+
+	// Send verification email
+	if err := SendVerificationEmail(user.Email, otpCode); err != nil {
+		log.Printf("Error sending verification email for password reset: %v", err)
+		return errors.New("failed to send verification email")
+	}
+
+	return nil
+}
+
+func (s *AuthService) ResetPassword(email, otp, newPassword string) error {
+	var user models.User
+	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("invalid email")
+		}
+		log.Printf("Error finding user for password reset: %v", err)
+		return errors.New("failed to retrieve user")
+	}
+
+	var otpRecord models.OTP
+	if err := s.DB.Where("user_id = ? AND purpose = ? AND target = ?", user.ID, "password_reset", email).First(&otpRecord).Error; err != nil {
+		return errors.New("OTP not found or invalid for this email")
+	}
+
+	// Check if OTP is expired
+	if time.Now().After(otpRecord.ExpiresAt) {
+		s.DB.Delete(&otpRecord) // Delete expired OTP
+		return errors.New("OTP expired")
+	}
+
+	// Check if OTP matches
+	if !utils.CheckOTPHash(otp, otpRecord.OTP) {
+		return errors.New("invalid OTP")
+	}
+
+	tx := s.DB.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		tx.Rollback()
+		log.Printf("Error hashing new password for reset: %v", err)
+		return errors.New("failed to hash new password")
+	}
+
+	user.Password = hashedPassword
+	if err := tx.Save(&user).Error; err != nil {
+		tx.Rollback()
+		log.Printf("Error updating user password after reset: %v", err)
+		return errors.New("failed to update password")
+	}
+
+	// Delete OTP after successful verification
+	if err := tx.Delete(&otpRecord).Error; err != nil {
+		tx.Rollback()
+		log.Printf("Error deleting OTP record after password reset: %v", err)
+		return errors.New("failed to delete OTP record")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return tx.Error
+	}
+
+	return nil
 }

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -299,20 +298,77 @@ func (h *AuthHandler) UpdateEmail(c echo.Context) error {
 
 	req := new(dtos.UpdateEmailRequest)
 	if err := c.Bind(req); err != nil {
-		fmt.Printf("Bind error: %v\n", err)
+		log.Printf("UpdateEmail Handler: Invalid request payload: %v", err)
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
 	}
 
+	log.Printf("UpdateEmail Handler: UserID: %d, NewEmail: %s, OTP: %s", userID, req.NewEmail, req.OTP)
+
 	lang := c.Get("lang").(string)
 	if messages := validators.ValidateUpdateEmailRequest(req, lang); messages != nil {
+		log.Printf("UpdateEmail Handler: Validation failed: %v", messages)
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"message": messages,
 		})
 	}
 
 	if err := h.AuthService.UpdateEmail(userID, req.NewEmail, req.OTP); err != nil {
+		log.Printf("UpdateEmail Handler: Service error: %v", err)
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
+	log.Println("UpdateEmail Handler: Email updated successfully")
 	return JSONSuccess(c, http.StatusOK, "email_updated_successfully", nil)
+}
+
+func (h *AuthHandler) ForgotPassword(c echo.Context) error {
+	req := new(dtos.ForgotPasswordRequest)
+	if err := c.Bind(req); err != nil {
+		log.Printf("ForgotPassword Handler: Invalid request payload: %v", err)
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	log.Printf("ForgotPassword Handler: Email: %s", req.Email)
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateForgotPasswordRequest(req, lang); messages != nil {
+		log.Printf("ForgotPassword Handler: Validation failed: %v", messages)
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
+	if err := h.AuthService.SendOTPForPasswordReset(req.Email); err != nil {
+		log.Printf("ForgotPassword Handler: Service error: %v", err)
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	log.Println("ForgotPassword Handler: OTP sent for password reset")
+	return JSONSuccess(c, http.StatusOK, "otp_sent_for_password_reset", nil)
+}
+
+func (h *AuthHandler) ResetPassword(c echo.Context) error {
+	req := new(dtos.ResetPasswordRequest)
+	if err := c.Bind(req); err != nil {
+		log.Printf("ResetPassword Handler: Invalid request payload: %v", err)
+		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	}
+
+	log.Printf("ResetPassword Handler: Email: %s, OTP: %s, NewPassword: %s", req.Email, req.OTP, req.NewPassword)
+
+	lang := c.Get("lang").(string)
+	if messages := validators.ValidateResetPasswordRequest(req, lang); messages != nil {
+		log.Printf("ResetPassword Handler: Validation failed: %v", messages)
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": messages,
+		})
+	}
+
+	if err := h.AuthService.ResetPassword(req.Email, req.OTP, req.NewPassword); err != nil {
+		log.Printf("ResetPassword Handler: Service error: %v", err)
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	log.Println("ResetPassword Handler: Password reset successfully")
+	return JSONSuccess(c, http.StatusOK, "password_reset_successful", nil)
 }

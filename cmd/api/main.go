@@ -63,6 +63,8 @@ func Run() {
 	authGroup.POST("/register", authHandler.RegisterAdmin)
 	authGroup.POST("/verify-otp", authHandler.VerifyOTP)
 	authGroup.POST("/login", authHandler.Login)
+	authGroup.POST("/forgot-password", authHandler.ForgotPassword)
+	authGroup.POST("/reset-password", authHandler.ResetPassword)
 
 	// Google OAuth2 routes
 	authGroup.GET("/google/login", googleOAuthHandler.GoogleLogin)

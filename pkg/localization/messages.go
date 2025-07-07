@@ -530,6 +530,14 @@ var validationMessages = map[string]map[string]string{
 		"en": "Invalid OTP",
 		"id": "OTP tidak valid",
 	},
+	"otp_sent_for_password_reset": {
+		"en": "OTP sent to your email for password reset",
+		"id": "OTP telah dikirim ke email Anda untuk reset kata sandi",
+	},
+	"password_reset_successful": {
+		"en": "Password reset successful",
+		"id": "Reset kata sandi berhasil",
+	},
 }
 
 // GetLocalizedValidationMessage retrieves a validation message for a given key and language.

@@ -62,3 +62,13 @@ type UpdateEmailRequest struct {
 type SendOTPRequest struct {
 	Email string `json:"email" validate:"required,email"`
 }
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type ResetPasswordRequest struct {
+	Email       string `json:"email" validate:"required,email"`
+	OTP         string `json:"otp" validate:"required,len=6"`
+	NewPassword string `json:"new_password" validate:"required,passwordstrength"`
+}
