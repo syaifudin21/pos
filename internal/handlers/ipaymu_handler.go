@@ -61,3 +61,51 @@ func (h *IpaymuHandler) IpaymuNotify(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, map[string]interface{}{"message": "Success"})
 }
+
+// Handler untuk register user ke Ipaymu
+func (h *IpaymuHandler) RegisterIpaymu(c echo.Context) error {
+	var req dtos.RegisterIpaymuRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": "Invalid request", "details": err.Error()})
+	}
+
+	// Validasi opsional, bisa tambahkan validator custom jika perlu
+	if req.Name == "" || req.Phone == "" || req.Password == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": "name, phone, dan password wajib diisi"})
+	}
+
+	optional := make(map[string]interface{})
+	if req.IdentityNo != nil {
+		optional["identityNo"] = *req.IdentityNo
+	}
+	if req.BusinessName != nil {
+		optional["businessName"] = *req.BusinessName
+	}
+	if req.Birthday != nil {
+		optional["birthday"] = *req.Birthday
+	}
+	if req.Birthplace != nil {
+		optional["birthplace"] = *req.Birthplace
+	}
+	if req.Gender != nil {
+		optional["gender"] = *req.Gender
+	}
+	if req.Address != nil {
+		optional["address"] = *req.Address
+	}
+	if req.IdentityPhoto != nil {
+		optional["identityPhoto"] = req.IdentityPhoto
+	}
+
+	res, err := h.Service.Register(
+		req.Name,
+		req.Phone,
+		req.Password,
+		req.Email,
+		optional,
+	)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, res)
+}

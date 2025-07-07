@@ -217,10 +217,12 @@ func Run() {
 
 	// Initialize iPaymu handler
 	ipaymuHandler := handlers.NewIpaymuHandler(ipaymuService)
-	// Payment routes
-	paymentGroup := e.Group("/api/payment")
-	paymentGroup.POST("/ipaymu/direct-payment", ipaymuHandler.CreateDirectPayment)
-	paymentGroup.POST("/ipaymu/notify", ipaymuHandler.IpaymuNotify)
+	paymentGroup := e.Group("/api/ipaymu")
+	paymentGroup.Use(internalmw.SelfAuthorize())
+	paymentGroup.POST("/register", ipaymuHandler.RegisterIpaymu)
+	paymentGroup.POST("/direct-payment", ipaymuHandler.CreateDirectPayment)
+
+	e.POST("/api/payment/ipaymu/notify", ipaymuHandler.IpaymuNotify)
 
 	// Start server
 	port := os.Getenv("PORT")

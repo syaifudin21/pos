@@ -66,3 +66,23 @@ type IpaymuNotifyRequest struct {
 	URL                   string        `json:"url"`                     // "http://localhost:8080/vendor/ipaymu/notify"
 	VA                    string        `json:"va"`                      // "000012316415"
 }
+
+// RegisterIpaymuRequest untuk pendaftaran user ke Ipaymu
+// Untuk identityPhoto, gunakan multipart/form-data jika ingin upload file
+// Field validate opsional, bisa disesuaikan dengan kebutuhan
+// Email opsional, jika tidak ada, withoutEmail harus '1'
+type RegisterIpaymuRequest struct {
+	Name         string  `json:"name" validate:"required"`
+	Phone        string  `json:"phone" validate:"required"`
+	Password     string  `json:"password" validate:"required"`
+	Email        *string `json:"email,omitempty"`
+	WithoutEmail string  `json:"withoutEmail" validate:"required,oneof=0 1"`
+	IdentityNo   *string `json:"identityNo,omitempty"`
+	BusinessName *string `json:"businessName,omitempty"`
+	Birthday     *string `json:"birthday,omitempty"`
+	Birthplace   *string `json:"birthplace,omitempty"`
+	Gender       *string `json:"gender,omitempty"`
+	Address      *string `json:"address,omitempty"`
+	// Untuk multipart/form-data, gunakan field ini untuk file
+	IdentityPhoto interface{} `json:"identityPhoto,omitempty"`
+}

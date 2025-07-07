@@ -233,3 +233,91 @@ func (s *IpaymuService) NotifyDirectPayment(TrxId int, Status string, Settlement
 
 	return nil
 }
+
+// Register melakukan pendaftaran user ke Ipaymu
+func (s *IpaymuService) Register(
+	name string,
+	phone string,
+	password string,
+	email *string,
+	optional map[string]interface{},
+) (map[string]interface{}, error) {
+	body := map[string]interface{}{
+		"name":     name,
+		"phone":    phone,
+		"password": password,
+	}
+
+	if email != nil {
+		body["email"] = *email
+		body["withoutEmail"] = "0"
+	} else {
+		body["withoutEmail"] = "1"
+	}
+
+	// Tambahkan field opsional jika ada
+	if v, ok := optional["identityNo"]; ok {
+		body["identityNo"] = v
+	}
+	if v, ok := optional["businessName"]; ok {
+		body["businessName"] = v
+	}
+	if v, ok := optional["birthday"]; ok {
+		body["birthday"] = v
+	}
+	if v, ok := optional["birthplace"]; ok {
+		body["birthplace"] = v
+	}
+	if v, ok := optional["gender"]; ok {
+		body["gender"] = v
+	}
+	if v, ok := optional["address"]; ok {
+		body["address"] = v
+	}
+
+	var contentType string
+	// Cek apakah ada identityPhoto (file)
+	if v, ok := optional["identityPhoto"]; ok && v != nil {
+		// v harus berupa *os.File
+		body["identityPhoto"] = v
+		contentType = "multipart/form-data"
+	} else {
+		contentType = "application/json"
+	}
+
+	res, err := s.send("/api/v2/register", body, contentType, "POST")
+	if err != nil {
+		return nil, err
+	}
+
+	if res != nil && err == nil {
+		// Pastikan response mengandung data VA
+		data, ok := res["Data"].(map[string]interface{})
+		if ok {
+			va, _ := data["Va"].(string)
+			userIpaymu := &models.UserIpaymu{
+				Name:      name,
+				VaIpaymu:  va,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}
+			// Simpan user_id jika ada di optional
+			if v, ok := optional["user_id"]; ok {
+				if userID, ok := v.(uint); ok {
+					userIpaymu.UserID = userID
+				}
+			}
+			// Simpan phone dan email jika ada
+			if phone != "" {
+				userIpaymu.Phone = &phone
+			}
+			if email != nil {
+				userIpaymu.Email = email
+			}
+			// Simpan ke database
+			s.DB.Create(userIpaymu)
+		}
+	}
+
+	return res, nil
+}
