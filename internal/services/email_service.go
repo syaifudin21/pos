@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"fmt"
 	"html/template"
@@ -9,7 +10,10 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"time"
 
+	redispkg "github.com/go-redis/redis/v8"
+	"github.com/msyaifudin/pos/internal/redis"
 	"gopkg.in/gomail.v2"
 )
 
@@ -95,6 +99,12 @@ func GenerateOTP() (string, error) {
 }
 
 func SendVerificationEmail(to, otp string) error {
+	// Check if email can be sent based on rate limit
+	if !CanSendEmail(to) {
+		log.Printf("Email to %s rate limited. Please wait before sending another email.", to)
+		return fmt.Errorf("email rate limited")
+	}
+
 	// Read the HTML template from the file
 	templateBytes, err := os.ReadFile("internal/templates/emails/email_template.html")
 	if err != nil {
@@ -144,4 +154,26 @@ func SendVerificationEmail(to, otp string) error {
 	log.Printf("Email job for %s queued.", to)
 
 	return nil
+}
+
+// CanSendEmail checks if an email can be sent to a recipient based on a 1-minute cooldown
+func CanSendEmail(email string) bool {
+	ctx := context.Background()
+	key := fmt.Sprintf("email_cooldown:%s", email)
+
+	// Check if the key exists in Redis
+	val, err := redis.Rdb.Get(ctx, key).Result()
+	if err == redispkg.Nil {
+		// Key does not exist, so we can send the email. Set the key with a 1-minute expiry.
+		redis.Rdb.Set(ctx, key, "1", 1*time.Minute)
+		return true
+	} else if err != nil {
+		// An error occurred with Redis, log it and allow sending to avoid blocking legitimate emails
+		log.Printf("Redis error checking email cooldown for %s: %v", email, err)
+		return true
+	}
+
+	// Key exists, meaning an email was sent recently. Do not send.
+	log.Printf("Email to %s is on cooldown. Last sent at %s", email, val)
+	return false
 }

@@ -8,10 +8,12 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"golang.org/x/time/rate"
 
 	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/handlers"
 	internalmw "github.com/msyaifudin/pos/internal/middleware"
+	"github.com/msyaifudin/pos/internal/redis"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/pkg/casbin"
 )
@@ -25,6 +27,9 @@ func Run() {
 	// Initialize database
 	database.InitDB()
 
+	// Initialize Redis
+	redis.InitRedis()
+
 	// Initialize Casbin
 	casbin.InitCasbin()
 
@@ -37,6 +42,9 @@ func Run() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(
+		rate.Limit(30),
+	)))
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return internalmw.LanguageMiddleware(next)
 	})
