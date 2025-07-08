@@ -181,4 +181,8 @@ func seedCasbinPolicies() {
 	}
 
 	log.Println("Casbin policies seeded from policy.csv to database.")
+
+	if err := casbin.UpdateCasbinPolicy(); err != nil {
+		log.Fatalf("Failed to update Casbin policy via Redis watcher: %v", err)
+	}
 }
