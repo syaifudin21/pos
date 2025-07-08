@@ -92,12 +92,9 @@ func RegisterRoutes(e *echo.Echo) {
 
 		// User Payment routes (owner only)
 		userPaymentGroup := authorizedGroup.Group("/account/payment-methods")
-		userPaymentGroup.Use(internalmw.Authorize("user_payments", "activate"))
-		userPaymentGroup.POST("/activate", userPaymentHandler.ActivateUserPayment)
-		userPaymentGroup.Use(internalmw.Authorize("user_payments", "deactivate"))
-		userPaymentGroup.POST("/deactivate", userPaymentHandler.DeactivateUserPayment)
-		userPaymentGroup.Use(internalmw.Authorize("user_payments", "read"))
-		userPaymentGroup.GET("", userPaymentHandler.ListUserPayments)
+		userPaymentGroup.POST("/activate", userPaymentHandler.ActivateUserPayment, internalmw.Authorize("user_payments", "activate"))
+		userPaymentGroup.POST("/deactivate", userPaymentHandler.DeactivateUserPayment, internalmw.Authorize("user_payments", "deactivate"))
+		userPaymentGroup.GET("", userPaymentHandler.ListUserPayments, internalmw.Authorize("user_payments", "read"))
 
 		// Product routes
 		productGroup := authorizedGroup.Group("/products")

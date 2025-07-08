@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -52,6 +53,7 @@ func Authorize(obj, act string) echo.MiddlewareFunc {
 			userRole := claims.Role
 
 			// Enforce Casbin policy
+			log.Printf("Casbin Middleware: Enforcing policy for userRole=%s, obj=%s, act=%s", userRole, obj, act)
 			ok, err = casbin.Enforcer.Enforce(userRole, obj, act)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, handlers.ErrorResponse{Message: "Authorization error"})
