@@ -12,6 +12,8 @@ import (
 	"github.com/msyaifudin/pos/internal/services"
 )
 
+var validate = validator.New()
+
 type UserPaymentHandler struct {
 	UserPaymentService *services.UserPaymentService
 	UserContextService *services.UserContextService
@@ -124,5 +126,16 @@ func (h *UserPaymentHandler) ListUserPayments(c echo.Context) error {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return JSONSuccess(c, http.StatusOK, "user_payments_listed_successfully", userPayments)
+	var responses []dtos.UserPaymentResponse
+	for _, up := range userPayments {
+		responses = append(responses, dtos.UserPaymentResponse{
+			PaymentMethodID: up.PaymentMethodID,
+			PaymentName:     up.PaymentMethod.Name,
+			PaymentMethod:   up.PaymentMethod.PaymentMethod,
+			PaymentChannel:  up.PaymentMethod.PaymentChannel,
+			IsActive:        up.IsActive,
+		})
+	}
+
+	return JSONSuccess(c, http.StatusOK, "user_payments_listed_successfully", responses)
 }

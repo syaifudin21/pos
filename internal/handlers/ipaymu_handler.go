@@ -13,14 +13,15 @@ import (
 	"github.com/msyaifudin/pos/internal/validators"
 )
 
-var validate = validator.New()
+
 
 type IpaymuHandler struct {
 	Service *services.IpaymuService
+	UserContextService *services.UserContextService
 }
 
-func NewIpaymuHandler(service *services.IpaymuService) *IpaymuHandler {
-	return &IpaymuHandler{Service: service}
+func NewIpaymuHandler(service *services.IpaymuService, userContextService *services.UserContextService) *IpaymuHandler {
+	return &IpaymuHandler{Service: service, UserContextService: userContextService}
 }
 
 func (h *IpaymuHandler) CreateDirectPayment(c echo.Context) error {
@@ -142,7 +143,13 @@ func (h *IpaymuHandler) RegisterIpaymu(c echo.Context) error {
 		optional["identityPhoto"] = req.IdentityPhoto
 	}
 
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_user_id")
+	}
+
 	res, err := h.Service.Register(
+		userID,
 		req.Name,
 		req.Phone,
 		req.Password,
@@ -150,7 +157,7 @@ func (h *IpaymuHandler) RegisterIpaymu(c echo.Context) error {
 		optional,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-	return c.JSON(http.StatusOK, res)
+	return JSONSuccess(c, http.StatusOK, "ipaymu_registration_successful", res)
 }

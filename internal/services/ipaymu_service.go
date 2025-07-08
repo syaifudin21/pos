@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -23,14 +24,16 @@ type IpaymuService struct {
 	Va      string
 	ApiKey  string
 	DB      *gorm.DB
+	UserContextService *UserContextService
 }
 
-func NewIpaymuService(db *gorm.DB) *IpaymuService {
+func NewIpaymuService(db *gorm.DB, userContextService *UserContextService) *IpaymuService {
 	return &IpaymuService{
 		BaseURL: os.Getenv("IPAYMU_BASE_URL"),
 		Va:      os.Getenv("IPAYMU_VA"),
 		ApiKey:  os.Getenv("IPAYMU_API_KEY"),
 		DB:      db,
+		UserContextService: userContextService,
 	}
 }
 
@@ -236,6 +239,7 @@ func (s *IpaymuService) NotifyDirectPayment(TrxId int, Status string, Settlement
 
 // Register melakukan pendaftaran user ke Ipaymu
 func (s *IpaymuService) Register(
+	userID uint,
 	name string,
 	phone string,
 	password string,
@@ -295,27 +299,48 @@ func (s *IpaymuService) Register(
 		data, ok := res["Data"].(map[string]interface{})
 		if ok {
 			va, _ := data["Va"].(string)
-			userIpaymu := &models.UserIpaymu{
-				Name:      name,
-				VaIpaymu:  va,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			}
-			// Simpan user_id jika ada di optional
-			if v, ok := optional["user_id"]; ok {
-				if userID, ok := v.(uint); ok {
-					userIpaymu.UserID = userID
+
+			var userIpaymu models.UserIpaymu
+			// Cek apakah sudah ada entri UserIpaymu untuk user ini
+			result := s.DB.Where("user_id = ?", userID).First(&userIpaymu)
+
+			if result.Error != nil {
+				if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+					// Buat entri baru jika tidak ditemukan
+					userIpaymu = models.UserIpaymu{
+						UserID:    userID,
+						Name:      name,
+						VaIpaymu:  va,
+						CreatedAt: time.Now(),
+						UpdatedAt: time.Now(),
+					}
+					if phone != "" {
+						userIpaymu.Phone = &phone
+					}
+					if email != nil {
+						userIpaymu.Email = email
+					}
+					if err := s.DB.Create(&userIpaymu).Error; err != nil {
+						return nil, fmt.Errorf("failed to create UserIpaymu: %w", err)
+					}
+				} else {
+					return nil, fmt.Errorf("database error checking UserIpaymu: %w", result.Error)
+				}
+			} else {
+				// Update entri yang sudah ada
+				userIpaymu.Name = name
+				userIpaymu.VaIpaymu = va
+				userIpaymu.UpdatedAt = time.Now()
+				if phone != "" {
+					userIpaymu.Phone = &phone
+				}
+				if email != nil {
+					userIpaymu.Email = email
+				}
+				if err := s.DB.Save(&userIpaymu).Error; err != nil {
+					return nil, fmt.Errorf("failed to update UserIpaymu: %w", err)
 				}
 			}
-			// Simpan phone dan email jika ada
-			if phone != "" {
-				userIpaymu.Phone = &phone
-			}
-			if email != nil {
-				userIpaymu.Email = email
-			}
-			// Simpan ke database
-			s.DB.Create(userIpaymu)
 		}
 	}
 

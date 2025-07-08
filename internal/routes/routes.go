@@ -11,11 +11,11 @@ import (
 )
 
 func RegisterRoutes(e *echo.Echo) {
-	// Initialize iPaymu service
-	ipaymuService := services.NewIpaymuService(database.DB)
-
 	// Initialize services and handlers
 	userContextService := services.NewUserContextService(database.DB)
+
+	// Initialize iPaymu service
+	ipaymuService := services.NewIpaymuService(database.DB, userContextService)
 	authService := services.NewAuthService(database.DB)
 	authHandler := handlers.NewAuthHandler(authService, userContextService)
 	googleOAuthService := services.NewGoogleOAuthService(database.DB, authService)
@@ -36,7 +36,7 @@ func RegisterRoutes(e *echo.Echo) {
 	supplierHandler := handlers.NewSupplierHandler(supplierService, userContextService)
 	poService := services.NewPurchaseOrderService(database.DB, stockService, userContextService)
 	poHandler := handlers.NewPurchaseOrderHandler(poService, userContextService)
-	ipaymuHandler := handlers.NewIpaymuHandler(ipaymuService)
+	ipaymuHandler := handlers.NewIpaymuHandler(ipaymuService, userContextService)
 	userPaymentService := services.NewUserPaymentService(database.DB, userContextService)
 	userPaymentHandler := handlers.NewUserPaymentHandler(userPaymentService, userContextService)
 	tsmService := services.NewTsmService(database.DB, userContextService)
