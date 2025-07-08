@@ -7,6 +7,7 @@ toolchain go1.23.10
 require (
 	github.com/casbin/casbin/v2 v2.108.0
 	github.com/casbin/gorm-adapter/v3 v3.33.0
+	github.com/casbin/redis-watcher/v2 v2.5.0
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -25,7 +26,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
 	github.com/casbin/govaluate v1.3.0 // indirect
-	github.com/casbin/redis-watcher/v2 v2.5.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect

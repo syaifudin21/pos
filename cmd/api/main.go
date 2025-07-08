@@ -2,7 +2,7 @@ package api
 
 import (
 	"log"
-	"net/http"
+	
 	"os"
 
 	"github.com/joho/godotenv"
@@ -11,10 +11,11 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/msyaifudin/pos/internal/database"
-	"github.com/msyaifudin/pos/internal/handlers"
+	
 	internalmw "github.com/msyaifudin/pos/internal/middleware"
 	"github.com/msyaifudin/pos/internal/redis"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/internal/routes"
 	"github.com/msyaifudin/pos/pkg/casbin"
 )
 
@@ -56,182 +57,8 @@ func Run() {
 		}
 	})
 
-	// Basic route
-	e.GET("", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Welcome to POS API!")
-	})
-
-	// Initialize iPaymu service
-	ipaymuService := services.NewIpaymuService(database.DB)
-
-	// Initialize services and handlers
-	userContextService := services.NewUserContextService(database.DB)
-	authService := services.NewAuthService(database.DB)
-	authHandler := handlers.NewAuthHandler(authService, userContextService)
-	googleOAuthService := services.NewGoogleOAuthService(database.DB, authService)
-	googleOAuthHandler := handlers.NewGoogleOAuthHandler(googleOAuthService)
-
-	// Auth routes
-	authGroup := e.Group("/auth")
-	authGroup.POST("/register", authHandler.RegisterOwner)
-	authGroup.POST("/verify-otp", authHandler.VerifyOTP)
-	authGroup.POST("/login", authHandler.Login)
-	authGroup.POST("/forgot-password", authHandler.ForgotPassword)
-	authGroup.POST("/reset-password", authHandler.ResetPassword)
-	authGroup.POST("/resend-verification-email", authHandler.ResendVerificationEmail)
-
-	// Google OAuth2 routes
-	authGroup.GET("/google/login", googleOAuthHandler.GoogleLogin)
-	authGroup.GET("/google/callback", googleOAuthHandler.GoogleCallback)
-
-	// User management routes (owner only)
-	userAdminGroup := e.Group("/users")
-	userAdminGroup.Use(internalmw.Authorize("users", "manage")) // New Casbin rule for user management
-	userAdminGroup.GET("", authHandler.GetAllUsers)
-	userAdminGroup.POST("", authHandler.Register)
-	userAdminGroup.PUT("/:uuid", authHandler.UpdateUser)
-	userAdminGroup.PUT("/:uuid/block", authHandler.BlockUser)
-	userAdminGroup.PUT("/:uuid/unblock", authHandler.UnblockUser)
-	userAdminGroup.DELETE("/:uuid", authHandler.DeleteUser)
-
-	// Authenticated user routes
-	accountGroup := e.Group("/account")
-	accountGroup.Use(internalmw.SelfAuthorize())
-	accountGroup.GET("/profile", authHandler.GetProfile)
-	accountGroup.PUT("/password", authHandler.UpdatePassword)
-	accountGroup.POST("/email/otp", authHandler.SendOTPForEmailUpdate)
-	accountGroup.PUT("/email", authHandler.UpdateEmail)
-
-	// Initialize product and outlet services and handlers
-	productService := services.NewProductService(database.DB, userContextService)
-	productHandler := handlers.NewProductHandler(productService, userContextService)
-
-		outletService := services.NewOutletService(database.DB, userContextService)
-	outletHandler := handlers.NewOutletHandler(outletService, userContextService)
-
-	// Product routes
-	productGroup := e.Group("/products")
-	productGroup.Use(internalmw.Authorize("products", "read"))
-	productGroup.GET("", productHandler.GetAllProducts)
-	productGroup.GET("/:uuid", productHandler.GetProductByID)
-	productGroup.Use(internalmw.Authorize("products", "write")) // For create, update, delete
-	productGroup.POST("", productHandler.CreateProduct)
-	productGroup.PUT("/:uuid", productHandler.UpdateProduct)
-	productGroup.DELETE("/:uuid", productHandler.DeleteProduct)
-
-	// Products by outlet
-	outletProductGroup := e.Group("/outlets/:outlet_uuid/products")
-	outletProductGroup.Use(internalmw.Authorize("products", "read"))
-	outletProductGroup.GET("", productHandler.GetProductsByOutlet)
-
-	// Initialize recipe service and handler
-	recipeService := services.NewRecipeService(database.DB, userContextService)
-	recipeHandler := handlers.NewRecipeHandler(recipeService, userContextService)
-
-	// Recipe routes
-	recipeGroup := e.Group("/recipes")
-	recipeGroup.Use(internalmw.Authorize("recipes", "read"))
-	recipeGroup.GET("/:uuid", recipeHandler.GetRecipeByUuid)
-	recipeGroup.Use(internalmw.Authorize("recipes", "write")) // For create, update, delete
-	recipeGroup.POST("", recipeHandler.CreateRecipe)
-	recipeGroup.PUT("/:uuid", recipeHandler.UpdateRecipe)
-	recipeGroup.DELETE("/:uuid", recipeHandler.DeleteRecipe)
-
-	// Recipes by main product
-	productRecipeGroup := e.Group("/products/:main_product_uuid/recipes")
-	productRecipeGroup.Use(internalmw.Authorize("recipes", "read"))
-	productRecipeGroup.GET("", recipeHandler.GetRecipesByMainProduct)
-
-	// Outlet routes
-	outletGroup := e.Group("/outlets")
-	outletGroup.Use(internalmw.Authorize("outlets", "read"))
-	outletGroup.GET("", outletHandler.GetAllOutlets)
-	outletGroup.GET("/:uuid", outletHandler.GetOutletByID)
-	outletGroup.Use(internalmw.Authorize("outlets", "write")) // For create, update, delete
-	outletGroup.POST("", outletHandler.CreateOutlet)
-	outletGroup.PUT("/:uuid", outletHandler.UpdateOutlet)
-	outletGroup.DELETE("/:uuid", outletHandler.DeleteOutlet)
-
-	// Initialize stock service and handler
-	stockService := services.NewStockService(database.DB, userContextService)
-	stockHandler := handlers.NewStockHandler(stockService, userContextService)
-
-	// Stock routes
-	stockGroup := e.Group("/outlets/:outlet_uuid/stocks")
-	stockGroup.Use(internalmw.Authorize("stocks", "read"))
-	stockGroup.GET("", stockHandler.GetOutletStocks)
-	stockGroup.GET("/:product_uuid", stockHandler.GetStockByOutletAndProduct)
-	stockGroup.Use(internalmw.Authorize("stocks", "write")) // For update
-	stockGroup.PUT("/:product_uuid", stockHandler.UpdateStock)
-
-	// Global stock update route
-	e.PUT("/stocks", stockHandler.UpdateGlobalStock, internalmw.Authorize("stocks", "write"))
-
-	// Initialize order service and handler
-	orderService := services.NewOrderService(database.DB, stockService, ipaymuService, userContextService)
-	orderHandler := handlers.NewOrderHandler(orderService, userContextService)
-
-	// Order routes
-	orderGroup := e.Group("/orders")
-	orderGroup.Use(internalmw.Authorize("orders", "write")) // Cashier can create orders
-	orderGroup.POST("", orderHandler.CreateOrder)
-	orderGroup.Use(internalmw.Authorize("orders", "read")) // Admin/Manager can read orders
-	orderGroup.GET("/:uuid", orderHandler.GetOrderByUuid)
-
-	// Orders by outlet
-	outletOrdersGroup := e.Group("/outlets/:outlet_uuid/orders")
-	outletOrdersGroup.Use(internalmw.Authorize("orders", "read"))
-	outletOrdersGroup.GET("", orderHandler.GetOrdersByOutlet)
-
-	// Initialize report service and handler
-	reportService := services.NewReportService(database.DB)
-	reportHandler := handlers.NewReportHandler(reportService, userContextService)
-
-	// Report routes
-	reportGroup := e.Group("/reports")
-	reportGroup.Use(internalmw.Authorize("reports", "read"))
-	reportGroup.GET("/outlets/:outlet_uuid/sales", reportHandler.GetSalesByOutletReport)
-	reportGroup.GET("/products/:product_uuid/sales", reportHandler.GetSalesByProductReport)
-
-	// Initialize supplier service and handler
-	supplierService := services.NewSupplierService(database.DB, userContextService)
-	supplierHandler := handlers.NewSupplierHandler(supplierService, userContextService)
-
-	// Supplier routes
-	supplierGroup := e.Group("/suppliers")
-	supplierGroup.Use(internalmw.Authorize("suppliers", "read"))
-	supplierGroup.GET("", supplierHandler.GetAllSuppliers)
-	supplierGroup.GET("/:uuid", supplierHandler.GetSupplierByuuid)
-	supplierGroup.Use(internalmw.Authorize("suppliers", "write")) // For create, update, delete
-	supplierGroup.POST("", supplierHandler.CreateSupplier)
-	supplierGroup.PUT("/:uuid", supplierHandler.UpdateSupplier)
-	supplierGroup.DELETE("/:uuid", supplierHandler.DeleteSupplier)
-
-	// Initialize purchase order service and handler
-	poService := services.NewPurchaseOrderService(database.DB, stockService, userContextService)
-	poHandler := handlers.NewPurchaseOrderHandler(poService, userContextService)
-
-	// Purchase Order routes
-	poGroup := e.Group("/purchase-orders")
-	poGroup.Use(internalmw.Authorize("purchase_orders", "write")) // Admin/Manager can create/receive POs
-	poGroup.POST("", poHandler.CreatePurchaseOrder)
-	poGroup.PUT("/:uuid/receive", poHandler.ReceivePurchaseOrder)
-	poGroup.Use(internalmw.Authorize("purchase_orders", "read")) // Admin/Manager can read POs
-	poGroup.GET("/:uuid", poHandler.GetPurchaseOrderByUuid)
-
-	// Purchase Orders by outlet
-	outletPoGroup := e.Group("/outlets/:outlet_uuid/purchase-orders")
-	outletPoGroup.Use(internalmw.Authorize("purchase_orders", "read"))
-	outletPoGroup.GET("", poHandler.GetPurchaseOrdersByOutlet)
-
-	// Initialize iPaymu handler
-	ipaymuHandler := handlers.NewIpaymuHandler(ipaymuService)
-	paymentGroup := e.Group("/api/ipaymu")
-	paymentGroup.Use(internalmw.SelfAuthorize())
-	paymentGroup.POST("/register", ipaymuHandler.RegisterIpaymu)
-	paymentGroup.POST("/direct-payment", ipaymuHandler.CreateDirectPayment)
-
-	e.POST("/api/payment/ipaymu/notify", ipaymuHandler.IpaymuNotify)
+	// Register all routes
+	routes.RegisterRoutes(e)
 
 	// Start server
 	port := os.Getenv("PORT")
