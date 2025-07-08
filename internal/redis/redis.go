@@ -55,3 +55,20 @@ func CloseRedis() {
 		}
 	}
 }
+
+// Publish publishes a message to a Redis channel
+func Publish(ctx context.Context, channel string, message interface{}) error {
+	return Rdb.Publish(ctx, channel, message).Err()
+}
+
+// Subscribe subscribes to a Redis channel and returns a channel of messages
+func Subscribe(ctx context.Context, channel string) (<-chan *redis.Message, error) {
+	pubsub := Rdb.Subscribe(ctx, channel)
+
+	_, err := pubsub.Receive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return pubsub.Channel(), nil
+}
