@@ -12,8 +12,6 @@ import (
 	"github.com/msyaifudin/pos/internal/services"
 )
 
-var validate = validator.New()
-
 type UserPaymentHandler struct {
 	UserPaymentService *services.UserPaymentService
 	UserContextService *services.UserContextService

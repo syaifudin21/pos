@@ -76,7 +76,7 @@ type RegisterIpaymuRequest struct {
 	Phone        string  `json:"phone" validate:"required"`
 	Password     string  `json:"password" validate:"required"`
 	Email        *string `json:"email,omitempty"`
-	WithoutEmail string  `json:"withoutEmail" validate:"required,oneof=0 1"`
+	WithoutEmail string  `json:"withoutEmail"`
 	IdentityNo   *string `json:"identityNo,omitempty"`
 	BusinessName *string `json:"businessName,omitempty"`
 	Birthday     *string `json:"birthday,omitempty"`

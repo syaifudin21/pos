@@ -250,7 +250,7 @@ func (s *IpaymuService) Register(
 
 	if email != nil {
 		body["email"] = *email
-		body["withoutEmail"] = "0"
+		body["WithoutEmail"] = "0"
 	} else {
 		body["withoutEmail"] = "1"
 	}

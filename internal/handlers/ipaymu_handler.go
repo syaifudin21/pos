@@ -1,14 +1,19 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/internal/validators"
 )
+
+var validate = validator.New()
 
 type IpaymuHandler struct {
 	Service *services.IpaymuService
@@ -21,7 +26,24 @@ func NewIpaymuHandler(service *services.IpaymuService) *IpaymuHandler {
 func (h *IpaymuHandler) CreateDirectPayment(c echo.Context) error {
 	var req dtos.CreateDirectPaymentRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": "Invalid request", "details": err.Error()})
+		// Check if it's a binding error (e.g., JSON parsing, type mismatch)
+		if he, ok := err.(*echo.HTTPError); ok && he.Code == http.StatusBadRequest {
+			return JSONError(c, http.StatusBadRequest, "Invalid JSON format or data type mismatch.")
+		}
+		return JSONError(c, http.StatusBadRequest, "invalid_input")
+	}
+
+	// Validate the request struct
+	if err := validate.Struct(req); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			errMsgs := make([]string, 0, len(ve))
+			for _, fe := range ve {
+				errMsgs = append(errMsgs, fmt.Sprintf("Field '%s' failed on the '%s' tag", fe.Field(), fe.Tag()))
+			}
+			return JSONError(c, http.StatusBadRequest, strings.Join(errMsgs, ", "))
+		}
+		return JSONError(c, http.StatusBadRequest, err.Error())
 	}
 
 	lang := c.Get("lang").(string)
@@ -44,15 +66,26 @@ func (h *IpaymuHandler) CreateDirectPayment(c echo.Context) error {
 func (h *IpaymuHandler) IpaymuNotify(c echo.Context) error {
 	var req dtos.IpaymuNotifyRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": "Invalid request", "details": err.Error()})
+		// Check if it's a binding error (e.g., JSON parsing, type mismatch)
+		if he, ok := err.(*echo.HTTPError); ok && he.Code == http.StatusBadRequest {
+			return JSONError(c, http.StatusBadRequest, "Invalid JSON format or data type mismatch.")
+		}
+		return JSONError(c, http.StatusBadRequest, "invalid_input")
 	}
 
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateIpaymuNotify(&req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	// Validate the request struct
+	if err := validate.Struct(req); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			errMsgs := make([]string, 0, len(ve))
+			for _, fe := range ve {
+				errMsgs = append(errMsgs, fmt.Sprintf("ssss '%s' failed on the '%s' tag", fe.Field(), fe.Tag()))
+			}
+			return JSONError(c, http.StatusBadRequest, strings.Join(errMsgs, ", "))
+		}
+		return JSONError(c, http.StatusBadRequest, err.Error())
 	}
+
 	fmt.Println("Debug Signature:", req) // Debugging output
 
 	err := h.Service.NotifyDirectPayment(req.TrxID, req.Status, req.SettlementStatus)
@@ -66,12 +99,24 @@ func (h *IpaymuHandler) IpaymuNotify(c echo.Context) error {
 func (h *IpaymuHandler) RegisterIpaymu(c echo.Context) error {
 	var req dtos.RegisterIpaymuRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": "Invalid request", "details": err.Error()})
+		// Check if it's a binding error (e.g., JSON parsing, type mismatch)
+		if he, ok := err.(*echo.HTTPError); ok && he.Code == http.StatusBadRequest {
+			return JSONError(c, http.StatusBadRequest, "Invalid JSON format or data type mismatch.")
+		}
+		return JSONError(c, http.StatusBadRequest, "invalid_input")
 	}
 
-	// Validasi opsional, bisa tambahkan validator custom jika perlu
-	if req.Name == "" || req.Phone == "" || req.Password == "" {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": "name, phone, dan password wajib diisi"})
+	// Validate the request struct
+	if err := validate.Struct(req); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			errMsgs := make([]string, 0, len(ve))
+			for _, fe := range ve {
+				errMsgs = append(errMsgs, fmt.Sprintf("Field '%s' failed on the '%s' tag", fe.Field(), fe.Tag()))
+			}
+			return JSONError(c, http.StatusBadRequest, strings.Join(errMsgs, ", "))
+		}
+		return JSONError(c, http.StatusBadRequest, err.Error())
 	}
 
 	optional := make(map[string]interface{})
