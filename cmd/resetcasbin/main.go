@@ -39,6 +39,7 @@ func Run() {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
+		log.Printf("Processing policy line: %s", line) // Added logging
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue // Skip empty lines and comments
 		}
@@ -64,6 +65,8 @@ func Run() {
 			}
 			if _, err := casbin.Enforcer.AddPolicy(args...); err != nil {
 				log.Fatalf("Failed to add policy %v: %v", policyArgs, err)
+			} else {
+				log.Printf("Successfully added policy: %v", policyArgs) // Added logging
 			}
 		case "g":
 			// 'g' policies expect 2 arguments: user, role
@@ -77,6 +80,8 @@ func Run() {
 			}
 			if _, err := casbin.Enforcer.AddGroupingPolicy(args...); err != nil {
 				log.Fatalf("Failed to add grouping policy %v: %v", policyArgs, err)
+			} else {
+				log.Printf("Successfully added grouping policy: %v", policyArgs) // Added logging
 			}
 		default:
 			log.Printf("Unknown policy type: %s in line: %s", policyType, line)

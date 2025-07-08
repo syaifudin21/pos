@@ -20,19 +20,19 @@ import (
 )
 
 type IpaymuService struct {
-	BaseURL string
-	Va      string
-	ApiKey  string
-	DB      *gorm.DB
+	BaseURL            string
+	Va                 string
+	ApiKey             string
+	DB                 *gorm.DB
 	UserContextService *UserContextService
 }
 
 func NewIpaymuService(db *gorm.DB, userContextService *UserContextService) *IpaymuService {
 	return &IpaymuService{
-		BaseURL: os.Getenv("IPAYMU_BASE_URL"),
-		Va:      os.Getenv("IPAYMU_VA"),
-		ApiKey:  os.Getenv("IPAYMU_API_KEY"),
-		DB:      db,
+		BaseURL:            os.Getenv("IPAYMU_BASE_URL"),
+		Va:                 os.Getenv("IPAYMU_VA"),
+		ApiKey:             os.Getenv("IPAYMU_API_KEY"),
+		DB:                 db,
 		UserContextService: userContextService,
 	}
 }
@@ -294,7 +294,7 @@ func (s *IpaymuService) Register(
 		return nil, err
 	}
 
-	if res != nil && err == nil {
+	if res != nil {
 		// Pastikan response mengandung data VA
 		data, ok := res["Data"].(map[string]interface{})
 		if ok {

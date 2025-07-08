@@ -50,6 +50,16 @@ func InitCasbin() {
 	// Set the watcher for the enforcer
 	Enforcer.SetWatcher(Watcher)
 
+	// Set a callback function to reload policy when an update is received
+	Watcher.SetUpdateCallback(func(s string) {
+		log.Println("Casbin: Received policy update via Redis watcher. Reloading policy...")
+		if err := Enforcer.LoadPolicy(); err != nil {
+			log.Printf("Casbin: Failed to reload policy after update: %v", err)
+		} else {
+			log.Println("Casbin: Policy reloaded successfully.")
+		}
+	})
+
 	log.Println("Casbin: Loading policy from DB...")
 	// Load the policy from DB.
 	if err := Enforcer.LoadPolicy(); err != nil {
