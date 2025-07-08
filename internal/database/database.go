@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/msyaifudin/pos/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -30,9 +31,9 @@ func InitDB() {
 		log.Fatalf("Gagal register plugin UpdateByCallback: %v", err)
 	}
 
-	// AutoMigrate IpaymuLog
-	if err := db.AutoMigrate(&models.IpaymuLog{}); err != nil {
-		log.Fatalf("Gagal migrasi tabel IpaymuLog: %v", err)
+	// AutoMigrate all models, including CasbinRule
+	if err := db.AutoMigrate(&models.IpaymuLog{}, &gormadapter.CasbinRule{}); err != nil {
+		log.Fatalf("Gagal migrasi tabel: %v", err)
 	}
 
 	DB = db

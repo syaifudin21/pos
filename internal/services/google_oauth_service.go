@@ -82,7 +82,7 @@ func (s *GoogleOAuthService) HandleGoogleCallback(code string) (string, *models.
 			// Generate a random password for the new user
 
 			// Use the AuthService to register the user
-			registeredUser, regErr := s.AuthService.RegisterUser(userInfo.Name, userInfo.Email, "", "admin", nil, nil, nil, true)
+			registeredUser, regErr := s.AuthService.RegisterUser(userInfo.Name, userInfo.Email, "", "owner", nil, nil, nil, true)
 			if regErr != nil {
 				log.Printf("Failed to auto-register user: %v", regErr)
 				return "", nil, errors.New("failed to auto-register user")

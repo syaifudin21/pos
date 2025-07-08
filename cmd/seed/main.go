@@ -1,12 +1,16 @@
 package seed
 
 import (
+	"bufio"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/msyaifudin/pos/internal/database"
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/pkg/casbin"
 	"github.com/msyaifudin/pos/pkg/utils"
 	"gorm.io/gorm"
 )
@@ -24,6 +28,9 @@ func Run() {
 
 	// Seed Payment Methods
 	seedPaymentMethods(database.DB)
+
+	// Seed Casbin Policies from CSV to DB
+	seedCasbinPolicies()
 
 	// Seed Super Admin User
 	seedSuperAdmin(database.DB)
@@ -107,4 +114,71 @@ func seedSuperAdmin(db *gorm.DB) {
 	} else {
 		log.Println("Super admin user already exists, skipping.")
 	}
+}
+
+func seedCasbinPolicies() {
+	// Initialize Casbin enforcer with GORM adapter
+	casbin.InitCasbin()
+
+	// Clear existing policies in DB to avoid duplicates during seeding
+	casbin.Enforcer.ClearPolicy()
+
+	file, err := os.Open("pkg/casbin/policy.csv")
+	if err != nil {
+		log.Fatalf("Failed to open policy.csv: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue // Skip empty lines and comments
+		}
+
+		parts := strings.Split(line, ",")
+		for i := range parts {
+			parts[i] = strings.TrimSpace(parts[i])
+		}
+
+		policyType := parts[0]
+		policyArgs := parts[1:]
+
+		switch policyType {
+		case "p":
+			// 'p' policies expect 3 arguments: sub, obj, act
+			if len(policyArgs) != 3 {
+				log.Printf("Skipping invalid 'p' policy line (expected 3 arguments, got %d): %s", len(policyArgs), line)
+				continue
+			}
+			args := make([]interface{}, len(policyArgs))
+			for i, v := range policyArgs {
+				args[i] = v
+			}
+			if _, err := casbin.Enforcer.AddPolicy(args...); err != nil {
+				log.Fatalf("Failed to add policy %v: %v", policyArgs, err)
+			}
+		case "g":
+			// 'g' policies expect 2 arguments: user, role
+			if len(policyArgs) != 2 {
+				log.Printf("Skipping invalid 'g' policy line (expected 2 arguments, got %d): %s", len(policyArgs), line)
+				continue
+			}
+			args := make([]interface{}, len(policyArgs))
+			for i, v := range policyArgs {
+				args[i] = v
+			}
+			if _, err := casbin.Enforcer.AddGroupingPolicy(args...); err != nil {
+				log.Fatalf("Failed to add grouping policy %v: %v", policyArgs, err)
+			}
+		default:
+			log.Printf("Unknown policy type: %s in line: %s", policyType, line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Error reading policy.csv: %v", err)
+	}
+
+	log.Println("Casbin policies seeded from policy.csv to database.")
 }

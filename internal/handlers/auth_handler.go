@@ -47,7 +47,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	return JSONSuccess(c, http.StatusCreated, "user_registered_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role})
 }
 
-func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
+func (h *AuthHandler) RegisterOwner(c echo.Context) error {
 	req := new(dtos.RegisterAdminRequest)
 	if err := c.Bind(req); err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
@@ -60,19 +60,14 @@ func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
 		})
 	}
 
-	// Only allow 'admin' role for this endpoint
-	// For initial admin registration, this check might be skipped or handled differently
-	// For subsequent admin registrations by an existing admin, you might want to check the creator's role
-	// For simplicity, assuming this is for initial admin setup or by a super-admin
-
-	// No creatorID for the first admin, or if registered by a super-admin outside the system
-	// For now, let's assume no creatorID for admin registration via this endpoint
-	user, err := h.AuthService.RegisterUser(req.Name, req.Email, req.Password, "admin", nil, nil, &req.PhoneNumber, false)
+	// This endpoint is for public owner registration, so no creatorID is needed.
+	// The role is hardcoded to "owner".
+	user, err := h.AuthService.RegisterUser(req.Name, req.Email, req.Password, "owner", nil, nil, &req.PhoneNumber, false)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	return JSONSuccess(c, http.StatusCreated, "admin_registered_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role})
+	return JSONSuccess(c, http.StatusCreated, "owner_registered_successfully", dtos.UserResponse{ID: user.ID, Uuid: user.Uuid, Name: user.Name, Email: user.Email, Role: user.Role})
 }
 
 func (h *AuthHandler) Login(c echo.Context) error {

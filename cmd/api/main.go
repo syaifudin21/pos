@@ -73,7 +73,7 @@ func Run() {
 
 	// Auth routes
 	authGroup := e.Group("/auth")
-	authGroup.POST("/register", authHandler.RegisterAdmin)
+	authGroup.POST("/register", authHandler.RegisterOwner)
 	authGroup.POST("/verify-otp", authHandler.VerifyOTP)
 	authGroup.POST("/login", authHandler.Login)
 	authGroup.POST("/forgot-password", authHandler.ForgotPassword)
@@ -84,7 +84,7 @@ func Run() {
 	authGroup.GET("/google/login", googleOAuthHandler.GoogleLogin)
 	authGroup.GET("/google/callback", googleOAuthHandler.GoogleCallback)
 
-	// User management routes (admin only)
+	// User management routes (owner only)
 	userAdminGroup := e.Group("/users")
 	userAdminGroup.Use(internalmw.Authorize("users", "manage")) // New Casbin rule for user management
 	userAdminGroup.GET("", authHandler.GetAllUsers)
