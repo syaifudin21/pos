@@ -32,6 +32,9 @@ p,owner,suppliers,read
 p,owner,suppliers,write
 p,owner,purchase_orders,read
 p,owner,purchase_orders,write
+p,owner,user_payments,activate
+p,owner,user_payments,deactivate
+p,manager,user_payments,read
 
 p,manager,products,read
 p,manager,products,write
@@ -45,11 +48,13 @@ p,manager,suppliers,read
 p,manager,suppliers,write
 p,manager,purchase_orders,read
 p,manager,purchase_orders,write
+p,manager,user_payments,read
 
 p,cashier,products,read
 p,cashier,orders,read
 p,cashier,orders,write
 p,cashier,stocks,read
+p,cashier,user_payments,read
 
 g,admin,admin
 g,owner,owner

@@ -4,10 +4,10 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	internalmw "github.com/msyaifudin/pos/internal/middleware"
-	"github.com/msyaifudin/pos/internal/handlers"
-	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/internal/database"
+	"github.com/msyaifudin/pos/internal/handlers"
+	internalmw "github.com/msyaifudin/pos/internal/middleware"
+	"github.com/msyaifudin/pos/internal/services"
 )
 
 func RegisterRoutes(e *echo.Echo) {
@@ -37,7 +37,10 @@ func RegisterRoutes(e *echo.Echo) {
 	poService := services.NewPurchaseOrderService(database.DB, stockService, userContextService)
 	poHandler := handlers.NewPurchaseOrderHandler(poService, userContextService)
 	ipaymuHandler := handlers.NewIpaymuHandler(ipaymuService)
-
+	userPaymentService := services.NewUserPaymentService(database.DB, userContextService)
+	userPaymentHandler := handlers.NewUserPaymentHandler(userPaymentService, userContextService)
+	tsmService := services.NewTsmService(database.DB, userContextService)
+	tsmHandler := handlers.NewTsmHandler(tsmService, userContextService)
 
 	// Public routes (no specific middleware)
 	e.GET("", func(c echo.Context) error {
@@ -66,9 +69,12 @@ func RegisterRoutes(e *echo.Echo) {
 		accountGroup.POST("/email/otp", authHandler.SendOTPForEmailUpdate)
 		accountGroup.PUT("/email", authHandler.UpdateEmail)
 
-		paymentGroup := selfAuthGroup.Group("/api/ipaymu")
+		paymentGroup := selfAuthGroup.Group("/ipaymu")
 		paymentGroup.POST("/register", ipaymuHandler.RegisterIpaymu)
 		paymentGroup.POST("/direct-payment", ipaymuHandler.CreateDirectPayment)
+
+		tsmGroup := selfAuthGroup.Group("/tsm")
+		tsmGroup.POST("/register", tsmHandler.RegisterTsm)
 	}
 
 	// Routes requiring internalmw.Authorize()
@@ -83,6 +89,15 @@ func RegisterRoutes(e *echo.Echo) {
 		userAdminGroup.PUT("/:uuid/block", authHandler.BlockUser)
 		userAdminGroup.PUT("/:uuid/unblock", authHandler.UnblockUser)
 		userAdminGroup.DELETE("/:uuid", authHandler.DeleteUser)
+
+		// User Payment routes (owner only)
+		userPaymentGroup := authorizedGroup.Group("/account/payment-methods")
+		userPaymentGroup.Use(internalmw.Authorize("user_payments", "activate"))
+		userPaymentGroup.POST("/activate", userPaymentHandler.ActivateUserPayment)
+		userPaymentGroup.Use(internalmw.Authorize("user_payments", "deactivate"))
+		userPaymentGroup.POST("/deactivate", userPaymentHandler.DeactivateUserPayment)
+		userPaymentGroup.Use(internalmw.Authorize("user_payments", "read"))
+		userPaymentGroup.GET("", userPaymentHandler.ListUserPayments)
 
 		// Product routes
 		productGroup := authorizedGroup.Group("/products")

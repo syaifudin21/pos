@@ -9,7 +9,7 @@ import (
 	"github.com/msyaifudin/pos/internal/models"
 )
 
-func Run() {
+func PerformMigration() {
 	// Load environment variables from .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
@@ -36,12 +36,17 @@ func Run() {
 		&models.PaymentMethod{},
 		&models.IpaymuLog{},
 		&models.UserPayment{},
+		&models.UserIpaymu{},
+		&models.UserTsm{},
 	) 
 	if err != nil {
 		log.Fatalf("Failed to auto-migrate database: %v", err)
 	}
 	log.Println("Database migration completed.")
+}
 
+func Run() {
+	PerformMigration()
 	// Exit after migration
 	os.Exit(0)
 }

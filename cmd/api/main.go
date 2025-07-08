@@ -2,7 +2,6 @@ package api
 
 import (
 	"log"
-	
 	"os"
 
 	"github.com/joho/godotenv"
@@ -10,8 +9,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/time/rate"
 
+	"github.com/msyaifudin/pos/cmd/migrate"
 	"github.com/msyaifudin/pos/internal/database"
-	
 	internalmw "github.com/msyaifudin/pos/internal/middleware"
 	"github.com/msyaifudin/pos/internal/redis"
 	"github.com/msyaifudin/pos/internal/services"
@@ -20,13 +19,13 @@ import (
 )
 
 func Run() {
+	// Perform database migrations
+	migrate.PerformMigration()
+
 	// Load environment variables from .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
 	}
-
-	// Initialize database
-	database.InitDB()
 
 	// Initialize Redis
 	redis.InitRedis()

@@ -8,6 +8,7 @@ import (
 	"github.com/msyaifudin/pos/cmd/migrate"
 	"github.com/msyaifudin/pos/cmd/seed"
 	"github.com/msyaifudin/pos/cmd/resetdb"
+	"github.com/msyaifudin/pos/cmd/resetcasbin"
 )
 
 func main() {
@@ -18,7 +19,8 @@ Commands:
   api    - Runs the API server
   migrate - Runs database migrations
   seed   - Seeds the database with initial data
-  resetdb - Resets the database (drops all tables, migrates, and seeds)`)
+  resetdb - Resets the database (drops all tables, migrates, and seeds)
+  resetcasbin - Resets Casbin policies to default from policy-default.csv`)
 	}
 
 	command := os.Args[1]
@@ -32,6 +34,8 @@ Commands:
 		seed.Run()
 	case "resetdb":
 		resetdb.Run()
+	case "resetcasbin":
+		resetcasbin.Run()
 	default:
 		log.Fatalf("Unknown command: %s", command)
 	}

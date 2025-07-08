@@ -40,10 +40,10 @@ func Run() {
 
 func seedPaymentMethods(db *gorm.DB) {
 	paymentMethods := []models.PaymentMethod{
-		{Name: "Cash", Type: "cash", IsActive: true, PaymentMethod: "cash", PaymentChannel: "manual"},
-		{Name: "Bank Transfer", Type: "bank_transfer", IsActive: true, PaymentMethod: "va", PaymentChannel: "mandiri"},
-		{Name: "Credit Card", Type: "credit_card", IsActive: true, PaymentMethod: "edc", PaymentChannel: "linkpayment"},
-		{Name: "QRIS", Type: "qris", IsActive: true, PaymentMethod: "qris", PaymentChannel: "qris"},
+		{Issuer: "default", Name: "Cash", Type: "cash", IsActive: true, PaymentMethod: "cash", PaymentChannel: "manual"},
+		{Issuer: "iPaymu", Name: "Bank Transfer", Type: "bank_transfer", IsActive: true, PaymentMethod: "va", PaymentChannel: "mandiri"},
+		{Issuer: "TSM", Name: "Credit Card", Type: "credit_card", IsActive: true, PaymentMethod: "edc", PaymentChannel: "linkpayment"},
+		{Issuer: "iPaymu", Name: "QRIS", Type: "qris", IsActive: true, PaymentMethod: "qris", PaymentChannel: "qris"},
 	}
 
 	for _, pm := range paymentMethods {
@@ -120,10 +120,15 @@ func seedCasbinPolicies() {
 	// Initialize Casbin enforcer with GORM adapter
 	casbin.InitCasbin()
 
-	// Clear existing policies in DB to avoid duplicates during seeding
-	casbin.Enforcer.ClearPolicy()
+	// Clear existing policies in DB to avoid duplicates during seeding, if enabled by environment variable
+	if os.Getenv("CASBIN_CLEAR_POLICY_ON_SEED") == "true" {
+		log.Println("Clearing existing Casbin policies from DB...")
+		casbin.Enforcer.ClearPolicy()
+	} else {
+		log.Println("Skipping clearing Casbin policies. To clear, set CASBIN_CLEAR_POLICY_ON_SEED=true")
+	}
 
-	file, err := os.Open("pkg/casbin/policy.csv")
+	file, err := os.Open("pkg/casbin/policy-default.csv")
 	if err != nil {
 		log.Fatalf("Failed to open policy.csv: %v", err)
 	}
