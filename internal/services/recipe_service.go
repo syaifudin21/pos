@@ -14,32 +14,16 @@ import (
 
 type RecipeService struct {
 	DB *gorm.DB
+	UserContextService *UserContextService
 }
 
-func NewRecipeService(db *gorm.DB) *RecipeService {
-	return &RecipeService{DB: db}
-}
-
-// GetOwnerID retrieves the owner's ID for a given user.
-// If the user is a manager or cashier, it returns their creator's ID.
-// Otherwise, it returns the user's own ID.
-func (s *RecipeService) GetOwnerID(userID uint) (uint, error) {
-	var user models.User
-	if err := s.DB.First(&user, userID).Error; err != nil {
-		log.Printf("Error finding user: %v", err)
-		return 0, errors.New("user not found")
-	}
-
-	if (user.Role == "manager" || user.Role == "cashier") && user.CreatorID != nil {
-		return *user.CreatorID, nil
-	}
-
-	return userID, nil
+func NewRecipeService(db *gorm.DB, userContextService *UserContextService) *RecipeService {
+	return &RecipeService{DB: db, UserContextService: userContextService}
 }
 
 // GetRecipeByUuid retrieves a recipe by its Uuid.
 func (s *RecipeService) GetRecipeByUuid(uuid uuid.UUID, userID uint) (*dtos.RecipeResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +48,7 @@ func (s *RecipeService) GetRecipeByUuid(uuid uuid.UUID, userID uint) (*dtos.Reci
 
 // GetRecipesByMainProduct retrieves all recipes for a given main product.
 func (s *RecipeService) GetRecipesByMainProduct(mainProductUuid uuid.UUID, userID uint) ([]dtos.RecipeResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +79,7 @@ func (s *RecipeService) GetRecipesByMainProduct(mainProductUuid uuid.UUID, userI
 
 // CreateRecipe creates a new recipe.
 func (s *RecipeService) CreateRecipe(mainProductUuid, componentUuid uuid.UUID, quantity float64, userID uint) (*dtos.RecipeResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +123,7 @@ func (s *RecipeService) CreateRecipe(mainProductUuid, componentUuid uuid.UUID, q
 
 // UpdateRecipe updates an existing recipe.
 func (s *RecipeService) UpdateRecipe(uuid uuid.UUID, mainProductUuid, componentUuid uuid.UUID, quantity float64, userID uint) (*dtos.RecipeResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +172,7 @@ func (s *RecipeService) UpdateRecipe(uuid uuid.UUID, mainProductUuid, componentU
 
 // DeleteRecipe deletes a recipe by its Uuid.
 func (s *RecipeService) DeleteRecipe(uuid uuid.UUID, userID uint) error {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return err
 	}

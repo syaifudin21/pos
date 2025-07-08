@@ -14,31 +14,15 @@ import (
 
 type SupplierService struct {
 	DB *gorm.DB
+	UserContextService *UserContextService
 }
 
-func NewSupplierService(db *gorm.DB) *SupplierService {
-	return &SupplierService{DB: db}
-}
-
-// GetOwnerID retrieves the owner's ID for a given user.
-// If the user is a manager or cashier, it returns their creator's ID.
-// Otherwise, it returns the user's own ID.
-func (s *SupplierService) GetOwnerID(userID uint) (uint, error) {
-	var user models.User
-	if err := s.DB.First(&user, userID).Error; err != nil {
-		log.Printf("Error finding user: %v", err)
-		return 0, errors.New("user not found")
-	}
-
-	if (user.Role == "manager" || user.Role == "cashier") && user.CreatorID != nil {
-		return *user.CreatorID, nil
-	}
-
-	return userID, nil
+func NewSupplierService(db *gorm.DB, userContextService *UserContextService) *SupplierService {
+	return &SupplierService{DB: db, UserContextService: userContextService}
 }
 
 func (s *SupplierService) GetAllSuppliers(userID uint) ([]models.Supplier, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +35,7 @@ func (s *SupplierService) GetAllSuppliers(userID uint) ([]models.Supplier, error
 }
 
 func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID, userID uint) (*dtos.SupplierResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +57,7 @@ func (s *SupplierService) GetSupplierByuuid(uuid uuid.UUID, userID uint) (*dtos.
 }
 
 func (s *SupplierService) CreateSupplier(req *dtos.CreateSupplierRequest, userID uint) (*dtos.SupplierResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +81,7 @@ func (s *SupplierService) CreateSupplier(req *dtos.CreateSupplierRequest, userID
 }
 
 func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, req *dtos.UpdateSupplierRequest, userID uint) (*dtos.SupplierResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +113,7 @@ func (s *SupplierService) UpdateSupplier(uuid uuid.UUID, req *dtos.UpdateSupplie
 }
 
 func (s *SupplierService) DeleteSupplier(uuid uuid.UUID, userID uint) error {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return err
 	}

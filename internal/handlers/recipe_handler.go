@@ -3,21 +3,20 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/internal/validators"
-	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type RecipeHandler struct {
-	RecipeService *services.RecipeService
+	RecipeService      *services.RecipeService
+	UserContextService *services.UserContextService
 }
 
-func NewRecipeHandler(recipeService *services.RecipeService) *RecipeHandler {
-	return &RecipeHandler{RecipeService: recipeService}
+func NewRecipeHandler(recipeService *services.RecipeService, userContextService *services.UserContextService) *RecipeHandler {
+	return &RecipeHandler{RecipeService: recipeService, UserContextService: userContextService}
 }
 func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 	uuidParam := c.Param("uuid")
@@ -26,11 +25,12 @@ func (h *RecipeHandler) GetRecipeByUuid(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.RecipeService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -49,11 +49,12 @@ func (h *RecipeHandler) GetRecipesByMainProduct(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_main_product_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.RecipeService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -89,11 +90,12 @@ func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.RecipeService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -122,11 +124,12 @@ func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.RecipeService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -145,9 +148,10 @@ func (h *RecipeHandler) DeleteRecipe(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	err = h.RecipeService.DeleteRecipe(parsedUuid, userID)
 	if err != nil {

@@ -3,29 +3,29 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/internal/validators"
-	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type ProductHandler struct {
-	ProductService *services.ProductService
+	ProductService     *services.ProductService
+	UserContextService *services.UserContextService
 }
 
-func NewProductHandler(productService *services.ProductService) *ProductHandler {
-	return &ProductHandler{ProductService: productService}
+func NewProductHandler(productService *services.ProductService, userContextService *services.UserContextService) *ProductHandler {
+	return &ProductHandler{ProductService: productService, UserContextService: userContextService}
 }
 
 func (h *ProductHandler) GetAllProducts(c echo.Context) error {
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.ProductService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -55,9 +55,10 @@ func (h *ProductHandler) GetProductByID(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	product, err := h.ProductService.GetProductByUuid(id, userID)
 	if err != nil {
@@ -79,9 +80,10 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	createdProduct, err := h.ProductService.CreateProduct(product, userID)
 	if err != nil {
@@ -107,9 +109,10 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	result, err := h.ProductService.UpdateProduct(id, product, userID)
 	if err != nil {
@@ -124,9 +127,10 @@ func (h *ProductHandler) DeleteProduct(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	err = h.ProductService.DeleteProduct(id, userID)
 	if err != nil {
@@ -141,9 +145,10 @@ func (h *ProductHandler) GetProductsByOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	products, err := h.ProductService.GetProductsByOutlet(outletUuid, userID)
 	if err != nil {

@@ -13,32 +13,16 @@ import (
 )
 
 type OutletService struct {
-	DB *gorm.DB
+	DB                 *gorm.DB
+	UserContextService *UserContextService
 }
 
-func NewOutletService(db *gorm.DB) *OutletService {
-	return &OutletService{DB: db}
-}
-
-// GetOwnerID retrieves the owner's ID for a given user.
-// If the user is a manager or cashier, it returns their creator's ID.
-// Otherwise, it returns the user's own ID.
-func (s *OutletService) GetOwnerID(userID uint) (uint, error) {
-	var user models.User
-	if err := s.DB.First(&user, userID).Error; err != nil {
-		log.Printf("Error finding user: %v", err)
-		return 0, errors.New("user not found")
-	}
-
-	if (user.Role == "manager" || user.Role == "cashier") && user.CreatorID != nil {
-		return *user.CreatorID, nil
-	}
-
-	return userID, nil
+func NewOutletService(db *gorm.DB, userContextService *UserContextService) *OutletService {
+	return &OutletService{DB: db, UserContextService: userContextService}
 }
 
 func (s *OutletService) GetAllOutlets(userID uint) ([]models.Outlet, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +35,7 @@ func (s *OutletService) GetAllOutlets(userID uint) ([]models.Outlet, error) {
 }
 
 func (s *OutletService) GetOutletByUuid(Uuid uuid.UUID, userID uint) (*dtos.OutletResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +57,7 @@ func (s *OutletService) GetOutletByUuid(Uuid uuid.UUID, userID uint) (*dtos.Outl
 }
 
 func (s *OutletService) CreateOutlet(req *dtos.OutletCreateRequest, userID uint) (*dtos.OutletResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +81,7 @@ func (s *OutletService) CreateOutlet(req *dtos.OutletCreateRequest, userID uint)
 }
 
 func (s *OutletService) UpdateOutlet(Uuid uuid.UUID, req *dtos.OutletUpdateRequest, userID uint) (*dtos.OutletResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +113,7 @@ func (s *OutletService) UpdateOutlet(Uuid uuid.UUID, req *dtos.OutletUpdateReque
 }
 
 func (s *OutletService) DeleteOutlet(Uuid uuid.UUID, userID uint) error {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return err
 	}

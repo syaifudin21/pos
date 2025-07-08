@@ -17,32 +17,16 @@ type OrderService struct {
 	DB            *gorm.DB
 	StockService  *StockService  // Dependency on StockService
 	IpaymuService *IpaymuService // Dependency on IpaymuService
+	UserContextService *UserContextService
 }
 
-func NewOrderService(db *gorm.DB, stockService *StockService, ipaymuService *IpaymuService) *OrderService {
-	return &OrderService{DB: db, StockService: stockService, IpaymuService: ipaymuService}
-}
-
-// GetOwnerID retrieves the owner's ID for a given user.
-// If the user is a manager or cashier, it returns their creator's ID.
-// Otherwise, it returns the user's own ID.
-func (s *OrderService) GetOwnerID(userID uint) (uint, error) {
-	var user models.User
-	if err := s.DB.First(&user, userID).Error; err != nil {
-		log.Printf("Error finding user: %v", err)
-		return 0, errors.New("user not found")
-	}
-
-	if (user.Role == "manager" || user.Role == "cashier") && user.CreatorID != nil {
-		return *user.CreatorID, nil
-	}
-
-	return userID, nil
+func NewOrderService(db *gorm.DB, stockService *StockService, ipaymuService *IpaymuService, userContextService *UserContextService) *OrderService {
+	return &OrderService{DB: db, StockService: stockService, IpaymuService: ipaymuService, UserContextService: userContextService}
 }
 
 // CreateOrder creates a new order and deducts stock.
 func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dtos.OrderItemRequest, paymentMethod string) (*dtos.OrderResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +136,7 @@ func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dt
 
 // GetOrder retrieves an order by its Uuid.
 func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +165,7 @@ func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderR
 
 // GetOrdersByOutlet retrieves all orders for a specific outlet.
 func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uint) ([]dtos.OrderResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}

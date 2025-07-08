@@ -3,29 +3,29 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/internal/validators"
-	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type SupplierHandler struct {
-	SupplierService *services.SupplierService
+	SupplierService    *services.SupplierService
+	UserContextService *services.UserContextService
 }
 
-func NewSupplierHandler(supplierService *services.SupplierService) *SupplierHandler {
-	return &SupplierHandler{SupplierService: supplierService}
+func NewSupplierHandler(supplierService *services.SupplierService, userContextService *services.UserContextService) *SupplierHandler {
+	return &SupplierHandler{SupplierService: supplierService, UserContextService: userContextService}
 }
 
 func (h *SupplierHandler) GetAllSuppliers(c echo.Context) error {
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.SupplierService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -53,11 +53,12 @@ func (h *SupplierHandler) GetSupplierByuuid(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.SupplierService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -82,11 +83,12 @@ func (h *SupplierHandler) CreateSupplier(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.SupplierService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -115,9 +117,10 @@ func (h *SupplierHandler) UpdateSupplier(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	result, err := h.SupplierService.UpdateSupplier(parsedUuid, req, userID)
 	if err != nil {
@@ -133,9 +136,10 @@ func (h *SupplierHandler) DeleteSupplier(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	err = h.SupplierService.DeleteSupplier(parsedUuid, userID)
 	if err != nil {

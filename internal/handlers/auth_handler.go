@@ -4,21 +4,20 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/internal/validators"
-	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type AuthHandler struct {
-	AuthService *services.AuthService
+	AuthService        *services.AuthService
+	UserContextService *services.UserContextService
 }
 
-func NewAuthHandler(authService *services.AuthService) *AuthHandler {
-	return &AuthHandler{AuthService: authService}
+func NewAuthHandler(authService *services.AuthService, userContextService *services.UserContextService) *AuthHandler {
+	return &AuthHandler{AuthService: authService, UserContextService: userContextService}
 }
 
 func (h *AuthHandler) Register(c echo.Context) error {
@@ -35,8 +34,10 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	// Get the ID of the currently logged-in admin from the JWT claims
-	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
-	creatorID := claims.ID
+	creatorID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	user, err := h.AuthService.RegisterUser(req.Name, req.Email, req.Password, req.Role, req.OutletID, &creatorID, nil, false)
 	if err != nil {
@@ -140,8 +141,10 @@ func (h *AuthHandler) UnblockUser(c echo.Context) error {
 }
 
 func (h *AuthHandler) GetAllUsers(c echo.Context) error {
-	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
-	adminID := claims.ID
+	adminID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	users, err := h.AuthService.GetAllUsers(adminID)
 	if err != nil {
@@ -221,8 +224,10 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 }
 
 func (h *AuthHandler) GetProfile(c echo.Context) error {
-	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	user, err := h.AuthService.GetUserByID(userID)
 	if err != nil {
@@ -233,8 +238,10 @@ func (h *AuthHandler) GetProfile(c echo.Context) error {
 }
 
 func (h *AuthHandler) UpdatePassword(c echo.Context) error {
-	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	req := new(dtos.UpdatePasswordRequest)
 	if err := c.Bind(req); err != nil {
@@ -262,8 +269,10 @@ func (h *AuthHandler) UpdatePassword(c echo.Context) error {
 }
 
 func (h *AuthHandler) SendOTPForEmailUpdate(c echo.Context) error {
-	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	req := new(dtos.SendOTPRequest)
 	if err := c.Bind(req); err != nil {
@@ -293,8 +302,10 @@ func (h *AuthHandler) SendOTPForEmailUpdate(c echo.Context) error {
 
 // Berikut contoh rewrite dengan log tambahan untuk membantu debug:
 func (h *AuthHandler) UpdateEmail(c echo.Context) error {
-	claims := c.Get("user").(*jwt.Token).Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	req := new(dtos.UpdateEmailRequest)
 	if err := c.Bind(req); err != nil {

@@ -16,32 +16,16 @@ import (
 type PurchaseOrderService struct {
 	DB           *gorm.DB
 	StockService *StockService // Dependency on StockService
+	UserContextService *UserContextService
 }
 
-func NewPurchaseOrderService(db *gorm.DB, stockService *StockService) *PurchaseOrderService {
-	return &PurchaseOrderService{DB: db, StockService: stockService}
-}
-
-// GetOwnerID retrieves the owner's ID for a given user.
-// If the user is a manager or cashier, it returns their creator's ID.
-// Otherwise, it returns the user's own ID.
-func (s *PurchaseOrderService) GetOwnerID(userID uint) (uint, error) {
-	var user models.User
-	if err := s.DB.First(&user, userID).Error; err != nil {
-		log.Printf("Error finding user: %v", err)
-		return 0, errors.New("user not found")
-	}
-
-	if (user.Role == "manager" || user.Role == "cashier") && user.CreatorID != nil {
-		return *user.CreatorID, nil
-	}
-
-	return userID, nil
+func NewPurchaseOrderService(db *gorm.DB, stockService *StockService, userContextService *UserContextService) *PurchaseOrderService {
+	return &PurchaseOrderService{DB: db, StockService: stockService, UserContextService: userContextService}
 }
 
 // CreatePurchaseOrder creates a new purchase order.
 func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid.UUID, items []dtos.PurchaseItemRequest, userID uint) (*dtos.PurchaseOrderResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +106,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 
 // GetPurchaseOrderByUuid retrieves a purchase order by its UUID.
 func (s *PurchaseOrderService) GetPurchaseOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.PurchaseOrderResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +133,7 @@ func (s *PurchaseOrderService) GetPurchaseOrderByUuid(uuid uuid.UUID, userID uin
 
 // GetPurchaseOrdersByOutlet retrieves all purchase orders for a specific outlet.
 func (s *PurchaseOrderService) GetPurchaseOrdersByOutlet(outletUuid uuid.UUID, userID uint) ([]dtos.PurchaseOrderResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}

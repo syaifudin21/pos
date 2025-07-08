@@ -14,32 +14,16 @@ import (
 
 type StockService struct {
 	DB *gorm.DB
+	UserContextService *UserContextService
 }
 
-func NewStockService(db *gorm.DB) *StockService {
-	return &StockService{DB: db}
-}
-
-// GetOwnerID retrieves the owner's ID for a given user.
-// If the user is a manager or cashier, it returns their creator's ID.
-// Otherwise, it returns the user's own ID.
-func (s *StockService) GetOwnerID(userID uint) (uint, error) {
-	var user models.User
-	if err := s.DB.First(&user, userID).Error; err != nil {
-		log.Printf("Error finding user: %v", err)
-		return 0, errors.New("user not found")
-	}
-
-	if (user.Role == "manager" || user.Role == "cashier") && user.CreatorID != nil {
-		return *user.CreatorID, nil
-	}
-
-	return userID, nil
+func NewStockService(db *gorm.DB, userContextService *UserContextService) *StockService {
+	return &StockService{DB: db, UserContextService: userContextService}
 }
 
 // GetStockByOutletAndProduct retrieves stock for a specific product in an outlet.
 func (s *StockService) GetStockByOutletAndProduct(outletUuid, productUuid uuid.UUID, userID uint) (*dtos.StockResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +60,7 @@ func (s *StockService) GetStockByOutletAndProduct(outletUuid, productUuid uuid.U
 
 // GetOutletStocks retrieves all stocks for a given outlet.
 func (s *StockService) GetOutletStocks(outletUuid uuid.UUID, userID uint) ([]dtos.StockResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +90,7 @@ func (s *StockService) GetOutletStocks(outletUuid uuid.UUID, userID uint) ([]dto
 // UpdateStock updates the quantity of a product in an outlet.
 // This is a direct update, useful for initial setup or corrections.
 func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity float64, userID uint) (*dtos.StockResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +142,7 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 // DeductStockForSale handles stock deduction based on product type.
 // For FnB main products, it deducts from components based on recipe.
 func (s *StockService) DeductStockForSale(outletUuid, productUuid uuid.UUID, quantity float64, userID uint) error {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return err
 	}

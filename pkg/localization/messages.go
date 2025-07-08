@@ -538,6 +538,10 @@ var validationMessages = map[string]map[string]string{
 		"en": "Password reset successful",
 		"id": "Reset kata sandi berhasil",
 	},
+	"users_retrieved_successfully": {
+		"en": "ok",
+		"id": "ok",
+	},
 }
 
 // GetLocalizedValidationMessage retrieves a validation message for a given key and language.

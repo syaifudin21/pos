@@ -3,21 +3,20 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/internal/validators"
-	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type OrderHandler struct {
-	OrderService *services.OrderService
+	OrderService       *services.OrderService
+	UserContextService *services.UserContextService
 }
 
-func NewOrderHandler(orderService *services.OrderService) *OrderHandler {
-	return &OrderHandler{OrderService: orderService}
+func NewOrderHandler(orderService *services.OrderService, userContextService *services.UserContextService) *OrderHandler {
+	return &OrderHandler{OrderService: orderService, UserContextService: userContextService}
 }
 
 func (h *OrderHandler) CreateOrder(c echo.Context) error {
@@ -33,11 +32,12 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.OrderService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -61,11 +61,12 @@ func (h *OrderHandler) GetOrderByUuid(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.OrderService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -83,11 +84,12 @@ func (h *OrderHandler) GetOrdersByOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.OrderService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

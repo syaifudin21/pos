@@ -3,29 +3,29 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/internal/validators"
-	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type OutletHandler struct {
-	OutletService *services.OutletService
+	OutletService      *services.OutletService
+	UserContextService *services.UserContextService
 }
 
-func NewOutletHandler(outletService *services.OutletService) *OutletHandler {
-	return &OutletHandler{OutletService: outletService}
+func NewOutletHandler(outletService *services.OutletService, userContextService *services.UserContextService) *OutletHandler {
+	return &OutletHandler{OutletService: outletService, UserContextService: userContextService}
 }
 
 func (h *OutletHandler) GetAllOutlets(c echo.Context) error {
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.OutletService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -53,11 +53,12 @@ func (h *OutletHandler) GetOutletByID(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.OutletService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -82,11 +83,12 @@ func (h *OutletHandler) CreateOutlet(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.OutletService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -121,11 +123,12 @@ func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
-	ownerID, err := h.OutletService.GetOwnerID(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
@@ -143,9 +146,10 @@ func (h *OutletHandler) DeleteOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	err = h.OutletService.DeleteOutlet(id, userID)
 	if err != nil {

@@ -14,31 +14,15 @@ import (
 
 type ProductService struct {
 	DB *gorm.DB
+	UserContextService *UserContextService
 }
 
-func NewProductService(db *gorm.DB) *ProductService {
-	return &ProductService{DB: db}
-}
-
-// GetOwnerID retrieves the owner's ID for a given user.
-// If the user is a manager or cashier, it returns their creator's ID.
-// Otherwise, it returns the user's own ID.
-func (s *ProductService) GetOwnerID(userID uint) (uint, error) {
-	var user models.User
-	if err := s.DB.First(&user, userID).Error; err != nil {
-		log.Printf("Error finding user: %v", err)
-		return 0, errors.New("user not found")
-	}
-
-	if (user.Role == "manager" || user.Role == "cashier") && user.CreatorID != nil {
-		return *user.CreatorID, nil
-	}
-
-	return userID, nil
+func NewProductService(db *gorm.DB, userContextService *UserContextService) *ProductService {
+	return &ProductService{DB: db, UserContextService: userContextService}
 }
 
 func (s *ProductService) GetAllProducts(userID uint) ([]models.Product, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +35,7 @@ func (s *ProductService) GetAllProducts(userID uint) ([]models.Product, error) {
 }
 
 func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.ProductResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +59,7 @@ func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.Pr
 }
 
 func (s *ProductService) CreateProduct(req *dtos.ProductCreateRequest, userID uint) (*dtos.ProductResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +87,7 @@ func (s *ProductService) CreateProduct(req *dtos.ProductCreateRequest, userID ui
 }
 
 func (s *ProductService) UpdateProduct(Uuid uuid.UUID, req *dtos.ProductUpdateRequest, userID uint) (*dtos.ProductResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +123,7 @@ func (s *ProductService) UpdateProduct(Uuid uuid.UUID, req *dtos.ProductUpdateRe
 }
 
 func (s *ProductService) DeleteProduct(Uuid uuid.UUID, userID uint) error {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return err
 	}
@@ -155,7 +139,7 @@ func (s *ProductService) DeleteProduct(Uuid uuid.UUID, userID uint) error {
 
 // GetProductsByOutlet retrieves all products available in a specific outlet (i.e., have stock).
 func (s *ProductService) GetProductsByOutlet(outletUuid uuid.UUID, userID uint) ([]dtos.ProductOutletResponse, error) {
-	ownerID, err := s.GetOwnerID(userID)
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}

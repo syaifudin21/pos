@@ -4,19 +4,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/services"
-	"github.com/msyaifudin/pos/pkg/utils"
 )
 
 type ReportHandler struct {
-	ReportService *services.ReportService
+	ReportService      *services.ReportService
+	UserContextService *services.UserContextService
 }
 
-func NewReportHandler(reportService *services.ReportService) *ReportHandler {
-	return &ReportHandler{ReportService: reportService}
+func NewReportHandler(reportService *services.ReportService, userContextService *services.UserContextService) *ReportHandler {
+	return &ReportHandler{ReportService: reportService, UserContextService: userContextService}
 }
 
 func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
@@ -38,9 +37,10 @@ func (h *ReportHandler) GetSalesByOutletReport(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_end_date_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	orders, err := h.ReportService.SalesByOutletReport(outletUuid, startDate, endDate, userID)
 	if err != nil {
@@ -69,9 +69,10 @@ func (h *ReportHandler) GetSalesByProductReport(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_end_date_format")
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*utils.Claims)
-	userID := claims.ID
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
 
 	orderItems, err := h.ReportService.SalesByProductReport(productUuid, startDate, endDate, userID)
 	if err != nil {

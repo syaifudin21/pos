@@ -65,8 +65,9 @@ func Run() {
 	ipaymuService := services.NewIpaymuService(database.DB)
 
 	// Initialize services and handlers
+	userContextService := services.NewUserContextService(database.DB)
 	authService := services.NewAuthService(database.DB)
-	authHandler := handlers.NewAuthHandler(authService)
+	authHandler := handlers.NewAuthHandler(authService, userContextService)
 	googleOAuthService := services.NewGoogleOAuthService(database.DB, authService)
 	googleOAuthHandler := handlers.NewGoogleOAuthHandler(googleOAuthService)
 
@@ -102,11 +103,11 @@ func Run() {
 	accountGroup.PUT("/email", authHandler.UpdateEmail)
 
 	// Initialize product and outlet services and handlers
-	productService := services.NewProductService(database.DB)
-	productHandler := handlers.NewProductHandler(productService)
+	productService := services.NewProductService(database.DB, userContextService)
+	productHandler := handlers.NewProductHandler(productService, userContextService)
 
-	outletService := services.NewOutletService(database.DB)
-	outletHandler := handlers.NewOutletHandler(outletService)
+		outletService := services.NewOutletService(database.DB, userContextService)
+	outletHandler := handlers.NewOutletHandler(outletService, userContextService)
 
 	// Product routes
 	productGroup := e.Group("/products")
@@ -124,8 +125,8 @@ func Run() {
 	outletProductGroup.GET("", productHandler.GetProductsByOutlet)
 
 	// Initialize recipe service and handler
-	recipeService := services.NewRecipeService(database.DB)
-	recipeHandler := handlers.NewRecipeHandler(recipeService)
+	recipeService := services.NewRecipeService(database.DB, userContextService)
+	recipeHandler := handlers.NewRecipeHandler(recipeService, userContextService)
 
 	// Recipe routes
 	recipeGroup := e.Group("/recipes")
@@ -152,8 +153,8 @@ func Run() {
 	outletGroup.DELETE("/:uuid", outletHandler.DeleteOutlet)
 
 	// Initialize stock service and handler
-	stockService := services.NewStockService(database.DB)
-	stockHandler := handlers.NewStockHandler(stockService)
+	stockService := services.NewStockService(database.DB, userContextService)
+	stockHandler := handlers.NewStockHandler(stockService, userContextService)
 
 	// Stock routes
 	stockGroup := e.Group("/outlets/:outlet_uuid/stocks")
@@ -167,8 +168,8 @@ func Run() {
 	e.PUT("/stocks", stockHandler.UpdateGlobalStock, internalmw.Authorize("stocks", "write"))
 
 	// Initialize order service and handler
-	orderService := services.NewOrderService(database.DB, stockService, ipaymuService)
-	orderHandler := handlers.NewOrderHandler(orderService)
+	orderService := services.NewOrderService(database.DB, stockService, ipaymuService, userContextService)
+	orderHandler := handlers.NewOrderHandler(orderService, userContextService)
 
 	// Order routes
 	orderGroup := e.Group("/orders")
@@ -184,7 +185,7 @@ func Run() {
 
 	// Initialize report service and handler
 	reportService := services.NewReportService(database.DB)
-	reportHandler := handlers.NewReportHandler(reportService)
+	reportHandler := handlers.NewReportHandler(reportService, userContextService)
 
 	// Report routes
 	reportGroup := e.Group("/reports")
@@ -193,8 +194,8 @@ func Run() {
 	reportGroup.GET("/products/:product_uuid/sales", reportHandler.GetSalesByProductReport)
 
 	// Initialize supplier service and handler
-	supplierService := services.NewSupplierService(database.DB)
-	supplierHandler := handlers.NewSupplierHandler(supplierService)
+	supplierService := services.NewSupplierService(database.DB, userContextService)
+	supplierHandler := handlers.NewSupplierHandler(supplierService, userContextService)
 
 	// Supplier routes
 	supplierGroup := e.Group("/suppliers")
@@ -207,8 +208,8 @@ func Run() {
 	supplierGroup.DELETE("/:uuid", supplierHandler.DeleteSupplier)
 
 	// Initialize purchase order service and handler
-	poService := services.NewPurchaseOrderService(database.DB, stockService)
-	poHandler := handlers.NewPurchaseOrderHandler(poService)
+	poService := services.NewPurchaseOrderService(database.DB, stockService, userContextService)
+	poHandler := handlers.NewPurchaseOrderHandler(poService, userContextService)
 
 	// Purchase Order routes
 	poGroup := e.Group("/purchase-orders")
