@@ -39,6 +39,7 @@ func Run() {
 		&models.PaymentMethod{},
 		&models.IpaymuLog{},
 		&models.UserPayment{},
+		&models.StockMovement{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to drop tables: %v", err)

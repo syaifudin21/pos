@@ -38,7 +38,8 @@ func PerformMigration() {
 		&models.UserPayment{},
 		&models.UserIpaymu{},
 		&models.UserTsm{},
-	) 
+		&models.StockMovement{},
+	)
 	if err != nil {
 		log.Fatalf("Failed to auto-migrate database: %v", err)
 	}

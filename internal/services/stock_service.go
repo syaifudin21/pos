@@ -13,12 +13,13 @@ import (
 )
 
 type StockService struct {
-	DB *gorm.DB
-	UserContextService *UserContextService
+	DB                   *gorm.DB
+	UserContextService   *UserContextService
+	StockMovementService *StockMovementService
 }
 
-func NewStockService(db *gorm.DB, userContextService *UserContextService) *StockService {
-	return &StockService{DB: db, UserContextService: userContextService}
+func NewStockService(db *gorm.DB, userContextService *UserContextService, stockMovementService *StockMovementService) *StockService {
+	return &StockService{DB: db, UserContextService: userContextService, StockMovementService: stockMovementService}
 }
 
 // GetStockByOutletAndProduct retrieves stock for a specific product in an outlet.
@@ -105,6 +106,9 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 	}
 
 	var stock models.Stock
+	oldQuantity := float64(0)
+	var quantityChange float64
+
 	if err := s.DB.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outlet.ID, product.ID, ownerID).First(&stock).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Create new stock entry if not found
@@ -114,6 +118,7 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 				Quantity:  quantity,
 				UserID:    ownerID,
 			}
+			quantityChange = quantity // If new, change is the quantity itself
 			if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&stock).Error; err != nil {
 				log.Printf("Error creating stock: %v", err)
 				return nil, errors.New("failed to create stock")
@@ -124,10 +129,27 @@ func (s *StockService) UpdateStock(outletUuid, productUuid uuid.UUID, quantity f
 		}
 	} else {
 		// Update existing stock
+		oldQuantity = stock.Quantity
 		stock.Quantity = quantity
+		quantityChange = quantity - oldQuantity
 		if err := s.DB.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&stock).Error; err != nil {
 			log.Printf("Error updating stock: %v", err)
 			return nil, errors.New("failed to update stock")
+		}
+	}
+
+	// Record stock movement
+	if quantityChange != 0 {
+		movement := &models.StockMovement{
+			ProductID:      product.ID,
+			OutletID:       outlet.ID,
+			QuantityChange: int(quantityChange),
+			MovementType:   "Adjustment",
+			Description:    stringPtr("Direct stock update"),
+		}
+		if err := s.StockMovementService.CreateStockMovement(movement); err != nil {
+			log.Printf("Error recording stock movement for UpdateStock: %v", err)
+			// Decide if this error should block the stock update. For now, just log.
 		}
 	}
 
@@ -191,6 +213,18 @@ func (s *StockService) DeductStockForSale(outletUuid, productUuid uuid.UUID, qua
 				return errors.New("failed to deduct component stock")
 			}
 			log.Printf("DeductStockForSale: After deduction - Component %s, Product %s, New Stock: %f", recipe.Component.Name, product.Name, componentStock.Quantity)
+
+			// Record stock movement for component
+			movement := &models.StockMovement{
+				ProductID:      recipe.ComponentID,
+				OutletID:       outlet.ID,
+				QuantityChange: int(-requiredComponentQuantity),
+				MovementType:   "Order",
+				Description:    stringPtr("Deduction for F&B main product sale"),
+			}
+			if err := s.StockMovementService.CreateStockMovement(movement); err != nil {
+				log.Printf("Error recording stock movement for F&B component deduction: %v", err)
+			}
 		}
 	} else if product.Type == "retail_item" {
 		var retailStock models.Stock
@@ -212,6 +246,18 @@ func (s *StockService) DeductStockForSale(outletUuid, productUuid uuid.UUID, qua
 			return errors.New("failed to deduct retail item stock")
 		}
 		log.Printf("DeductStockForSale: After deduction - Product %s, New Stock: %f", product.Name, retailStock.Quantity)
+
+		// Record stock movement for retail item
+		movement := &models.StockMovement{
+			ProductID:      product.ID,
+			OutletID:       outlet.ID,
+			QuantityChange: int(-quantity),
+			MovementType:   "Order",
+			Description:    stringPtr("Deduction for retail item sale"),
+		}
+		if err := s.StockMovementService.CreateStockMovement(movement); err != nil {
+			log.Printf("Error recording stock movement for retail item deduction: %v", err)
+		}
 	}
 
 	return nil
@@ -261,10 +307,29 @@ func (s *StockService) AdjustStock(outletUuid, productUuid uuid.UUID, quantityCh
 		}
 	}
 
+	// Record stock movement
+	if quantityChange != 0 {
+		movement := &models.StockMovement{
+			ProductID:      product.ID,
+			OutletID:       outlet.ID,
+			QuantityChange: int(quantityChange),
+			MovementType:   "Adjustment",
+			Description:    stringPtr("Stock adjustment"),
+		}
+		if err := s.StockMovementService.CreateStockMovement(movement); err != nil {
+			log.Printf("Error recording stock movement for AdjustStock: %v", err)
+		}
+	}
+
 	return &dtos.StockResponse{
 		ProductUuid: product.Uuid,
 		ProductName: product.Name,
 		ProductSku:  product.SKU,
 		Quantity:    stock.Quantity,
 	}, nil
+}
+
+// stringPtr is a helper function to return a pointer to a string.
+func stringPtr(s string) *string {
+	return &s
 }
