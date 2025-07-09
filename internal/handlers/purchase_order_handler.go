@@ -28,12 +28,7 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c echo.Context) error {
 		return JSONError(c, http.StatusUnauthorized, err.Error())
 	}
 
-	ownerID, err := h.UserContextService.GetOwnerID(userID)
-	if err != nil {
-		return JSONError(c, MapErrorToStatusCode(err), err.Error())
-	}
-
-	po, err := h.PurchaseOrderService.CreatePurchaseOrder(req.SupplierUuid, req.OutletUuid, req.Items, ownerID)
+	po, err := h.PurchaseOrderService.CreatePurchaseOrder(*req, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

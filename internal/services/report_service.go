@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
 )
 
@@ -56,4 +57,44 @@ func (s *ReportService) SalesByProductReport(productUuid uuid.UUID, startDate, e
 	}
 
 	return orderItems, nil
+}
+
+// StockReport generates a stock report for a specific outlet.
+func (s *ReportService) StockReport(outletUuid uuid.UUID, userID uint) ([]dtos.StockReportResponse, error) {
+	var outlet models.Outlet
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, userID).First(&outlet).Error; err != nil {
+		return nil, errors.New("outlet not found")
+	}
+
+	var stocks []models.Stock
+	err := s.DB.
+		Preload("Product").
+		Preload("ProductVariant.Product"). // Preload the parent product of the variant
+		Where("outlet_id = ? AND user_id = ?", outlet.ID, userID).
+		Find(&stocks).Error
+
+	if err != nil {
+		log.Printf("Error generating stock report: %v", err)
+		return nil, errors.New("failed to generate stock report")
+	}
+
+	var report []dtos.StockReportResponse
+	for _, stock := range stocks {
+		if stock.ProductID != nil && stock.Product != nil {
+			report = append(report, dtos.StockReportResponse{
+				ProductName: stock.Product.Name,
+				ProductSku:  stock.Product.SKU,
+				Quantity:    stock.Quantity,
+			})
+		} else if stock.ProductVariantID != nil && stock.ProductVariant != nil && stock.ProductVariant.Product.ID != 0 {
+			report = append(report, dtos.StockReportResponse{
+				ProductName: stock.ProductVariant.Product.Name, // Get product name from the preloaded parent
+				VariantName: stock.ProductVariant.Name,
+				VariantSku:  stock.ProductVariant.SKU,
+				Quantity:    stock.Quantity,
+			})
+		}
+	}
+
+	return report, nil
 }

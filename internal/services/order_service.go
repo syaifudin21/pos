@@ -14,9 +14,9 @@ import (
 )
 
 type OrderService struct {
-	DB            *gorm.DB
-	StockService  *StockService  // Dependency on StockService
-	IpaymuService *IpaymuService // Dependency on IpaymuService
+	DB                 *gorm.DB
+	StockService       *StockService
+	IpaymuService      *IpaymuService
 	UserContextService *UserContextService
 }
 
@@ -24,102 +24,100 @@ func NewOrderService(db *gorm.DB, stockService *StockService, ipaymuService *Ipa
 	return &OrderService{DB: db, StockService: stockService, IpaymuService: ipaymuService, UserContextService: userContextService}
 }
 
-// CreateOrder creates a new order and deducts stock.
-func (s *OrderService) CreateOrder(outletUuid uuid.UUID, userID uint, items []dtos.OrderItemRequest, paymentMethod string) (*dtos.OrderResponse, error) {
+func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*dtos.OrderResponse, error) {
 	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
-	// Find Outlet
+
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, ownerID).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", req.OutletUuid, ownerID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
-	// Find User
 	var user models.User
 	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		return nil, errors.New("user not found")
 	}
 
-	// Start a database transaction
 	tx := s.DB.Begin()
-	if tx.Error != nil {
-		return nil, errors.New("failed to start transaction")
-	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 
 	order := models.Order{
 		OutletID:      outlet.ID,
 		UserID:        ownerID,
-		Status:        "completed", // Assuming immediate completion for simplicity
+		Status:        "completed",
 		TotalAmount:   0,
-		PaymentMethod: paymentMethod,
+		PaymentMethod: req.PaymentMethod,
 	}
 
 	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&order).Error; err != nil {
 		tx.Rollback()
-		log.Printf("Error creating order: %v", err)
 		return nil, errors.New("failed to create order")
 	}
 
 	totalAmount := 0.0
-	for _, item := range items {
-		var product models.Product
-		if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, ownerID).First(&product).Error; err != nil {
+	for _, item := range req.Items {
+		var product *models.Product
+		var variant *models.ProductVariant
+		var price float64
+		var productID *uint
+		var variantID *uint
+
+		if item.ProductVariantUuid != uuid.Nil {
+			if err := tx.Where("uuid = ? AND user_id = ?", item.ProductVariantUuid, ownerID).First(&variant).Error; err != nil {
+				tx.Rollback()
+				return nil, errors.New("product variant not found")
+			}
+			price = variant.Price
+			variantID = &variant.ID
+		} else if item.ProductUuid != uuid.Nil {
+			if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, ownerID).First(&product).Error; err != nil {
+				tx.Rollback()
+				return nil, errors.New("product not found")
+			}
+			price = product.Price
+			productID = &product.ID
+		} else {
 			tx.Rollback()
-			return nil, errors.New("product not found")
+			return nil, errors.New("product_uuid or product_variant_uuid is required for each item")
 		}
 
-		// Deduct stock using StockService
-		if err := s.StockService.DeductStockForSale(outletUuid, item.ProductUuid, float64(item.Quantity), ownerID); err != nil {
+		if err := s.StockService.DeductStockForSale(tx, outlet.ID, productID, variantID, float64(item.Quantity), ownerID); err != nil {
 			tx.Rollback()
-			return nil, err // Return specific stock deduction error
+			return nil, err
 		}
 
 		orderItem := models.OrderItem{
-			OrderID:   order.ID,
-			ProductID: product.ID,
-			Quantity:  float64(item.Quantity),
-			Price:     product.Price, // Price at the time of order
+			OrderID:          order.ID,
+			ProductID:        productID,
+			ProductVariantID: variantID,
+			Quantity:         float64(item.Quantity),
+			Price:            price,
 		}
 
 		if err := tx.Create(&orderItem).Error; err != nil {
 			tx.Rollback()
-			log.Printf("Error creating order item: %v", err)
 			return nil, errors.New("failed to create order item")
 		}
-		totalAmount += product.Price * float64(item.Quantity)
+		totalAmount += price * float64(item.Quantity)
 	}
 
 	order.TotalAmount = totalAmount
-	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&order).Error; err != nil {
+	if err := tx.Save(&order).Error; err != nil {
 		tx.Rollback()
-		log.Printf("Error updating order total amount: %v", err)
-		return nil, errors.New("failed to update order total amount")
+		return nil, errors.New("failed to update order total")
 	}
 
-	// Process payment if method is iPaymu
-	if paymentMethod == "ipaymu" {
-		// // Fetch order items with product details for iPaymu
-		// var fullOrderItems []models.OrderItem
-		// if err := tx.Preload("Product").Where("order_id = ?", order.ID).Find(&fullOrderItems).Error; err != nil {
-		// 	tx.Rollback()
-		// 	log.Printf("Error preloading order items for iPaymu: %v", err)
-		// 	return nil, errors.New("failed to prepare order for iPaymu payment")
-		// }
-
-		// ipaymuResp, err := s.IpaymuService.ProcessIpaymuPayment(&order, &user, fullOrderItems)
-		// if err != nil {
-		// 	tx.Rollback()
-		// 	return nil, err
-		// }
-		// // You might want to store ipaymuResp.Data.URL or transaction ID in the order for later reference
-		// log.Printf("iPaymu Payment URL: %s", ipaymuResp.Data.URL)
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to commit order transaction")
 	}
 
-	tx.Commit()
-
-	// Construct DTO response
 	return &dtos.OrderResponse{
 		ID:            order.ID,
 		Uuid:          order.Uuid,

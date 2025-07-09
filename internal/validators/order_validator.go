@@ -2,6 +2,7 @@ package validators
 
 import (
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 )
 
@@ -28,6 +29,11 @@ func ValidateCreateOrder(req *dtos.CreateOrderRequest) []string {
 }
 
 func ValidateOrderItem(req *dtos.OrderItemRequest) []string {
+	// Custom validation logic
+	if (req.ProductUuid == uuid.Nil && req.ProductVariantUuid == uuid.Nil) || (req.ProductUuid != uuid.Nil && req.ProductVariantUuid != uuid.Nil) {
+		return []string{"either_product_uuid_or_product_variant_uuid_is_required_for_order_item"}
+	}
+
 	err := orderValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -35,7 +41,6 @@ func ValidateOrderItem(req *dtos.OrderItemRequest) []string {
 
 	var messages []string
 	fieldToMessage := map[string]string{
-		"ProductUuid": "product_uuid_required",
 		"Quantity":    "quantity_required",
 	}
 	for _, err := range err.(validator.ValidationErrors) {

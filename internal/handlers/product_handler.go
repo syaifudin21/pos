@@ -29,7 +29,9 @@ func (h *ProductHandler) GetAllProducts(c echo.Context) error {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	products, err := h.ProductService.GetAllProducts(ownerID)
+	productType := c.QueryParam("type")
+
+	products, err := h.ProductService.GetAllProducts(ownerID, productType)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

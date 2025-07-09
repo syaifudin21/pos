@@ -14,8 +14,8 @@ import (
 )
 
 type PurchaseOrderService struct {
-	DB           *gorm.DB
-	StockService *StockService // Dependency on StockService
+	DB                 *gorm.DB
+	StockService       *StockService // Dependency on StockService
 	UserContextService *UserContextService
 }
 
@@ -24,18 +24,18 @@ func NewPurchaseOrderService(db *gorm.DB, stockService *StockService, userContex
 }
 
 // CreatePurchaseOrder creates a new purchase order.
-func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid.UUID, items []dtos.PurchaseItemRequest, userID uint) (*dtos.PurchaseOrderResponse, error) {
+func (s *PurchaseOrderService) CreatePurchaseOrder(req dtos.CreatePurchaseOrderRequest, userID uint) (*dtos.PurchaseOrderResponse, error) {
 	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
 	}
 	var supplier models.Supplier
-	if err := s.DB.Where("uuid = ? AND user_id = ?", supplierUuid, ownerID).First(&supplier).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", req.SupplierUuid, ownerID).First(&supplier).Error; err != nil {
 		return nil, errors.New("supplier not found")
 	}
 
 	var outlet models.Outlet
-	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, ownerID).First(&outlet).Error; err != nil {
+	if err := s.DB.Where("uuid = ? AND user_id = ?", req.OutletUuid, ownerID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
 	}
 
@@ -59,17 +59,34 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(supplierUuid, outletUuid uuid
 	}
 
 	totalAmount := 0.0
-	for _, item := range items {
-		var product models.Product
-		if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, ownerID).First(&product).Error; err != nil {
+	for _, item := range req.Items {
+		var product *models.Product
+		var variant *models.ProductVariant
+		var productID *uint
+		var variantID *uint
+
+		if item.ProductVariantUuid != uuid.Nil {
+			if err := tx.Where("uuid = ? AND user_id = ?", item.ProductVariantUuid, ownerID).First(&variant).Error; err != nil {
+				tx.Rollback()
+				return nil, errors.New("product variant not found")
+			}
+			variantID = &variant.ID
+		} else if item.ProductUuid != uuid.Nil {
+			if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, ownerID).First(&product).Error; err != nil {
+				tx.Rollback()
+				return nil, errors.New("product not found")
+			}
+			productID = &product.ID
+		} else {
 			tx.Rollback()
-			return nil, errors.New("product not found")
+			return nil, errors.New("product_uuid or product_variant_uuid is required for each item")
 		}
 
 		poItem := models.PurchaseOrderItem{
 			PurchaseOrderID:   po.ID,
-			PurchaseOrderUuid: po.Uuid, // Set the UUID here
-			ProductID:         product.ID,
+			PurchaseOrderUuid: po.Uuid,
+			ProductID:         productID,
+			ProductVariantID:  variantID,
 			Quantity:          float64(item.Quantity),
 			Price:             item.Price,
 		}
@@ -167,8 +184,12 @@ func (s *PurchaseOrderService) GetPurchaseOrdersByOutlet(outletUuid uuid.UUID, u
 
 // ReceivePurchaseOrder updates stock based on a completed purchase order.
 func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID, userID uint) (*dtos.PurchaseOrderResponse, error) {
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
 	var po models.PurchaseOrder
-	if err := s.DB.Preload("Outlet").Preload("PurchaseOrderItems.Product").Where("uuid = ? AND user_id = ?", poUuid, userID).First(&po).Error; err != nil {
+	if err := s.DB.Preload("Outlet").Preload("PurchaseOrderItems.Product").Preload("PurchaseOrderItems.ProductVariant").Where("uuid = ? AND user_id = ?", poUuid, ownerID).First(&po).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("purchase order not found")
 		}
@@ -186,8 +207,28 @@ func (s *PurchaseOrderService) ReceivePurchaseOrder(poUuid uuid.UUID, userID uin
 	}
 
 	for _, item := range po.PurchaseOrderItems {
-		// Add stock using StockService
-		_, err := s.StockService.AdjustStock(po.Outlet.Uuid, item.Product.Uuid, item.Quantity, userID)
+		// Determine if it's a product or a variant
+		var productUuid uuid.UUID
+		var productVariantUuid uuid.UUID
+
+		if item.ProductVariantID != nil && item.ProductVariant != nil {
+			productVariantUuid = item.ProductVariant.Uuid
+		} else if item.ProductID != nil && item.Product != nil {
+			productUuid = item.Product.Uuid
+		} else {
+			tx.Rollback()
+			return nil, errors.New("purchase order item has no associated product or variant")
+		}
+
+		// Create UpdateStockRequest for the item
+		updateReq := dtos.UpdateStockRequest{
+			ProductUuid:        productUuid,
+			ProductVariantUuid: productVariantUuid,
+			Quantity:           item.Quantity,
+		}
+
+		// Add stock using StockService.UpdateStock
+		_, err := s.StockService.UpdateStock(updateReq, po.Outlet.Uuid, userID)
 		if err != nil {
 			tx.Rollback()
 			log.Printf("Error updating stock for received PO: %v", err)

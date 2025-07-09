@@ -29,16 +29,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		return JSONError(c, http.StatusUnauthorized, err.Error())
 	}
 
-	ownerID, err := h.UserContextService.GetOwnerID(userID)
-	if err != nil {
-		return JSONError(c, MapErrorToStatusCode(err), err.Error())
-	}
-
-	// For simplicity, assuming outlet ID is passed in the request or derived from user's outlet
-	// For now, let's use the outlet ID from the request
-	outletUuid := req.OutletUuid
-
-	order, err := h.OrderService.CreateOrder(outletUuid, ownerID, req.Items, req.PaymentMethod)
+	order, err := h.OrderService.CreateOrder(*req, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

@@ -81,3 +81,23 @@ func (h *ReportHandler) GetSalesByProductReport(c echo.Context) error {
 
 	return JSONSuccess(c, http.StatusOK, "sales_report_by_product_generated_successfully", orderItems)
 }
+
+func (h *ReportHandler) GetStockReport(c echo.Context) error {
+	outletUuidParam := c.Param("outlet_uuid")
+	outletUuid, err := uuid.Parse(outletUuidParam)
+	if err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
+	}
+
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
+
+	report, err := h.ReportService.StockReport(outletUuid, userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "stock_report_generated_successfully", report)
+}

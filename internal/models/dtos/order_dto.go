@@ -4,13 +4,14 @@ import "github.com/google/uuid"
 
 type CreateOrderRequest struct {
 	OutletUuid    uuid.UUID          `json:"outlet_uuid" validate:"required"`
-	Items         []OrderItemRequest `json:"items" validate:"required"`
+	Items         []OrderItemRequest `json:"items" validate:"required,dive"`
 	PaymentMethod string             `json:"payment_method" validate:"required"`
 }
 
 type OrderItemRequest struct {
-	ProductUuid uuid.UUID `json:"product_uuid" validate:"required"`
-	Quantity    int       `json:"quantity" validate:"required"`
+	ProductUuid        uuid.UUID `json:"product_uuid,omitempty"`
+	ProductVariantUuid uuid.UUID `json:"product_variant_uuid,omitempty"`
+	Quantity           int       `json:"quantity" validate:"required,gt=0"`
 }
 
 // OrderResponse represents the response structure for an order.

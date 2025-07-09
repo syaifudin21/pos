@@ -53,28 +53,12 @@ func (h *RecipeHandler) GetRecipesByMainProduct(c echo.Context) error {
 		return JSONError(c, http.StatusUnauthorized, err.Error())
 	}
 
-	ownerID, err := h.UserContextService.GetOwnerID(userID)
+	recipes, err := h.RecipeService.GetRecipesByMainProduct(mainProductUuid, userID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
-
-	recipes, err := h.RecipeService.GetRecipesByMainProduct(mainProductUuid, ownerID)
-	if err != nil {
-		return JSONError(c, MapErrorToStatusCode(err), err.Error())
-	}
-	var recipeResponses []dtos.RecipeResponse
-	for _, recipe := range recipes {
-		recipeResponses = append(recipeResponses, dtos.RecipeResponse{
-			ID:              recipe.ID,
-			Uuid:            recipe.Uuid,
-			MainProductID:   recipe.MainProductID,
-			MainProductUuid: recipe.MainProductUuid,
-			ComponentID:     recipe.ComponentID,
-			ComponentUuid:   recipe.ComponentUuid,
-			Quantity:        recipe.Quantity,
-		})
-	}
-	return JSONSuccess(c, http.StatusOK, "recipes_retrieved_successfully", recipeResponses)
+	// The service now returns []dtos.RecipeResponse directly, so no need for manual mapping here.
+	return JSONSuccess(c, http.StatusOK, "recipes_retrieved_successfully", recipes)
 }
 func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
 	req, ok := c.Get("validated_data").(*dtos.CreateRecipeRequest)

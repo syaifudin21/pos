@@ -16,3 +16,7 @@ func NewStockMovementService(db *gorm.DB) *StockMovementService {
 func (s *StockMovementService) CreateStockMovement(movement *models.StockMovement) error {
 	return s.DB.Create(movement).Error
 }
+
+func (s *StockMovementService) CreateStockMovementWithTx(tx *gorm.DB, movement *models.StockMovement) error {
+	return tx.Create(movement).Error
+}

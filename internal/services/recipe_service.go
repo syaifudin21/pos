@@ -69,8 +69,10 @@ func (s *RecipeService) GetRecipesByMainProduct(mainProductUuid uuid.UUID, userI
 			Uuid:            recipe.Uuid,
 			MainProductID:   recipe.MainProductID,
 			MainProductUuid: recipe.MainProduct.Uuid,
+			MainProductName: recipe.MainProduct.Name, // Populated
 			ComponentID:     recipe.ComponentID,
 			ComponentUuid:   recipe.Component.Uuid,
+			ComponentName:   recipe.Component.Name,   // Populated
 			Quantity:        recipe.Quantity,
 		})
 	}

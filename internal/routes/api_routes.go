@@ -94,10 +94,7 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 		// Stock routes
 		stockGroup := authorizedGroup.Group("/outlets/:outlet_uuid/stocks", internalmw.Authorize("stocks", "read"))
 		stockGroup.GET("", stockHandler.GetOutletStocks)
-		stockGroup.GET("/:product_uuid", stockHandler.GetStockByOutletAndProduct)
-		stockGroup.PUT("/:product_uuid", stockHandler.UpdateStock, internalmw.Authorize("stocks", "write"), WithValidation(&dtos.UpdateStockRequest{}, validators.ValidateUpdateStock))
-
-		authorizedGroup.PUT("/stocks", stockHandler.UpdateGlobalStock, internalmw.Authorize("stocks", "write"), WithValidation(&dtos.GlobalStockUpdateRequest{}, validators.ValidateGlobalStockUpdate))
+		stockGroup.PUT("", stockHandler.UpdateStock, internalmw.Authorize("stocks", "write"), WithValidation(&dtos.UpdateStockRequest{}, validators.ValidateUpdateStock))
 
 		// Order routes
 		orderGroup := authorizedGroup.Group("/orders")
@@ -111,6 +108,7 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 		reportGroup := authorizedGroup.Group("/reports", internalmw.Authorize("reports", "read"))
 		reportGroup.GET("/outlets/:outlet_uuid/sales", reportHandler.GetSalesByOutletReport)
 		reportGroup.GET("/products/:product_uuid/sales", reportHandler.GetSalesByProductReport)
+		reportGroup.GET("/outlets/:outlet_uuid/stock", reportHandler.GetStockReport)
 
 		// Supplier routes
 		supplierGroup := authorizedGroup.Group("/suppliers", internalmw.Authorize("suppliers", "read"))
