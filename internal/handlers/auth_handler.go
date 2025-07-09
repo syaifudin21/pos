@@ -40,7 +40,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 }
 
 func (h *AuthHandler) RegisterOwner(c echo.Context) error {
-	req, ok := c.Get("validated_data").(*dtos.RegisterAdminRequest)
+	req, ok := c.Get("validated_data").(*dtos.RegisterOwnerRequest)
 	if !ok {
 		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}

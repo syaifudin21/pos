@@ -105,7 +105,7 @@ func ValidateUpdateUserRequest(req *dtos.UpdateUserRequest) []string {
 	return messages
 }
 
-func ValidateRegisterAdminRequest(req *dtos.RegisterAdminRequest) []string {
+func ValidateRegisterOwnerRequest(req *dtos.RegisterOwnerRequest) []string {
 	err := authValidator.Struct(req)
 	if err == nil {
 		return nil

@@ -37,7 +37,7 @@ type UpdateUserRequest struct {
 	OutletID *uint   `json:"outlet_id,omitempty"`
 }
 
-type RegisterAdminRequest struct {
+type RegisterOwnerRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Password    string `json:"password" validate:"required,passwordstrength"`
 	Email       string `json:"email" validate:"required,email"`
