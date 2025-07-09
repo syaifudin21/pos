@@ -62,8 +62,8 @@ func RegisterRoutes(e *echo.Echo) {
 	ipaymuHandler := handlers.NewIpaymuHandler(ipaymuService, userContextService)
 	userPaymentService := services.NewUserPaymentService(database.DB, userContextService)
 	userPaymentHandler := handlers.NewUserPaymentHandler(userPaymentService, userContextService)
-	tsmService := services.NewTsmService(database.DB, userContextService)
-	tsmHandler := handlers.NewTsmHandler(tsmService, userContextService)
+	tsmService := services.NewTsmService(database.DB, userContextService, userPaymentService)
+	tsmHandler := handlers.NewTsmHandler(tsmService, userContextService, userPaymentService)
 
 	// Public routes (no specific middleware)
 	e.GET("", func(c echo.Context) error {

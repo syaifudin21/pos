@@ -11,16 +11,28 @@ import (
 type TsmService struct {
 	DB                 *gorm.DB
 	UserContextService *UserContextService
+	UserPaymentService *UserPaymentService
 }
 
-func NewTsmService(db *gorm.DB, userContextService *UserContextService) *TsmService {
+func NewTsmService(db *gorm.DB, userContextService *UserContextService, userPaymentService *UserPaymentService) *TsmService {
 	return &TsmService{
 		DB:                 db,
 		UserContextService: userContextService,
+		UserPaymentService: userPaymentService,
 	}
 }
 
 func (s *TsmService) RegisterTsm(userID uint, req dtos.TsmRegisterRequest) error {
+	// If VaIpaymu is not provided in the request, try to get it from UserIpaymu
+	if req.VaIpaymu == "" {
+		va, err := s.UserPaymentService.GetUserIpaymuVa(userID)
+		if err != nil {
+			// If user has no iPaymu connection or other error, return error
+			return errors.New("ipaymu_va_not_found_or_provided")
+		}
+		req.VaIpaymu = va
+	}
+
 	var existingTsm models.UserTsm
 	result := s.DB.Where("user_id = ?", userID).First(&existingTsm)
 

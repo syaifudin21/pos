@@ -130,3 +130,24 @@ func (s *UserPaymentService) ListUserPaymentsByOwner(ownerID uint) ([]models.Use
 
 	return userPayments, nil
 }
+
+func (s *UserPaymentService) HasIpaymuConnection(userID uint) (bool, error) {
+	var userIpaymu models.UserIpaymu
+	err := s.DB.Where("user_id = ?", userID).First(&userIpaymu).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil // User does not have an iPaymu connection
+		}
+		return false, err // Other database error
+	}
+	return true, nil // User has an iPaymu connection
+}
+
+func (s *UserPaymentService) GetUserIpaymuVa(userID uint) (string, error) {
+	var userIpaymu models.UserIpaymu
+	err := s.DB.Where("user_id = ?", userID).First(&userIpaymu).Error
+	if err != nil {
+		return "", err
+	}
+	return userIpaymu.VaIpaymu, nil
+}
