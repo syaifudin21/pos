@@ -13,9 +13,10 @@ import (
 	"github.com/msyaifudin/pos/internal/database"
 	internalmw "github.com/msyaifudin/pos/internal/middleware"
 	"github.com/msyaifudin/pos/internal/redis"
-	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/internal/routes"
+	"github.com/msyaifudin/pos/internal/services"
 	"github.com/msyaifudin/pos/pkg/casbin"
+	"github.com/msyaifudin/pos/pkg/elasticsearch"
 )
 
 func Run() {
@@ -26,6 +27,9 @@ func Run() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
 	}
+
+	// Initialize Elasticsearch Logger
+	elasticsearch.InitElasticLogger()
 
 	// Initialize Redis
 	redis.InitRedis()
@@ -40,6 +44,7 @@ func Run() {
 	e := echo.New()
 
 	// Middleware
+	e.Use(internalmw.APILoggerMiddleware)
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(
