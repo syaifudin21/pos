@@ -396,15 +396,6 @@ func (s *AuthService) DeleteUser(userID uint) error {
 	return nil
 }
 
-func isValidRole(role string) bool {
-	for _, r := range models.AllowedUserRoles {
-		if r == role {
-			return true
-		}
-	}
-	return false
-}
-
 func (s *AuthService) SendOTPForPasswordReset(email string) error {
 	var user models.User
 	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {

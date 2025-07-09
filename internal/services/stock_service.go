@@ -167,6 +167,112 @@ func (s *StockService) UpdateStock(req dtos.UpdateStockRequest, outletUuid uuid.
 	return resp, nil
 }
 
+// ProduceFNBProduct handles the production of F&B main products, deducting component stock.
+func (s *StockService) ProduceFNBProduct(req dtos.FNBProductionRequest, outletUuid uuid.UUID, userID uint) (*dtos.FNBProductionResponse, error) {
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var outlet models.Outlet
+	if err := s.DB.Where("uuid = ? AND user_id = ?", outletUuid, ownerID).First(&outlet).Error; err != nil {
+		return nil, errors.New("outlet not found")
+	}
+
+	var mainProduct models.Product
+	if err := s.DB.Preload("Recipes.Component").Where("uuid = ? AND user_id = ? AND type = ?", req.FNBMainProductUuid, ownerID, "fnb_main_product").First(&mainProduct).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("F&B main product not found or not of type fnb_main_product")
+		}
+		log.Printf("Error finding F&B main product: %v", err)
+		return nil, errors.New("failed to retrieve F&B main product")
+	}
+
+	if len(mainProduct.Recipes) == 0 {
+		return nil, errors.New("F&B main product has no recipes defined")
+	}
+
+	tx := s.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Deduct component stocks
+	for _, recipe := range mainProduct.Recipes {
+		if recipe.Component.ID == 0 { // Ensure component is loaded
+			tx.Rollback()
+			return nil, errors.New("recipe component not found")
+		}
+		requiredQuantity := recipe.Quantity * req.QuantityToProduce
+
+		// Deduct stock for the component
+		err := s.DeductStockForSale(tx, outlet.ID, &recipe.Component.ID, nil, requiredQuantity, userID)
+		if err != nil {
+			tx.Rollback()
+			log.Printf("Error deducting stock for component %s: %v", recipe.Component.Name, err)
+			return nil, errors.New("failed to deduct component stock: " + err.Error())
+		}
+	}
+
+	// Optionally, increase stock of the F&B main product itself
+	// This assumes you want to track the stock of the finished F&B product.
+	// If not, you can remove this block.
+	var mainProductStock models.Stock
+	err = tx.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outlet.ID, mainProduct.ID, ownerID).First(&mainProductStock).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Create new stock entry for the main product
+			mainProductStock = models.Stock{
+				OutletID:  outlet.ID,
+				ProductID: &mainProduct.ID,
+				Quantity:  req.QuantityToProduce,
+				UserID:    ownerID,
+			}
+			if err := tx.Create(&mainProductStock).Error; err != nil {
+				log.Printf("Error creating stock for main F&B product: %v", err)
+				return nil, errors.New("failed to create stock for main F&B product")
+			}
+		} else {
+			log.Printf("Error finding stock for main F&B product: %v", err)
+			return nil, errors.New("failed to retrieve stock for main F&B product")
+		}
+	} else {
+		// Update existing stock for the main product
+		mainProductStock.Quantity += req.QuantityToProduce
+		if err := tx.Save(&mainProductStock).Error; err != nil {
+			log.Printf("Error updating stock for main F&B product: %v", err)
+			return nil, errors.New("failed to update stock for main F&B product")
+		}
+	}
+
+	// Record stock movement for the main product production
+	movement := &models.StockMovement{
+		OutletID:       outlet.ID,
+		ProductID:      &mainProduct.ID,
+		QuantityChange: int(req.QuantityToProduce),
+		MovementType:   "Production",
+		Description:    stringPtr("Produced F&B main product"),
+	}
+	if err := s.StockMovementService.CreateStockMovementWithTx(tx, movement); err != nil {
+		log.Printf("Error recording production stock movement: %v", err)
+		// Don't rollback for movement logging failure, but log it.
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Printf("Error committing F&B production transaction: %v", err)
+		return nil, errors.New("failed to complete F&B production")
+	}
+
+	return &dtos.FNBProductionResponse{
+		FNBMainProductUuid: mainProduct.Uuid,
+		ProductName:        mainProduct.Name,
+		QuantityProduced:   req.QuantityToProduce,
+		Message:            "F&B main product produced successfully, components deducted.",
+	}, nil
+}
+
 func (s *StockService) DeductStockForSale(tx *gorm.DB, outletID uint, productID *uint, productVariantID *uint, quantity float64, userID uint) error {
 	var stock models.Stock
 	var query *gorm.DB

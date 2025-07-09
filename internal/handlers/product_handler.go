@@ -12,10 +12,11 @@ import (
 type ProductHandler struct {
 	ProductService     *services.ProductService
 	UserContextService *services.UserContextService
+	StockService       *services.StockService
 }
 
-func NewProductHandler(productService *services.ProductService, userContextService *services.UserContextService) *ProductHandler {
-	return &ProductHandler{ProductService: productService, UserContextService: userContextService}
+func NewProductHandler(productService *services.ProductService, userContextService *services.UserContextService, stockService *services.StockService) *ProductHandler {
+	return &ProductHandler{ProductService: productService, UserContextService: userContextService, StockService: stockService}
 }
 
 func (h *ProductHandler) GetAllProducts(c echo.Context) error {
@@ -129,6 +130,30 @@ func (h *ProductHandler) DeleteProduct(c echo.Context) error {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 	return JSONSuccess(c, http.StatusNoContent, "product_deleted_successfully", nil)
+}
+
+func (h *ProductHandler) ProduceFNBProduct(c echo.Context) error {
+	outletUuid, err := uuid.Parse(c.Param("outlet_uuid"))
+	if err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
+	}
+
+	req, ok := c.Get("validated_data").(*dtos.FNBProductionRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
+	}
+
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
+
+	resp, err := h.StockService.ProduceFNBProduct(*req, outletUuid, userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "fnb_product_produced_successfully", resp)
 }
 
 func (h *ProductHandler) GetProductsByOutlet(c echo.Context) error {

@@ -19,17 +19,17 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 	userPaymentService := services.NewUserPaymentService(db, userContextService)
 	userPaymentHandler := handlers.NewUserPaymentHandler(userPaymentService, userContextService)
 
+	stockMovementService := services.NewStockMovementService(db)
+	stockService := services.NewStockService(db, userContextService, stockMovementService)
+
 	productService := services.NewProductService(db, userContextService)
-	productHandler := handlers.NewProductHandler(productService, userContextService)
+	productHandler := handlers.NewProductHandler(productService, userContextService, stockService)
 
 	recipeService := services.NewRecipeService(db, userContextService)
 	recipeHandler := handlers.NewRecipeHandler(recipeService, userContextService)
 
 	outletService := services.NewOutletService(db, userContextService)
 	outletHandler := handlers.NewOutletHandler(outletService, userContextService)
-
-	stockMovementService := services.NewStockMovementService(db)
-	stockService := services.NewStockService(db, userContextService, stockMovementService)
 	stockHandler := handlers.NewStockHandler(stockService, userContextService)
 
 	ipaymuService := services.NewIpaymuService(db, userContextService) // Assuming this is needed for orderService
@@ -95,6 +95,7 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 		stockGroup := authorizedGroup.Group("/outlets/:outlet_uuid/stocks", internalmw.Authorize("stocks", "read"))
 		stockGroup.GET("", stockHandler.GetOutletStocks)
 		stockGroup.PUT("", stockHandler.UpdateStock, internalmw.Authorize("stocks", "write"), WithValidation(&dtos.UpdateStockRequest{}, validators.ValidateUpdateStock))
+		stockGroup.POST("/produce-fnb", productHandler.ProduceFNBProduct, internalmw.Authorize("stocks", "write"), WithValidation(&dtos.FNBProductionRequest{}, validators.ValidateFNBProductionRequest))
 
 		// Order routes
 		orderGroup := authorizedGroup.Group("/orders")
