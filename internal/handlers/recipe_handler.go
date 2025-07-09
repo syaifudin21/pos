@@ -7,7 +7,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
-	"github.com/msyaifudin/pos/internal/validators"
 )
 
 type RecipeHandler struct {
@@ -78,16 +77,9 @@ func (h *RecipeHandler) GetRecipesByMainProduct(c echo.Context) error {
 	return JSONSuccess(c, http.StatusOK, "recipes_retrieved_successfully", recipeResponses)
 }
 func (h *RecipeHandler) CreateRecipe(c echo.Context) error {
-	req := new(dtos.CreateRecipeRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateCreateRecipe(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.CreateRecipeRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
@@ -112,16 +104,9 @@ func (h *RecipeHandler) UpdateRecipe(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	req := new(dtos.UpdateRecipeRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateUpdateRecipe(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.UpdateRecipeRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)

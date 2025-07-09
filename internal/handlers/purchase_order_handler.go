@@ -7,7 +7,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
-	"github.com/msyaifudin/pos/internal/validators"
 )
 
 type PurchaseOrderHandler struct {
@@ -19,16 +18,9 @@ func NewPurchaseOrderHandler(poService *services.PurchaseOrderService, userConte
 	return &PurchaseOrderHandler{PurchaseOrderService: poService, UserContextService: userContextService}
 }
 func (h *PurchaseOrderHandler) CreatePurchaseOrder(c echo.Context) error {
-	req := new(dtos.CreatePurchaseOrderRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateCreatePurchaseOrder(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.CreatePurchaseOrderRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)

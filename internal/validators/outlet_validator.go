@@ -3,12 +3,11 @@ package validators
 import (
 	"github.com/go-playground/validator/v10"
 	"github.com/msyaifudin/pos/internal/models/dtos"
-	"github.com/msyaifudin/pos/pkg/localization"
 )
 
 var outletValidator = validator.New()
 
-func ValidateCreateOutlet(req *dtos.OutletCreateRequest, lang string) []string {
+func ValidateCreateOutlet(req *dtos.OutletCreateRequest) []string {
 	err := outletValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -22,13 +21,13 @@ func ValidateCreateOutlet(req *dtos.OutletCreateRequest, lang string) []string {
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages
 }
 
-func ValidateUpdateOutlet(req *dtos.OutletUpdateRequest, lang string) []string {
+func ValidateUpdateOutlet(req *dtos.OutletUpdateRequest) []string {
 	err := outletValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -42,7 +41,7 @@ func ValidateUpdateOutlet(req *dtos.OutletUpdateRequest, lang string) []string {
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages

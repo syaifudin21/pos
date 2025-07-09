@@ -7,7 +7,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
-	"github.com/msyaifudin/pos/internal/validators"
 )
 
 type StockHandler struct {
@@ -79,16 +78,9 @@ func (h *StockHandler) UpdateStock(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_product_uuid_format")
 	}
 
-	req := new(dtos.UpdateStockRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateUpdateStock(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.UpdateStockRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
@@ -109,16 +101,9 @@ func (h *StockHandler) UpdateStock(c echo.Context) error {
 }
 
 func (h *StockHandler) UpdateGlobalStock(c echo.Context) error {
-	req := new(dtos.GlobalStockUpdateRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateGlobalStockUpdate(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.GlobalStockUpdateRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)

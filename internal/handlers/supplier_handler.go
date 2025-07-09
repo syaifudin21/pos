@@ -7,7 +7,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
-	"github.com/msyaifudin/pos/internal/validators"
 )
 
 type SupplierHandler struct {
@@ -71,16 +70,9 @@ func (h *SupplierHandler) GetSupplierByuuid(c echo.Context) error {
 }
 
 func (h *SupplierHandler) CreateSupplier(c echo.Context) error {
-	req := new(dtos.CreateSupplierRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateCreateSupplier(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.CreateSupplierRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
@@ -106,15 +98,9 @@ func (h *SupplierHandler) UpdateSupplier(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "Invalid Uuid format")
 	}
-	req := new(dtos.UpdateSupplierRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateUpdateSupplier(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.UpdateSupplierRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)

@@ -3,12 +3,11 @@ package validators
 import (
 	"github.com/go-playground/validator/v10"
 	"github.com/msyaifudin/pos/internal/models/dtos"
-	"github.com/msyaifudin/pos/pkg/localization"
 )
 
 var stockValidator = validator.New()
 
-func ValidateUpdateStock(req *dtos.UpdateStockRequest, lang string) []string {
+func ValidateUpdateStock(req *dtos.UpdateStockRequest) []string {
 	err := stockValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -20,13 +19,13 @@ func ValidateUpdateStock(req *dtos.UpdateStockRequest, lang string) []string {
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages
 }
 
-func ValidateGlobalStockUpdate(req *dtos.GlobalStockUpdateRequest, lang string) []string {
+func ValidateGlobalStockUpdate(req *dtos.GlobalStockUpdateRequest) []string {
 	err := stockValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -40,7 +39,7 @@ func ValidateGlobalStockUpdate(req *dtos.GlobalStockUpdateRequest, lang string) 
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages

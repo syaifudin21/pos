@@ -8,7 +8,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
-	"github.com/msyaifudin/pos/internal/validators"
 )
 
 type AuthHandler struct {
@@ -21,16 +20,9 @@ func NewAuthHandler(authService *services.AuthService, userContextService *servi
 }
 
 func (h *AuthHandler) Register(c echo.Context) error {
-	req := new(dtos.RegisterRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateRegisterRequest(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.RegisterRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	// Get the ID of the currently logged-in admin from the JWT claims
@@ -48,16 +40,9 @@ func (h *AuthHandler) Register(c echo.Context) error {
 }
 
 func (h *AuthHandler) RegisterOwner(c echo.Context) error {
-	req := new(dtos.RegisterAdminRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateRegisterAdminRequest(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.RegisterAdminRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	// This endpoint is for public owner registration, so no creatorID is needed.
@@ -71,16 +56,9 @@ func (h *AuthHandler) RegisterOwner(c echo.Context) error {
 }
 
 func (h *AuthHandler) Login(c echo.Context) error {
-	req := new(dtos.LoginRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateLoginRequest(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.LoginRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	token, user, err := h.AuthService.LoginUser(req.Email, req.Password)
@@ -158,20 +136,17 @@ func (h *AuthHandler) UpdateUser(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_user_uuid_format")
 	}
-	req := new(dtos.UpdateUserRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	req, ok := c.Get("validated_data").(*dtos.UpdateUserRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateUpdateUserRequest(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
-	}
-
-	_, err = h.AuthService.GetUserByuuid(userUuid)
+	user, err := h.AuthService.GetUserByuuid(userUuid)
 	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	if err := h.AuthService.UpdateUser(user.ID, req); err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
@@ -198,16 +173,9 @@ func (h *AuthHandler) DeleteUser(c echo.Context) error {
 }
 
 func (h *AuthHandler) VerifyOTP(c echo.Context) error {
-	req := new(dtos.VerifyOTPRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateVerifyOTPRequest(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.VerifyOTPRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	user, err := h.AuthService.VerifyOTP(req.Email, req.OTP)
@@ -238,21 +206,13 @@ func (h *AuthHandler) UpdatePassword(c echo.Context) error {
 		return JSONError(c, http.StatusUnauthorized, err.Error())
 	}
 
-	req := new(dtos.UpdatePasswordRequest)
-	if err := c.Bind(req); err != nil {
-		log.Printf("UpdatePassword Handler: Invalid request payload: %v", err)
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	req, ok := c.Get("validated_data").(*dtos.UpdatePasswordRequest)
+	if !ok {
+		log.Printf("UpdatePassword Handler: Failed to get validated request from context.")
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	log.Printf("UpdatePassword Handler: UserID: %d, OldPassword: %s, NewPassword: %s", userID, req.OldPassword, req.NewPassword)
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateUpdatePasswordRequest(req, lang); messages != nil {
-		log.Printf("UpdatePassword Handler: Validation failed: %v", messages)
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
-	}
 
 	if err := h.AuthService.UpdatePassword(userID, req.OldPassword, req.NewPassword); err != nil {
 		log.Printf("UpdatePassword Handler: Service error: %v", err)
@@ -269,16 +229,9 @@ func (h *AuthHandler) SendOTPForEmailUpdate(c echo.Context) error {
 		return JSONError(c, http.StatusUnauthorized, err.Error())
 	}
 
-	req := new(dtos.SendOTPRequest)
-	if err := c.Bind(req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateSendOTPRequest(req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.SendOTPRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	if err := h.AuthService.SendOTPForEmailUpdate(userID, req.Email); err != nil {
@@ -302,21 +255,13 @@ func (h *AuthHandler) UpdateEmail(c echo.Context) error {
 		return JSONError(c, http.StatusUnauthorized, err.Error())
 	}
 
-	req := new(dtos.UpdateEmailRequest)
-	if err := c.Bind(req); err != nil {
-		log.Printf("UpdateEmail Handler: Invalid request payload: %v", err)
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	req, ok := c.Get("validated_data").(*dtos.UpdateEmailRequest)
+	if !ok {
+		log.Printf("UpdateEmail Handler: Failed to get validated request from context.")
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	log.Printf("UpdateEmail Handler: UserID: %d, NewEmail: %s, OTP: %s", userID, req.NewEmail, req.OTP)
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateUpdateEmailRequest(req, lang); messages != nil {
-		log.Printf("UpdateEmail Handler: Validation failed: %v", messages)
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
-	}
 
 	if err := h.AuthService.UpdateEmail(userID, req.NewEmail, req.OTP); err != nil {
 		log.Printf("UpdateEmail Handler: Service error: %v", err)
@@ -328,21 +273,13 @@ func (h *AuthHandler) UpdateEmail(c echo.Context) error {
 }
 
 func (h *AuthHandler) ForgotPassword(c echo.Context) error {
-	req := new(dtos.ForgotPasswordRequest)
-	if err := c.Bind(req); err != nil {
-		log.Printf("ForgotPassword Handler: Invalid request payload: %v", err)
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	req, ok := c.Get("validated_data").(*dtos.ForgotPasswordRequest)
+	if !ok {
+		log.Printf("ForgotPassword Handler: Failed to get validated request from context.")
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	log.Printf("ForgotPassword Handler: Email: %s", req.Email)
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateForgotPasswordRequest(req, lang); messages != nil {
-		log.Printf("ForgotPassword Handler: Validation failed: %v", messages)
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
-	}
 
 	if err := h.AuthService.SendOTPForPasswordReset(req.Email); err != nil {
 		log.Printf("ForgotPassword Handler: Service error: %v", err)
@@ -354,47 +291,31 @@ func (h *AuthHandler) ForgotPassword(c echo.Context) error {
 }
 
 func (h *AuthHandler) ResetPassword(c echo.Context) error {
-	req := new(dtos.ResetPasswordRequest)
-	if err := c.Bind(req); err != nil {
-		log.Printf("ResetPassword Handler: Invalid request payload: %v", err)
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	req, ok := c.Get("validated_data").(*dtos.ResetPasswordRequest)
+	if !ok {
+		log.Printf("ResetPassword Handler: Failed to get validated request from context.")
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	log.Printf("ResetPassword Handler: Email: %s, OTP: %s, NewPassword: %s", req.Email, req.OTP, req.NewPassword)
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateResetPasswordRequest(req, lang); messages != nil {
-		log.Printf("ResetPassword Handler: Validation failed: %v", messages)
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
-	}
 
 	if err := h.AuthService.ResetPassword(req.Email, req.OTP, req.NewPassword); err != nil {
 		log.Printf("ResetPassword Handler: Service error: %v", err)
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	log.Println("ResetPassword Handler: Password reset successfully")
+	log.Println("ResetPassword Handler: Password reset successful")
 	return JSONSuccess(c, http.StatusOK, "password_reset_successful", nil)
 }
 
 func (h *AuthHandler) ResendVerificationEmail(c echo.Context) error {
-	req := new(dtos.ResendEmailRequest)
-	if err := c.Bind(req); err != nil {
-		log.Printf("ResendVerificationEmail Handler: Invalid request payload: %v", err)
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
+	req, ok := c.Get("validated_data").(*dtos.ResendEmailRequest)
+	if !ok {
+		log.Printf("ResendVerificationEmail Handler: Failed to get validated request from context.")
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	log.Printf("ResendVerificationEmail Handler: Email: %s", req.Email)
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateResendEmailRequest(req, lang); messages != nil {
-		log.Printf("ResendVerificationEmail Handler: Validation failed: %v", messages)
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
-	}
 
 	if err := h.AuthService.ResendVerificationEmail(req.Email); err != nil {
 		log.Printf("ResendVerificationEmail Handler: Service error: %v", err)

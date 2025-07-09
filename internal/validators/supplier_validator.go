@@ -3,12 +3,11 @@ package validators
 import (
 	"github.com/go-playground/validator/v10"
 	"github.com/msyaifudin/pos/internal/models/dtos"
-	"github.com/msyaifudin/pos/pkg/localization"
 )
 
 var supplierValidator = validator.New()
 
-func ValidateCreateSupplier(req *dtos.CreateSupplierRequest, lang string) []string {
+func ValidateCreateSupplier(req *dtos.CreateSupplierRequest) []string {
 	err := supplierValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -22,13 +21,13 @@ func ValidateCreateSupplier(req *dtos.CreateSupplierRequest, lang string) []stri
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages
 }
 
-func ValidateUpdateSupplier(req *dtos.UpdateSupplierRequest, lang string) []string {
+func ValidateUpdateSupplier(req *dtos.UpdateSupplierRequest) []string {
 	err := supplierValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -42,7 +41,7 @@ func ValidateUpdateSupplier(req *dtos.UpdateSupplierRequest, lang string) []stri
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages

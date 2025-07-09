@@ -21,9 +21,9 @@ func NewTsmHandler(tsmService *services.TsmService, userContextService *services
 }
 
 func (h *TsmHandler) RegisterTsm(c echo.Context) error {
-	var req dtos.TsmRegisterRequest
-	if err := c.Bind(&req); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_input")
+	req, ok := c.Get("validated_tsm_register_request").(*dtos.TsmRegisterRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
@@ -31,7 +31,7 @@ func (h *TsmHandler) RegisterTsm(c echo.Context) error {
 		return JSONError(c, http.StatusInternalServerError, "failed_to_get_user_id")
 	}
 
-	if err := h.TsmService.RegisterTsm(userID, req); err != nil {
+	if err := h.TsmService.RegisterTsm(userID, *req); err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 

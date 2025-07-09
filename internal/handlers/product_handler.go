@@ -7,7 +7,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
-	"github.com/msyaifudin/pos/internal/validators"
 )
 
 type ProductHandler struct {
@@ -68,16 +67,9 @@ func (h *ProductHandler) GetProductByID(c echo.Context) error {
 }
 
 func (h *ProductHandler) CreateProduct(c echo.Context) error {
-	product := new(dtos.ProductCreateRequest)
-	if err := c.Bind(product); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateCreateProduct(product, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	product, ok := c.Get("validated_data").(*dtos.ProductCreateRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
@@ -97,16 +89,9 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	product := new(dtos.ProductUpdateRequest)
-	if err := c.Bind(product); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateUpdateProduct(product, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	product, ok := c.Get("validated_data").(*dtos.ProductUpdateRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
@@ -114,7 +99,12 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 		return JSONError(c, http.StatusUnauthorized, err.Error())
 	}
 
-	result, err := h.ProductService.UpdateProduct(id, product, userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	result, err := h.ProductService.UpdateProduct(id, product, ownerID)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

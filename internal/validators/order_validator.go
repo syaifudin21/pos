@@ -3,12 +3,11 @@ package validators
 import (
 	"github.com/go-playground/validator/v10"
 	"github.com/msyaifudin/pos/internal/models/dtos"
-	"github.com/msyaifudin/pos/pkg/localization"
 )
 
 var orderValidator = validator.New()
 
-func ValidateCreateOrder(req *dtos.CreateOrderRequest, lang string) []string {
+func ValidateCreateOrder(req *dtos.CreateOrderRequest) []string {
 	err := orderValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -22,13 +21,13 @@ func ValidateCreateOrder(req *dtos.CreateOrderRequest, lang string) []string {
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages
 }
 
-func ValidateOrderItem(req *dtos.OrderItemRequest, lang string) []string {
+func ValidateOrderItem(req *dtos.OrderItemRequest) []string {
 	err := orderValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -41,7 +40,7 @@ func ValidateOrderItem(req *dtos.OrderItemRequest, lang string) []string {
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages

@@ -3,12 +3,11 @@ package validators
 import (
 	"github.com/go-playground/validator/v10"
 	"github.com/msyaifudin/pos/internal/models/dtos"
-	"github.com/msyaifudin/pos/pkg/localization"
 )
 
 var recipeValidator = validator.New()
 
-func ValidateCreateRecipe(req *dtos.CreateRecipeRequest, lang string) []string {
+func ValidateCreateRecipe(req *dtos.CreateRecipeRequest) []string {
 	err := recipeValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -22,13 +21,13 @@ func ValidateCreateRecipe(req *dtos.CreateRecipeRequest, lang string) []string {
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages
 }
 
-func ValidateUpdateRecipe(req *dtos.UpdateRecipeRequest, lang string) []string {
+func ValidateUpdateRecipe(req *dtos.UpdateRecipeRequest) []string {
 	err := recipeValidator.Struct(req)
 	if err == nil {
 		return nil
@@ -42,7 +41,7 @@ func ValidateUpdateRecipe(req *dtos.UpdateRecipeRequest, lang string) []string {
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {
-			messages = append(messages, localization.GetLocalizedValidationMessage(msg, lang))
+			messages = append(messages, msg)
 		}
 	}
 	return messages

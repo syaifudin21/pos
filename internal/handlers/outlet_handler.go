@@ -7,7 +7,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
-	"github.com/msyaifudin/pos/internal/validators"
 )
 
 type OutletHandler struct {
@@ -71,16 +70,9 @@ func (h *OutletHandler) GetOutletByID(c echo.Context) error {
 }
 
 func (h *OutletHandler) CreateOutlet(c echo.Context) error {
-	outlet := new(dtos.OutletCreateRequest)
-	if err := c.Bind(outlet); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateCreateOutlet(outlet, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	outlet, ok := c.Get("validated_data").(*dtos.OutletCreateRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
@@ -111,16 +103,9 @@ func (h *OutletHandler) UpdateOutlet(c echo.Context) error {
 	if err != nil {
 		return JSONError(c, http.StatusBadRequest, "invalid_uuid_format")
 	}
-	outlet := new(dtos.OutletUpdateRequest)
-	if err := c.Bind(outlet); err != nil {
-		return JSONError(c, http.StatusBadRequest, "invalid_request_payload")
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateUpdateOutlet(outlet, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	outlet, ok := c.Get("validated_data").(*dtos.OutletUpdateRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)

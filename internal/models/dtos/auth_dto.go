@@ -30,10 +30,10 @@ type LoginResponse struct {
 }
 
 type UpdateUserRequest struct {
-	Name     *string `json:"name,omitempty" validate:"required"`
-	Email    *string `json:"email,omitempty" validate:"required,email"`
-	Password *string `json:"password,omitempty" validate:"required,passwordstrength"`
-	Role     *string `json:"role,omitempty" validate:"required,oneof=admin owner manager cashier"`
+	Name     *string `json:"name,omitempty"`
+	Email    *string `json:"email,omitempty" validate:"email"`
+	Password *string `json:"password,omitempty" validate:"passwordstrength"`
+	Role     *string `json:"role,omitempty" validate:"oneof=admin owner manager cashier"`
 	OutletID *uint   `json:"outlet_id,omitempty"`
 }
 

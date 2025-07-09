@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/pkg/utils"
 	"gorm.io/gorm"
 )
@@ -558,6 +559,46 @@ func (s *AuthService) ResendVerificationEmail(email string) error {
 	if err := SendVerificationEmail(user.Email, otpCode); err != nil {
 		log.Printf("Error sending verification email for resend: %v", err)
 		return errors.New("failed to send verification email")
+	}
+
+	return nil
+}
+
+func (s *AuthService) UpdateUser(userID uint, req *dtos.UpdateUserRequest) error {
+	var user models.User
+	if err := s.DB.First(&user, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		return err
+	}
+
+	if req.Name != nil {
+		user.Name = *req.Name
+	}
+	if req.Email != nil {
+		// Check if new email is already in use by another user
+		var existingUser models.User
+		if err := s.DB.Where("email = ? AND id != ?", *req.Email, userID).First(&existingUser).Error; err == nil {
+			return errors.New("email already in use by another account")
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("database error checking email")
+		}
+		user.Email = *req.Email
+	}
+	if req.Password != nil {
+		hashedPassword, err := utils.HashPassword(*req.Password)
+		if err != nil {
+			return errors.New("failed to hash password")
+		}
+		user.Password = hashedPassword
+	}
+	if req.Role != nil {
+		user.Role = *req.Role
+	}
+
+	if err := s.DB.Save(&user).Error; err != nil {
+		return err
 	}
 
 	return nil

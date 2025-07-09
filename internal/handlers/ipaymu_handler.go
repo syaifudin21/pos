@@ -1,22 +1,15 @@
 package handlers
 
 import (
-	"errors"
-	"fmt"
 	"net/http"
-	"strings"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
-	"github.com/msyaifudin/pos/internal/validators"
 )
 
-
-
 type IpaymuHandler struct {
-	Service *services.IpaymuService
+	Service            *services.IpaymuService
 	UserContextService *services.UserContextService
 }
 
@@ -25,33 +18,9 @@ func NewIpaymuHandler(service *services.IpaymuService, userContextService *servi
 }
 
 func (h *IpaymuHandler) CreateDirectPayment(c echo.Context) error {
-	var req dtos.CreateDirectPaymentRequest
-	if err := c.Bind(&req); err != nil {
-		// Check if it's a binding error (e.g., JSON parsing, type mismatch)
-		if he, ok := err.(*echo.HTTPError); ok && he.Code == http.StatusBadRequest {
-			return JSONError(c, http.StatusBadRequest, "Invalid JSON format or data type mismatch.")
-		}
-		return JSONError(c, http.StatusBadRequest, "invalid_input")
-	}
-
-	// Validate the request struct
-	if err := validate.Struct(req); err != nil {
-		var ve validator.ValidationErrors
-		if errors.As(err, &ve) {
-			errMsgs := make([]string, 0, len(ve))
-			for _, fe := range ve {
-				errMsgs = append(errMsgs, fmt.Sprintf("Field '%s' failed on the '%s' tag", fe.Field(), fe.Tag()))
-			}
-			return JSONError(c, http.StatusBadRequest, strings.Join(errMsgs, ", "))
-		}
-		return JSONError(c, http.StatusBadRequest, err.Error())
-	}
-
-	lang := c.Get("lang").(string)
-	if messages := validators.ValidateCreateDirectPayment(&req, lang); messages != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": messages,
-		})
+	req, ok := c.Get("validated_data").(*dtos.CreateDirectPaymentRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	res, err := h.Service.CreateDirectPayment(
@@ -65,29 +34,12 @@ func (h *IpaymuHandler) CreateDirectPayment(c echo.Context) error {
 
 // IpaymuNotify handles notify/callback from Ipaymu
 func (h *IpaymuHandler) IpaymuNotify(c echo.Context) error {
-	var req dtos.IpaymuNotifyRequest
-	if err := c.Bind(&req); err != nil {
-		// Check if it's a binding error (e.g., JSON parsing, type mismatch)
-		if he, ok := err.(*echo.HTTPError); ok && he.Code == http.StatusBadRequest {
-			return JSONError(c, http.StatusBadRequest, "Invalid JSON format or data type mismatch.")
-		}
-		return JSONError(c, http.StatusBadRequest, "invalid_input")
+	req, ok := c.Get("validated_data").(*dtos.IpaymuNotifyRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
-	// Validate the request struct
-	if err := validate.Struct(req); err != nil {
-		var ve validator.ValidationErrors
-		if errors.As(err, &ve) {
-			errMsgs := make([]string, 0, len(ve))
-			for _, fe := range ve {
-				errMsgs = append(errMsgs, fmt.Sprintf("ssss '%s' failed on the '%s' tag", fe.Field(), fe.Tag()))
-			}
-			return JSONError(c, http.StatusBadRequest, strings.Join(errMsgs, ", "))
-		}
-		return JSONError(c, http.StatusBadRequest, err.Error())
-	}
-
-	fmt.Println("Debug Signature:", req) // Debugging output
+	// fmt.Println("Debug Signature:", req) // Debugging output
 
 	err := h.Service.NotifyDirectPayment(req.TrxID, req.Status, req.SettlementStatus)
 	if err != nil {
@@ -98,26 +50,9 @@ func (h *IpaymuHandler) IpaymuNotify(c echo.Context) error {
 
 // Handler untuk register user ke Ipaymu
 func (h *IpaymuHandler) RegisterIpaymu(c echo.Context) error {
-	var req dtos.RegisterIpaymuRequest
-	if err := c.Bind(&req); err != nil {
-		// Check if it's a binding error (e.g., JSON parsing, type mismatch)
-		if he, ok := err.(*echo.HTTPError); ok && he.Code == http.StatusBadRequest {
-			return JSONError(c, http.StatusBadRequest, "Invalid JSON format or data type mismatch.")
-		}
-		return JSONError(c, http.StatusBadRequest, "invalid_input")
-	}
-
-	// Validate the request struct
-	if err := validate.Struct(req); err != nil {
-		var ve validator.ValidationErrors
-		if errors.As(err, &ve) {
-			errMsgs := make([]string, 0, len(ve))
-			for _, fe := range ve {
-				errMsgs = append(errMsgs, fmt.Sprintf("Field '%s' failed on the '%s' tag", fe.Field(), fe.Tag()))
-			}
-			return JSONError(c, http.StatusBadRequest, strings.Join(errMsgs, ", "))
-		}
-		return JSONError(c, http.StatusBadRequest, err.Error())
+	req, ok := c.Get("validated_data").(*dtos.RegisterIpaymuRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
 	optional := make(map[string]interface{})
