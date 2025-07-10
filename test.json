@@ -1,9 +1,35 @@
 {
-    "app_code": "YESPOS",
-    "amount": "100000",
-    "partner_trx_id": "L1",
-    "terminal_code": "10000906",
-    "merchant_code": "MDB510403000",
-    "payment_method": "CARD",
-    "timestamp": 1752126387931
+    "message": "order_created_successfully",
+    "data": {
+        "uuid": "9e40485b-c726-4b7f-960a-3d35f45532c4",
+        "order_date": "2025-07-11T03:52:28+08:00",
+        "total_amount": 17000,
+        "payment_method": "Cash",
+        "status": "completed",
+        "user" : {
+            "uuid": "uuid_user",
+            "name": "name user"
+        },
+        "outelt": {
+            "uuid": "uuid_outlet",
+            "name": "nama outlet",
+            "adderss": "alamat outlet",
+            "contact": "contact outlet"
+        },
+        "items": [
+        {
+            "product_uuid": "{{main_product_uuid}}",
+            "product_variant_uuid": "{{product_uuid}}",
+            "name": "name product",
+            "quantity": 1,
+            "add_ons": [
+                {
+                    "name": "name add on",
+                    "add_on_uuid": "{{uuid_add_on}}",
+                    "quantity": 1
+                }
+            ]
+        }
+    ]
+    }
 }

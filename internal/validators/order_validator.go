@@ -16,9 +16,9 @@ func ValidateCreateOrder(req *dtos.CreateOrderRequest) []string {
 
 	var messages []string
 	fieldToMessage := map[string]string{
-		"OutletUuid":    "outlet_uuid_required",
-		"Items":         "order_items_required",
-		"PaymentMethod": "payment_method_required",
+		"OutletUuid":      "outlet_uuid_required",
+		"Items":           "order_items_required",
+		"PaymentMethodID": "payment_method_id_required",
 	}
 	for _, err := range err.(validator.ValidationErrors) {
 		if msg, ok := fieldToMessage[err.Field()]; ok {

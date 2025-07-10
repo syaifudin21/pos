@@ -45,6 +45,7 @@ func Run() {
 		&models.ProductVariant{},
 		&models.OrderItemAddOn{},
 		&models.ProductAddOn{},
+		&models.TsmLog{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to drop tables: %v", err)

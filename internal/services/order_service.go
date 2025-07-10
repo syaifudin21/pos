@@ -18,10 +18,11 @@ type OrderService struct {
 	StockService       *StockService
 	IpaymuService      *IpaymuService
 	UserContextService *UserContextService
+	UserPaymentService *UserPaymentService
 }
 
 func NewOrderService(db *gorm.DB, stockService *StockService, ipaymuService *IpaymuService, userContextService *UserContextService) *OrderService {
-	return &OrderService{DB: db, StockService: stockService, IpaymuService: ipaymuService, UserContextService: userContextService}
+	return &OrderService{DB: db, StockService: stockService, IpaymuService: ipaymuService, UserContextService: userContextService, UserPaymentService: NewUserPaymentService(db, userContextService)}
 }
 
 func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*dtos.OrderResponse, error) {
@@ -33,6 +34,11 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 	var outlet models.Outlet
 	if err := s.DB.Where("uuid = ? AND user_id = ?", req.OutletUuid, ownerID).First(&outlet).Error; err != nil {
 		return nil, errors.New("outlet not found")
+	}
+
+	var userPayment models.UserPayment
+	if err := s.DB.Preload("PaymentMethod").Where("payment_method_id = ? AND user_id = ? AND is_active = ?", req.PaymentMethodID, ownerID, true).First(&userPayment).Error; err != nil {
+		return nil, errors.New("payment method not found or not active")
 	}
 
 	var user models.User
@@ -52,7 +58,7 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 		UserID:        ownerID,
 		Status:        "completed",
 		TotalAmount:   0,
-		PaymentMethod: req.PaymentMethod,
+		PaymentMethod: userPayment.PaymentMethod.Name,
 	}
 
 	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&order).Error; err != nil {
