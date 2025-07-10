@@ -47,3 +47,19 @@ func (h *TsmHandler) RegisterTsm(c echo.Context) error {
 
 	return JSONSuccess(c, http.StatusOK, "tsm_registered_successfully", nil)
 }
+
+func (h *TsmHandler) GenerateApplink(c echo.Context) error {
+	req, ok := c.Get("validated_data").(*dtos.TsmGenerateApplinkRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
+	}
+
+	// You might want to add authorization checks here if needed
+
+	resp, err := h.TsmService.GenerateAPPLink(*req)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "applink_generated_successfully", resp)
+}

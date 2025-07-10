@@ -48,6 +48,9 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 	poService := services.NewPurchaseOrderService(db, stockService, userContextService)
 	poHandler := handlers.NewPurchaseOrderHandler(poService, userContextService)
 
+	tsmService := services.NewTsmService(db, userContextService, userPaymentService)
+	tsmHandler := handlers.NewTsmHandler(tsmService, userContextService, userPaymentService)
+
 	authorizedGroup := e.Group("")
 	{
 		// User management routes (owner only)
@@ -138,5 +141,9 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 
 		outletPoGroup := authorizedGroup.Group("/outlets/:outlet_uuid/purchase-orders", internalmw.Authorize("purchase_orders", "read"))
 		outletPoGroup.GET("", poHandler.GetPurchaseOrdersByOutlet)
+
+		// TSM routes
+		tsmGroup := authorizedGroup.Group("/tsm")
+		tsmGroup.POST("/generate-applink", tsmHandler.GenerateApplink, WithValidation(&dtos.TsmGenerateApplinkRequest{}, validators.ValidateTsmGenerateApplink))
 	}
 }
