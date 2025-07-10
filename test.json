@@ -1,0 +1,33 @@
+{
+    "message": "outlet_stocks_retrieved_successfully",
+    "data": [
+        {
+            "uuid": "307671b4-8129-41c0-8222-6038e42eafb1",
+            "name": "Nasi Kecap",
+            "description": "Nasi kecap pontianal",
+            "price": 15000,
+            "sku": "nasi-kecap",
+            "type": "fnb_main_product",
+            "recipes": [
+                {
+                    "uuid": "43c1fb85-783b-467d-8d61-9e5b6f9b53ee",
+                    "component_name": "Kecap",
+                    "quantity": 1
+                },
+                {
+                    "uuid": "2b9d2f95-f683-4b3e-85cc-16451b5f882b",
+                    "component_name": "Nasi",
+                    "quantity": 1
+                }
+            ],
+            "add_ons": [
+                {
+                    "uuid": "40e539da-4f01-49f1-a08d-c329c6ba7eff",
+                    "add_on_name": "Extra Sambal",
+                    "price": 2000,
+                    "is_available": true
+                }
+            ]
+        }
+    ]
+}

@@ -40,7 +40,7 @@ func (s *ProductService) GetAllProducts(userID uint, productType string) ([]mode
 	return products, nil
 }
 
-func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.ProductResponse, error) {
+func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.ProductDetailResponse, error) {
 	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
@@ -71,8 +71,7 @@ func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.Pr
 			if r.Component.ID != 0 { // Check if component is loaded
 				recipeResponses = append(recipeResponses, dtos.RecipeResponse{
 					Uuid:        r.Uuid,
-					ComponentID: r.ComponentID,
-					ComponentName:   r.Component.Name,
+					ComponentName: r.Component.Name,
 					Quantity:    r.Quantity,
 				})
 			}
@@ -83,20 +82,15 @@ func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.Pr
 	for _, pao := range product.AddOns {
 		if pao.AddOn.ID != 0 { // Check if add-on product is loaded
 			addOnResponses = append(addOnResponses, dtos.ProductAddOnResponse{
-				ID:          pao.ID,
-				Uuid:        pao.Uuid,
-				ProductID:   product.Uuid,
-				ProductName: product.Name,
-				AddOnID:     pao.AddOn.Uuid,
-				AddOnName:   pao.AddOn.Name,
-				Price:       pao.Price,
-				IsAvailable: pao.IsAvailable,
-			})
+					Uuid:        pao.Uuid,
+					AddOnName:   pao.AddOn.Name,
+					Price:       pao.Price,
+					IsAvailable: pao.IsAvailable,
+				})
 		}
 	}
 
-	return &dtos.ProductResponse{
-		ID:          product.ID,
+	return &dtos.ProductDetailResponse{
 		Uuid:        product.Uuid,
 		Name:        product.Name,
 		Description: product.Description,

@@ -55,11 +55,7 @@ func (s *ProductAddOnService) CreateProductAddOn(req *dtos.ProductAddOnRequest, 
 	}
 
 	return &dtos.ProductAddOnResponse{
-		ID:          productAddOn.ID,
 		Uuid:        productAddOn.Uuid,
-		ProductID:   product.Uuid,
-		ProductName: product.Name,
-		AddOnID:     addOnProduct.Uuid,
 		AddOnName:   addOnProduct.Name,
 		Price:       productAddOn.Price,
 		IsAvailable: productAddOn.IsAvailable,
@@ -86,11 +82,7 @@ func (s *ProductAddOnService) GetProductAddOnsByProductID(productUuid uuid.UUID,
 	var responses []dtos.ProductAddOnResponse
 	for _, pao := range productAddOns {
 		responses = append(responses, dtos.ProductAddOnResponse{
-			ID:          pao.ID,
 			Uuid:        pao.Uuid,
-			ProductID:   product.Uuid,
-			ProductName: product.Name,
-			AddOnID:     pao.AddOn.Uuid,
 			AddOnName:   pao.AddOn.Name,
 			Price:       pao.Price,
 			IsAvailable: pao.IsAvailable,

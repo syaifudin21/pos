@@ -21,7 +21,7 @@ func NewStockService(db *gorm.DB, userContextService *UserContextService, stockM
 }
 
 // GetOutletStocks retrieves all stocks for a given outlet, including variants.
-func (s *StockService) GetOutletStocks(outletUuid uuid.UUID, userID uint) ([]dtos.StockResponse, error) {
+func (s *StockService) GetOutletStocks(outletUuid uuid.UUID, userID uint, productType string, isForSale bool) ([]dtos.StockDetailResponse, error) {
 	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
@@ -33,32 +33,158 @@ func (s *StockService) GetOutletStocks(outletUuid uuid.UUID, userID uint) ([]dto
 	}
 
 	var stocks []models.Stock
-	if err := s.DB.Preload("Product").Preload("ProductVariant.Product").Where("outlet_id = ? AND user_id = ?", outlet.ID, ownerID).Find(&stocks).Error; err != nil {
+	query := s.DB.Where("stocks.outlet_id = ? AND stocks.user_id = ?", outlet.ID, ownerID)
+
+	// Always include joins if either productType or isForSale is active
+	if productType != "" || isForSale {
+		query = query.Joins("LEFT JOIN products AS p_direct ON stocks.product_id = p_direct.id")
+		query = query.Joins("LEFT JOIN product_variants AS pv ON stocks.product_variant_id = pv.id")
+		query = query.Joins("LEFT JOIN products AS p_variant ON pv.product_id = p_variant.id")
+	}
+
+	if productType != "" {
+		query = query.Where("(stocks.product_id IS NOT NULL AND p_direct.type = ?) OR (stocks.product_variant_id IS NOT NULL AND p_variant.type = ?)", productType, productType)
+	}
+
+	if isForSale {
+		query = query.Where("(stocks.product_id IS NOT NULL AND (p_direct.type = ? OR p_direct.type = ?)) OR (stocks.product_variant_id IS NOT NULL AND (p_variant.type = ? OR p_variant.type = ?))", "retail_item", "fnb_main_product", "retail_item", "fnb_main_product")
+	}
+
+	// Preload the relationships after applying the joins and filters
+	query = query.Preload("Product.Recipes.Component").Preload("Product.AddOns.AddOn").Preload("ProductVariant.Product.Recipes.Component").Preload("ProductVariant.Product.AddOns.AddOn")
+
+	if err := query.Find(&stocks).Error; err != nil {
 		log.Printf("Error getting outlet stocks: %v", err)
 		return nil, errors.New("failed to retrieve outlet stocks")
 	}
 
-	var stockResponses []dtos.StockResponse
+	var stockDetailResponses []dtos.StockDetailResponse
 	for _, stock := range stocks {
+		var productDetail dtos.ProductDetailResponse
+		var recipes []dtos.RecipeResponse
+		var addOns []dtos.ProductAddOnResponse
+		var variants []dtos.ProductVariantResponse
+
 		if stock.ProductID != nil && stock.Product != nil {
-			stockResponses = append(stockResponses, dtos.StockResponse{
-				ProductUuid: stock.Product.Uuid,
-				ProductName: stock.Product.Name,
-				ProductSku:  stock.Product.SKU,
+			productDetail.Uuid = stock.Product.Uuid
+			productDetail.Name = stock.Product.Name
+			productDetail.Description = stock.Product.Description
+			productDetail.Price = stock.Product.Price
+			productDetail.SKU = stock.Product.SKU
+			productDetail.Type = stock.Product.Type
+
+			// Map recipes
+			if stock.Product.Type == "fnb_main_product" {
+				for _, r := range stock.Product.Recipes {
+					if r.Component.ID != 0 {
+						recipes = append(recipes, dtos.RecipeResponse{
+							Uuid:          r.Uuid,
+							ComponentName: r.Component.Name,
+							Quantity:      r.Quantity,
+						})
+					}
+				}
+			}
+			productDetail.Recipes = recipes
+
+			// Map add-ons
+			for _, pao := range stock.Product.AddOns {
+				if pao.AddOn.ID != 0 {
+					addOns = append(addOns, dtos.ProductAddOnResponse{
+						Uuid:        pao.Uuid,
+						AddOnName:   pao.AddOn.Name,
+						Price:       pao.Price,
+						IsAvailable: pao.IsAvailable,
+					})
+				}
+			}
+			productDetail.AddOns = addOns
+
+			// Map variants (if any)
+			for _, v := range stock.Product.Variants {
+				variants = append(variants, dtos.ProductVariantResponse{
+					ID:    v.ID,
+					Uuid:  v.Uuid,
+					Name:  v.Name,
+					SKU:   v.SKU,
+					Price: v.Price,
+				})
+			}
+			productDetail.Variants = variants
+
+			stockDetailResponses = append(stockDetailResponses, dtos.StockDetailResponse{
+				Uuid:        productDetail.Uuid,
+				Name:        productDetail.Name,
+				Description: productDetail.Description,
+				Price:       productDetail.Price,
+				SKU:         productDetail.SKU,
+				Type:        productDetail.Type,
+				Recipes:     productDetail.Recipes,
+				AddOns:      productDetail.AddOns,
+				Variants:    productDetail.Variants,
 				Quantity:    stock.Quantity,
 			})
 		} else if stock.ProductVariantID != nil && stock.ProductVariant != nil && stock.ProductVariant.Product.ID != 0 {
-			stockResponses = append(stockResponses, dtos.StockResponse{
-				ProductUuid:        stock.ProductVariant.Product.Uuid,
-				ProductName:        stock.ProductVariant.Product.Name,
-				ProductVariantUuid: &stock.ProductVariant.Uuid,
-				VariantName:        stock.ProductVariant.Name,
-				VariantSku:         stock.ProductVariant.SKU,
-				Quantity:           stock.Quantity,
+			// For product variants, the main product details come from stock.ProductVariant.Product
+			productDetail.Uuid = stock.ProductVariant.Product.Uuid
+			productDetail.Name = stock.ProductVariant.Product.Name
+			productDetail.Description = stock.ProductVariant.Product.Description
+			productDetail.Price = stock.ProductVariant.Product.Price
+			productDetail.SKU = stock.ProductVariant.Product.SKU
+			productDetail.Type = stock.ProductVariant.Product.Type
+
+			// Map recipes for the main product of the variant
+			if stock.ProductVariant.Product.Type == "fnb_main_product" {
+				for _, r := range stock.ProductVariant.Product.Recipes {
+					if r.Component.ID != 0 {
+						recipes = append(recipes, dtos.RecipeResponse{
+							Uuid:          r.Uuid,
+							ComponentName: r.Component.Name,
+							Quantity:      r.Quantity,
+						})
+					}
+				}
+			}
+			productDetail.Recipes = recipes
+
+			// Map add-ons for the main product of the variant
+			for _, pao := range stock.ProductVariant.Product.AddOns {
+				if pao.AddOn.ID != 0 {
+					addOns = append(addOns, dtos.ProductAddOnResponse{
+						Uuid:        pao.Uuid,
+						AddOnName:   pao.AddOn.Name,
+						Price:       pao.Price,
+						IsAvailable: pao.IsAvailable,
+					})
+				}
+			}
+			productDetail.AddOns = addOns
+
+			// Map variants (only the current variant for this stock entry)
+			variants = append(variants, dtos.ProductVariantResponse{
+				ID:    stock.ProductVariant.ID,
+				Uuid:  stock.ProductVariant.Uuid,
+				Name:  stock.ProductVariant.Name,
+				SKU:   stock.ProductVariant.SKU,
+				Price: stock.ProductVariant.Price,
+			})
+			productDetail.Variants = variants
+
+			stockDetailResponses = append(stockDetailResponses, dtos.StockDetailResponse{
+				Uuid:        productDetail.Uuid,
+				Name:        productDetail.Name,
+				Description: productDetail.Description,
+				Price:       productDetail.Price,
+				SKU:         productDetail.SKU,
+				Type:        productDetail.Type,
+				Recipes:     productDetail.Recipes,
+				AddOns:      productDetail.AddOns,
+				Variants:    productDetail.Variants,
+				Quantity:    stock.Quantity,
 			})
 		}
 	}
-	return stockResponses, nil
+	return stockDetailResponses, nil
 }
 
 // UpdateStock handles updating stock for both simple products and variants.

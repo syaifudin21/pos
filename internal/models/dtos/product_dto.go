@@ -50,6 +50,16 @@ type ProductResponse struct {
 	SKU         string                   `json:"sku,omitempty"`
 	Type        string                   `json:"type"`
 	Variants    []ProductVariantResponse `json:"variants,omitempty"`
+}
+
+type ProductDetailResponse struct {
+	Uuid        uuid.UUID                `json:"uuid"`
+	Name        string                   `json:"name"`
+	Description string                   `json:"description,omitempty"`
+	Price       float64                  `json:"price"`
+	SKU         string                   `json:"sku,omitempty"`
+	Type        string                   `json:"type"`
+	Variants    []ProductVariantResponse `json:"variants,omitempty"`
 	Recipes     []RecipeResponse         `json:"recipes,omitempty"`
 	AddOns      []ProductAddOnResponse   `json:"add_ons,omitempty"`
 }

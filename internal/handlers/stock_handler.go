@@ -24,12 +24,19 @@ func (h *StockHandler) GetOutletStocks(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
+	productType := c.QueryParam("product_type")
+	isForSaleStr := c.QueryParam("is_for_sale")
+	isForSale := false
+	if isForSaleStr == "true" {
+		isForSale = true
+	}
+
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
 	if err != nil {
 		return JSONError(c, http.StatusUnauthorized, err.Error())
 	}
 
-	stocks, err := h.StockService.GetOutletStocks(outletUuid, userID)
+	stocks, err := h.StockService.GetOutletStocks(outletUuid, userID, productType, isForSale)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
