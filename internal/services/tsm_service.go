@@ -24,13 +24,15 @@ type TsmService struct {
 	DB                 *gorm.DB
 	UserContextService *UserContextService
 	UserPaymentService *UserPaymentService
+	TsmLogService      *TsmLogService
 }
 
-func NewTsmService(db *gorm.DB, userContextService *UserContextService, userPaymentService *UserPaymentService) *TsmService {
+func NewTsmService(db *gorm.DB, userContextService *UserContextService, userPaymentService *UserPaymentService, tsmLogService *TsmLogService) *TsmService {
 	return &TsmService{
 		DB:                 db,
 		UserContextService: userContextService,
 		UserPaymentService: userPaymentService,
+		TsmLogService:      tsmLogService,
 	}
 }
 
@@ -117,7 +119,7 @@ func (s *TsmService) generateHeader(bodyPart string) (string, error) {
 	return headerToken, nil
 }
 
-func (s *TsmService) GenerateAPPLink(req dtos.TsmGenerateApplinkRequest) (map[string]interface{}, error) {
+func (s *TsmService) GenerateAPPLink(userID uint, req dtos.TsmGenerateApplinkRequest) (map[string]interface{}, error) {
 	body := map[string]interface{}{
 		"app_code":       req.AppCode,
 		"amount":         strconv.FormatFloat(req.Amount, 'f', -1, 64),
@@ -155,43 +157,53 @@ func (s *TsmService) GenerateAPPLink(req dtos.TsmGenerateApplinkRequest) (map[st
 	httpReq.Header.Set("Accept", "application/json")
 	httpReq.Header.Set("Token", headerToken)
 
-	// Log request to terminal
-	for key, values := range httpReq.Header {
-		for _, value := range values {
-			log.Printf("  %s: %s", key, value)
-		}
-	}
-
-	var reqBodyMap map[string]interface{}
-	err = json.Unmarshal(jsonBodyBytes, &reqBodyMap)
+	requestTime := time.Now()
+	endpoint := baseUrl + "/tph/v1/applink"
 
 	resp, err := client.Do(httpReq)
-	if err != nil {
-		log.Printf("TSM API Request Error: %v ", err)
-		return nil, fmt.Errorf("failed to send HTTP request: %w", err)
-	}
-	defer resp.Body.Close()
 
-	for key, values := range resp.Header {
-		for _, value := range values {
-			log.Printf("  %s: %s", key, value)
+	var respBody []byte
+	var logStatus string
+	var finalRes map[string]interface{}
+	var finalErr error
+
+	if err != nil {
+		logStatus = "failed"
+		finalErr = fmt.Errorf("failed to send HTTP request: %w", err)
+	} else {
+		defer resp.Body.Close()
+		respBody, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			logStatus = "error"
+			finalErr = fmt.Errorf("failed to read response body: %w", err)
+		} else {
+			if err := json.Unmarshal(respBody, &finalRes); err != nil {
+				logStatus = "error"
+				finalErr = fmt.Errorf("failed to unmarshal response JSON: %w", err)
+			} else {
+				logStatus = "success"
+			}
 		}
 	}
 
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("TSM API Response Body Read Error: %v ", err)
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+	// Log to database
+	if s.TsmLogService != nil {
+		logEntry := &models.TsmLog{
+			UserID:          userID,
+			Endpoint:        endpoint,
+			RequestPayload:  string(jsonBodyBytes),
+			ResponsePayload: string(respBody),
+			Status:          logStatus,
+			RequestTime:     requestTime,
+			ResponseTime:    time.Now(),
+		}
+		if logErr := s.TsmLogService.CreateTsmLog(logEntry); logErr != nil {
+			log.Printf("Failed to save TSM log: %v", logErr)
+		}
 	}
 
-	// Pretty print response body
-	var res map[string]interface{}
-	json.Unmarshal(respBody, &res) // Unmarshal to pretty print, ignore error for logging
-
-	if err := json.Unmarshal(respBody, &res); err != nil {
-		log.Printf("TSM API Response Unmarshal Error: %v ", err)
-		return nil, fmt.Errorf("failed to unmarshal response JSON: %w", err)
+	if finalErr != nil {
+		return nil, finalErr
 	}
-
-	return res, nil
+	return finalRes, nil
 }

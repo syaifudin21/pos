@@ -127,6 +127,7 @@ func (s *IpaymuService) send(endPoint string, body interface{}, contentType, met
 
 // CreateDirectPayment creates a direct payment request to Ipaymu
 func (s *IpaymuService) CreateDirectPayment(
+	userID uint,
 	ServiceName string,
 	ServiceRefID string,
 	product []string,
@@ -184,6 +185,7 @@ func (s *IpaymuService) CreateDirectPayment(
 	}
 
 	log := models.IpaymuLog{
+		UserID:          userID,
 		ServiceName:     ServiceName,
 		ServiceRefID:    ServiceRefID,
 		PaymentMethod:   method,

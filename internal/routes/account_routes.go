@@ -20,7 +20,8 @@ func RegisterAccountRoutes(e *echo.Echo, db *gorm.DB) {
 	ipaymuHandler := handlers.NewIpaymuHandler(ipaymuService, userContextService)
 
 	userPaymentService := services.NewUserPaymentService(db, userContextService) // Assuming this is needed for tsmService
-	tsmService := services.NewTsmService(db, userContextService, userPaymentService)
+	tsmLogService := services.NewTsmLogService(db)
+	tsmService := services.NewTsmService(db, userContextService, userPaymentService, tsmLogService)
 	tsmHandler := handlers.NewTsmHandler(tsmService, userContextService, userPaymentService)
 
 	selfAuthGroup := e.Group("")

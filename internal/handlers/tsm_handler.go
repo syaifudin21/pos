@@ -56,7 +56,12 @@ func (h *TsmHandler) GenerateApplink(c echo.Context) error {
 
 	// You might want to add authorization checks here if needed
 
-	resp, err := h.TsmService.GenerateAPPLink(*req)
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_user_id")
+	}
+
+	resp, err := h.TsmService.GenerateAPPLink(userID, *req)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

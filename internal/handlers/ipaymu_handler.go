@@ -23,7 +23,13 @@ func (h *IpaymuHandler) CreateDirectPayment(c echo.Context) error {
 		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
 	}
 
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_user_id")
+	}
+
 	res, err := h.Service.CreateDirectPayment(
+		userID,
 		req.ServiceName, req.ServiceRefID, req.Product, req.Qty, req.Price, req.Name, req.Email, req.Phone, req.Method, req.Channel, req.Account,
 	)
 	if err != nil {
