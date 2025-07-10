@@ -100,10 +100,34 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 			Price:            price,
 		}
 
-		if err := tx.Create(&orderItem).Error; err != nil {
+		if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&orderItem).Error; err != nil {
 			tx.Rollback()
 			return nil, errors.New("failed to create order item")
 		}
+
+		// Process add-ons for the current order item
+		for _, addOnReq := range item.AddOns {
+			var addOnProduct models.Product
+			if err := tx.Where("uuid = ? AND user_id = ? AND type = ?", addOnReq.AddOnUuid, ownerID, "add_on").First(&addOnProduct).Error; err != nil {
+				tx.Rollback()
+				return nil, errors.New("add-on product not found or not of type add_on")
+			}
+
+			orderItemAddOn := models.OrderItemAddOn{
+				OrderItemID: orderItem.ID,
+				AddOnID:     addOnProduct.ID,
+				Quantity:    float64(addOnReq.Quantity),
+				Price:       addOnProduct.Price, // Use the add-on's base price
+				UserID:      ownerID,
+			}
+
+			if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&orderItemAddOn).Error; err != nil {
+				tx.Rollback()
+				return nil, errors.New("failed to create order item add-on")
+			}
+			totalAmount += addOnProduct.Price * float64(addOnReq.Quantity)
+		}
+
 		totalAmount += price * float64(item.Quantity)
 	}
 

@@ -31,6 +31,9 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 	outletService := services.NewOutletService(db, userContextService)
 	outletHandler := handlers.NewOutletHandler(outletService, userContextService)
 	stockHandler := handlers.NewStockHandler(stockService, userContextService)
+	
+	productAddOnService := services.NewProductAddOnService(db, userContextService)
+	productAddOnHandler := handlers.NewProductAddOnHandler(productAddOnService, userContextService)
 
 	ipaymuService := services.NewIpaymuService(db, userContextService) // Assuming this is needed for orderService
 	orderService := services.NewOrderService(db, stockService, ipaymuService, userContextService)
@@ -69,6 +72,14 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 		productGroup.POST("", productHandler.CreateProduct, internalmw.Authorize("products", "write"), WithValidation(&dtos.ProductCreateRequest{}, validators.ValidateCreateProduct))
 		productGroup.PUT("/:uuid", productHandler.UpdateProduct, internalmw.Authorize("products", "write"), WithValidation(&dtos.ProductUpdateRequest{}, validators.ValidateUpdateProduct))
 		productGroup.DELETE("/:uuid", productHandler.DeleteProduct, internalmw.Authorize("products", "write"))
+
+		// Product Add-on routes
+		productAddOnGroup := authorizedGroup.Group("/products/:product_uuid/add-ons", internalmw.Authorize("products", "write"))
+		productAddOnGroup.POST("", productAddOnHandler.CreateProductAddOn, WithValidation(&dtos.ProductAddOnRequest{}, validators.ValidateProductAddOnRequest))
+		productAddOnGroup.GET("", productAddOnHandler.GetProductAddOnsByProductID)
+
+		productAddOnDeleteGroup := authorizedGroup.Group("/product-add-ons", internalmw.Authorize("products", "write"))
+		productAddOnDeleteGroup.DELETE("/:uuid", productAddOnHandler.DeleteProductAddOn)
 
 		outletProductGroup := authorizedGroup.Group("/outlets/:outlet_uuid/products", internalmw.Authorize("products", "read"))
 		outletProductGroup.GET("", productHandler.GetProductsByOutlet)

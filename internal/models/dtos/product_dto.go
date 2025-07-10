@@ -28,7 +28,7 @@ type ProductCreateRequest struct {
 	Description string                        `json:"description,omitempty"`
 	Price       float64                       `json:"price"`
 	SKU         string                        `json:"sku,omitempty"`
-	Type        string                        `json:"type" validate:"required,oneof=retail_item fnb_main_product fnb_component"`
+	Type        string                        `json:"type" validate:"required,oneof=retail_item fnb_main_product fnb_component add_on"`
 	Variants    []ProductVariantCreateRequest `json:"variants,omitempty"`
 }
 
@@ -37,7 +37,7 @@ type ProductUpdateRequest struct {
 	Description string                        `json:"description,omitempty"`
 	Price       float64                       `json:"price"`
 	SKU         string                        `json:"sku,omitempty"`
-	Type        string                        `json:"type" validate:"required,oneof=retail_item fnb_main_product fnb_component"`
+	Type        string                        `json:"type" validate:"required,oneof=retail_item fnb_main_product fnb_component add_on"`
 	Variants    []ProductVariantUpdateRequest `json:"variants,omitempty"`
 }
 
@@ -51,6 +51,7 @@ type ProductResponse struct {
 	Type        string                   `json:"type"`
 	Variants    []ProductVariantResponse `json:"variants,omitempty"`
 	Recipes     []RecipeResponse         `json:"recipes,omitempty"`
+	AddOns      []ProductAddOnResponse   `json:"add_ons,omitempty"`
 }
 
 type ProductOutletResponse struct {

@@ -9,9 +9,15 @@ type CreateOrderRequest struct {
 }
 
 type OrderItemRequest struct {
-	ProductUuid        uuid.UUID `json:"product_uuid,omitempty"`
-	ProductVariantUuid uuid.UUID `json:"product_variant_uuid,omitempty"`
-	Quantity           int       `json:"quantity" validate:"required,gt=0"`
+	ProductUuid        uuid.UUID            `json:"product_uuid,omitempty"`
+	ProductVariantUuid uuid.UUID            `json:"product_variant_uuid,omitempty"`
+	Quantity           int                  `json:"quantity" validate:"required,gt=0"`
+	AddOns             []OrderItemAddonRequest `json:"add_ons,omitempty"`
+}
+
+type OrderItemAddonRequest struct {
+	AddOnUuid uuid.UUID `json:"add_on_uuid" validate:"required"`
+	Quantity  int       `json:"quantity" validate:"required,gt=0"`
 }
 
 // OrderResponse represents the response structure for an order.

@@ -1,7 +1,7 @@
 package models
 
 // AllowedProductTypes defines the list of types that a product can have.
-var AllowedProductTypes = []string{"retail_item", "fnb_main_product", "fnb_component"}
+var AllowedProductTypes = []string{"retail_item", "fnb_main_product", "fnb_component", "add_on"}
 
 type Product struct {
 	BaseModel
@@ -14,4 +14,5 @@ type Product struct {
 	User        User             `json:"user"`
 	Variants    []ProductVariant `json:"variants,omitempty"`
 	Recipes     []Recipe         `gorm:"foreignKey:MainProductID" json:"recipes,omitempty"`
+	AddOns      []ProductAddOn   `gorm:"foreignKey:ProductID" json:"add_ons,omitempty"`
 }

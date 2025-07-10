@@ -46,7 +46,7 @@ func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.Pr
 		return nil, err
 	}
 	var product models.Product
-	if err := s.DB.Preload("Variants").Preload("Recipes.Component").Where("uuid = ? AND user_id = ?", Uuid, ownerID).First(&product).Error; err != nil {
+	if err := s.DB.Preload("Variants").Preload("Recipes.Component").Preload("AddOns.AddOn").Where("uuid = ? AND user_id = ?", Uuid, ownerID).First(&product).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("product not found")
 		}
@@ -79,6 +79,22 @@ func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.Pr
 		}
 	}
 
+	addOnResponses := []dtos.ProductAddOnResponse{}
+	for _, pao := range product.AddOns {
+		if pao.AddOn.ID != 0 { // Check if add-on product is loaded
+			addOnResponses = append(addOnResponses, dtos.ProductAddOnResponse{
+				ID:          pao.ID,
+				Uuid:        pao.Uuid,
+				ProductID:   product.Uuid,
+				ProductName: product.Name,
+				AddOnID:     pao.AddOn.Uuid,
+				AddOnName:   pao.AddOn.Name,
+				Price:       pao.Price,
+				IsAvailable: pao.IsAvailable,
+			})
+		}
+	}
+
 	return &dtos.ProductResponse{
 		ID:          product.ID,
 		Uuid:        product.Uuid,
@@ -89,6 +105,7 @@ func (s *ProductService) GetProductByUuid(Uuid uuid.UUID, userID uint) (*dtos.Pr
 		Type:        product.Type,
 		Variants:    variantResponses,
 		Recipes:     recipeResponses,
+		AddOns:      addOnResponses,
 	}, nil
 }
 
