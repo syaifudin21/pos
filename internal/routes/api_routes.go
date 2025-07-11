@@ -39,6 +39,9 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 	orderService := services.NewOrderService(db, stockService, ipaymuService, userContextService)
 	orderHandler := handlers.NewOrderHandler(orderService, userContextService)
 
+	orderPaymentService := services.NewOrderPaymentService(db, userContextService)
+	orderPaymentHandler := handlers.NewOrderPaymentHandler(orderPaymentService, userContextService)
+
 	reportService := services.NewReportService(db)
 	reportHandler := handlers.NewReportHandler(reportService, userContextService)
 
@@ -116,6 +119,10 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 		orderGroup := authorizedGroup.Group("/orders")
 		orderGroup.POST("", orderHandler.CreateOrder, internalmw.Authorize("orders", "write"), WithValidation(&dtos.CreateOrderRequest{}, validators.ValidateCreateOrder))
 		orderGroup.GET("/:uuid", orderHandler.GetOrderByUuid, internalmw.Authorize("orders", "read"))
+
+		// Order Payment routes
+		orderPaymentGroup := authorizedGroup.Group("/order-payments")
+		orderPaymentGroup.POST("", orderPaymentHandler.CreateOrderPayment, internalmw.Authorize("order_payments", "write"), WithValidation(&dtos.CreateOrderPaymentRequest{}, validators.ValidateCreateOrderPayment))
 
 		outletOrdersGroup := authorizedGroup.Group("/outlets/:outlet_uuid/orders", internalmw.Authorize("orders", "read"))
 		outletOrdersGroup.GET("", orderHandler.GetOrdersByOutlet)

@@ -56,7 +56,7 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 	order := models.Order{
 		OutletID:      outlet.ID,
 		UserID:        ownerID,
-		Status:        "completed",
+		Status:        "pending",
 		TotalAmount:   0,
 		PaymentMethod: userPayment.PaymentMethod.Name,
 	}
@@ -148,18 +148,13 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 		return nil, errors.New("failed to commit order transaction")
 	}
 
-	return &dtos.OrderResponse{
-		ID:            order.ID,
-		Uuid:          order.Uuid,
-		OutletID:      order.OutletID,
-		OutletUuid:    outlet.Uuid,
-		UserID:        order.UserID,
-		UserUuid:      user.Uuid,
-		OrderDate:     order.CreatedAt.Format(time.RFC3339),
-		TotalAmount:   order.TotalAmount,
-		PaymentMethod: order.PaymentMethod,
-		Status:        order.Status,
-	}, nil
+	// Reload the order with all its relations for the comprehensive response using the main DB connection
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").First(&order, order.ID).Error; err != nil {
+		log.Printf("Error preloading order relations after commit: %v", err)
+		return nil, errors.New("failed to retrieve full order details after commit")
+	}
+
+	return mapOrderToOrderResponse(order, outlet), nil
 }
 
 // GetOrder retrieves an order by its Uuid.
@@ -169,7 +164,7 @@ func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderR
 		return nil, err
 	}
 	var order models.Order
-	if err := s.DB.Preload("Outlet").Preload("User").Where("uuid = ? AND user_id = ?", uuid, ownerID).First(&order).Error; err != nil {
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").Where("uuid = ? AND user_id = ?", uuid, ownerID).First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("order not found")
 		}
@@ -177,18 +172,7 @@ func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderR
 		return nil, errors.New("failed to retrieve order")
 	}
 
-	return &dtos.OrderResponse{
-		ID:            order.ID,
-		Uuid:          order.Uuid,
-		OutletID:      order.OutletID,
-		OutletUuid:    order.Outlet.Uuid,
-		UserID:        order.UserID,
-		UserUuid:      order.User.Uuid,
-		OrderDate:     order.CreatedAt.Format(time.RFC3339),
-		TotalAmount:   order.TotalAmount,
-		PaymentMethod: order.PaymentMethod,
-		Status:        order.Status,
-	}, nil
+	return mapOrderToOrderResponse(order, order.Outlet), nil
 }
 
 // GetOrdersByOutlet retrieves all orders for a specific outlet.
@@ -210,18 +194,94 @@ func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uint) ([]d
 
 	var orderResponses []dtos.OrderResponse
 	for _, order := range orders {
-		orderResponses = append(orderResponses, dtos.OrderResponse{
-			ID:            order.ID,
-			Uuid:          order.Uuid,
-			OutletID:      order.OutletID,
-			OutletUuid:    outlet.Uuid, // Use the fetched outlet's UUID
-			UserID:        order.UserID,
-			UserUuid:      order.User.Uuid,
-			OrderDate:     order.CreatedAt.Format(time.RFC3339),
-			TotalAmount:   order.TotalAmount,
-			PaymentMethod: order.PaymentMethod,
-			Status:        order.Status,
-		})
+		// Load relations for each order
+		if err := s.DB.Preload("User").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").First(&order, order.ID).Error; err != nil {
+			log.Printf("Error preloading order relations for GetOrdersByOutlet: %v", err)
+			continue // Skip this order if relations cannot be loaded
+		}
+		orderResponses = append(orderResponses, *mapOrderToOrderResponse(order, outlet))
 	}
 	return orderResponses, nil
+}
+
+func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.OrderResponse {
+	var orderItemsResponse []dtos.OrderItemDetailResponse
+	for _, item := range order.OrderItems {
+		var productName string
+		var productUuid = uuid.Nil
+		var productVariantUuid = uuid.Nil
+
+		if item.Product != nil {
+			productName = item.Product.Name
+			productUuid = item.Product.Uuid
+		}
+		if item.ProductVariant != nil {
+			productName = item.ProductVariant.Name
+			productVariantUuid = item.ProductVariant.Uuid
+		}
+
+		var addOnsResponse []dtos.OrderItemAddonDetailResponse
+		for _, addOn := range item.AddOns {
+			if addOn.AddOn.ID != 0 { // Check if AddOn relation is loaded
+				addOnsResponse = append(addOnsResponse, dtos.OrderItemAddonDetailResponse{
+					Uuid:     addOn.AddOn.Uuid,
+					Name:     addOn.AddOn.Name,
+					Quantity: int(addOn.Quantity),
+				})
+			}
+		}
+
+		orderItemsResponse = append(orderItemsResponse, dtos.OrderItemDetailResponse{
+			ProductUuid:        productUuid,
+			ProductVariantUuid: productVariantUuid,
+			Name:               productName,
+			Quantity:           int(item.Quantity),
+			AddOns:             addOnsResponse,
+		})
+	}
+
+	var paymentsResponse []dtos.OrderPaymentDetailResponse
+	for _, payment := range order.OrderPayments {
+		if payment.PaymentMethod.ID != 0 {
+			paymentsResponse = append(paymentsResponse, dtos.OrderPaymentDetailResponse{
+				Uuid:            payment.Uuid,
+				PaymentMethodID: payment.PaymentMethodID,
+				PaidAmount:      payment.AmountPaid,
+				Name:            payment.PaymentMethod.Name,
+				PaymentMethod:   payment.PaymentMethod.PaymentMethod,
+				PaymentChannel:  payment.PaymentMethod.PaymentChannel,
+				ChangeAmount:    payment.ChangeAmount,
+				IsPaid:          payment.IsPaid,
+				ReferenceID:     payment.ReferenceID,
+				CreatedAt:       payment.CreatedAt.Format(time.RFC3339),
+				PaidAt:          payment.PaidAt,
+			})
+		}
+	}
+
+	var createdBy *dtos.UserDetailResponse
+	if order.User.ID != 0 {
+		createdBy = &dtos.UserDetailResponse{
+			Uuid: order.User.Uuid,
+			Name: order.User.Name,
+		}
+	}
+
+	return &dtos.OrderResponse{
+		Uuid:          order.Uuid,
+		OrderDate:     order.CreatedAt.Format(time.RFC3339),
+		TotalAmount:   order.TotalAmount,
+		PaidAmount:    order.PaidAmount,
+		PaymentMethod: order.PaymentMethod,
+		Status:        order.Status,
+		CreatedBy:     createdBy,
+		Outlet: dtos.OutletDetailResponse{
+			Uuid:    outlet.Uuid,
+			Name:    outlet.Name,
+			Address: outlet.Address,
+			Contact: outlet.Contact,
+		},
+		Payments: paymentsResponse,
+		Items:    orderItemsResponse,
+	}
 }

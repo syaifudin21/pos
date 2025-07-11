@@ -32,7 +32,7 @@ func InitDB() {
 	}
 
 	// AutoMigrate all models, including CasbinRule
-	if err := db.AutoMigrate(&models.IpaymuLog{}, &gormadapter.CasbinRule{}, &models.Order{}); err != nil {
+	if err := db.AutoMigrate(&models.IpaymuLog{}, &gormadapter.CasbinRule{}, &models.Order{}, &models.OrderPayment{}); err != nil {
 		log.Fatalf("Gagal migrasi tabel: %v", err)
 	}
 

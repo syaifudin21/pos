@@ -9,5 +9,7 @@ type Order struct {
 	TotalAmount   float64     `gorm:"not null" json:"total_amount"`
 	PaymentMethod string      `gorm:"not null" json:"payment_method"` // e.g., "cash", "credit_card", "ipaymu"
 	Status        string      `gorm:"not null" json:"status"` // e.g., "pending", "completed", "cancelled"
+	PaidAmount    float64     `gorm:"default:0" json:"paid_amount"`
 	OrderItems    []OrderItem `json:"order_items"`
+	OrderPayments []OrderPayment `json:"order_payments"`
 }

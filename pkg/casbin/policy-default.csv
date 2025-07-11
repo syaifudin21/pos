@@ -37,6 +37,8 @@ p,owner,user_payments,deactivate
 p,owner,user_payments,read
 p,owner,tsm,write
 p,owner,tsm,read
+p,owner,order_payments,write
+p,owner,order_payments,read
 
 p,manager,products,read
 p,manager,products,write
@@ -53,6 +55,8 @@ p,manager,purchase_orders,write
 p,manager,user_payments,read
 p,manager,tsm,write
 p,manager,tsm,read
+p,owner,order_payments,write
+p,owner,order_payments,read
 
 p,cashier,products,read
 p,cashier,orders,read
@@ -61,6 +65,8 @@ p,cashier,stocks,read
 p,cashier,user_payments,read
 p,cashier,tsm,write
 p,cashier,tsm,read
+p,cashier,order_payments,write
+p,cashier,order_payments,read
 
 g,admin,admin
 g,owner,owner

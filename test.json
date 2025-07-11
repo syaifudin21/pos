@@ -4,9 +4,10 @@
         "uuid": "9e40485b-c726-4b7f-960a-3d35f45532c4",
         "order_date": "2025-07-11T03:52:28+08:00",
         "total_amount": 17000,
+        "paid_amount": 10000,
         "payment_method": "Cash",
         "status": "completed",
-        "user" : {
+        "created_by": {
             "uuid": "uuid_user",
             "name": "name user"
         },
@@ -16,20 +17,44 @@
             "adderss": "alamat outlet",
             "contact": "contact outlet"
         },
+        "payments": [
+            {
+                "payment_method_id": "1",
+                "paid_amount": 7000,
+                "name": "Cash",
+                "payment_method": "cash",
+                "payment_channel": "manual",
+                "is_paid": true,
+                "reference_id": "",
+                "created_at": "2025-07-11T03:52:28+08:00",
+                "paid_at": "2025-07-11T03:52:28+08:00"
+            },
+            {
+                "payment_method_id": "2",
+                "paid_amount": 10000,
+                "name": "QRIS",
+                "payment_method": "qris",
+                "payment_channel": "qris",
+                "is_paid": true,
+                "reference_id": "",
+                "created_at": "2025-07-11T03:52:28+08:00",
+                "paid_at": "2025-07-11T03:52:28+08:00"
+            }
+        ],
         "items": [
-        {
-            "product_uuid": "{{main_product_uuid}}",
-            "product_variant_uuid": "{{product_uuid}}",
-            "name": "name product",
-            "quantity": 1,
-            "add_ons": [
-                {
-                    "name": "name add on",
-                    "add_on_uuid": "{{uuid_add_on}}",
-                    "quantity": 1
-                }
-            ]
-        }
-    ]
+            {
+                "product_uuid": "{{main_product_uuid}}",
+                "product_variant_uuid": "{{product_uuid}}",
+                "name": "name product",
+                "quantity": 1,
+                "add_ons": [
+                    {
+                        "name": "name add on",
+                        "add_on_uuid": "{{uuid_add_on}}",
+                        "quantity": 1
+                    }
+                ]
+            }
+        ]
     }
 }
