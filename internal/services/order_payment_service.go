@@ -84,7 +84,7 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		OrderID:         order.ID,
 		PaymentMethodID: req.PaymentMethodID,
 		AmountPaid:      amountToPay,
-		PaidAt:          &now,
+		PaidAt:          nil,   // Set to nil initially
 		IsPaid:          false, // Initially set to false
 		ChangeAmount:    changeAmount,
 		CustomerName:    req.CustomerName,
@@ -92,14 +92,39 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		CustomerPhone:   req.CustomerPhone,
 	}
 
-	// Handle iPaymu payment
+	// Handle non-iPaymu payments first
+	if paymentMethod.Issuer != "iPaymu" {
+		orderPayment.IsPaid = true
+		orderPayment.PaidAt = &now
+
+		// Update order's paid amount
+		order.PaidAmount += amountToPay
+		if order.PaidAmount >= order.TotalAmount {
+			order.Status = "completed"
+		}
+
+		if err := tx.Save(&order).Error; err != nil {
+			tx.Rollback()
+			log.Printf("Error updating order paid amount for non-iPaymu: %v", err)
+			return nil, errors.New("failed to update order paid amount")
+		}
+	}
+
+	// Ensure Extra is an empty JSON object if not set by iPaymu
+	if orderPayment.Extra == "" {
+		orderPayment.Extra = "{}"
+	}
+
+	// Create the order payment record for all payment types
+	if err := tx.Create(&orderPayment).Error; err != nil {
+		tx.Rollback()
+		log.Printf("Error creating order payment: %v", err)
+		return nil, errors.New("failed to create order payment")
+	}
+
+	// Handle iPaymu payment AFTER creating the base order payment record
 	if paymentMethod.Issuer == "iPaymu" {
-		// For iPaymu, IsPaid remains false until callback
-		// Order status and paid amount will be updated in iPaymu callback
 		// Preload order items to get product details
-		// Note: This preloading is done outside the main transaction to avoid issues if the transaction rolls back.
-		// However, for iPaymu, we need the product details before creating the payment record.
-		// If order items are not already loaded, load them here.
 		if len(order.OrderItems) == 0 {
 			if err := s.DB.Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").First(&order, order.ID).Error; err != nil {
 				tx.Rollback()
@@ -119,8 +144,8 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		log.Printf("Calling iPaymuService.CreateDirectPayment with products: %v, qtys: %v, prices: %v", products, qtys, prices)
 		ipaymuRes, err := s.IpaymuService.CreateDirectPayment(
 			userID,
-			"Order Payment",     // ServiceName
-			order.Uuid.String(), // ServiceRefID
+			"Order Payment",            // ServiceName
+			orderPayment.Uuid.String(), // ServiceRefID
 			products,
 			qtys,
 			prices,
@@ -141,48 +166,31 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 			if trxId, ok := data["TransactionId"].(string); ok {
 				orderPayment.ReferenceID = trxId
 			}
-		}
-		// Store the full iPaymu response in the Extra field
-		rawExtra, err := json.Marshal(ipaymuRes["Data"].(map[string]interface{}))
-		if err != nil {
-			log.Printf("Failed to marshal iPaymu response to JSON for Extra field: %v", err)
-			// Continue without extra data if marshaling fails
-		} else {
-			orderPayment.Extra = string(rawExtra)
-		}
-		// You might want to update PaidAt based on iPaymu response if it provides a specific timestamp
-	} else {
-		// For non-iPaymu payments, mark as paid and update order status immediately
-		orderPayment.IsPaid = true
-		orderPayment.PaidAt = &now
-
-		// Update order's paid amount
-		order.PaidAmount += amountToPay
-		if order.PaidAmount >= order.TotalAmount {
-			order.Status = "completed"
+			// Store the full iPaymu response in the Extra field
+			rawExtra, err := json.Marshal(data)
+			if err != nil {
+				log.Printf("Failed to marshal iPaymu response to JSON for Extra field: %v", err)
+				// Continue without extra data if marshaling fails
+			} else {
+				orderPayment.Extra = string(rawExtra)
+			}
 		}
 
-		if err := tx.Save(&order).Error; err != nil {
+		// Update the order payment record with iPaymu details
+		if err := tx.Save(&orderPayment).Error; err != nil {
 			tx.Rollback()
-			log.Printf("Error updating order paid amount for non-iPaymu: %v", err)
-			return nil, errors.New("failed to update order paid amount")
+			log.Printf("Error updating order payment with iPaymu details: %v", err)
+			return nil, errors.New("failed to update order payment with iPaymu details")
 		}
-	}
-
-	if err := tx.Create(&orderPayment).Error; err != nil {
-		tx.Rollback()
-		log.Printf("Error creating order payment: %v", err)
-		return nil, errors.New("failed to create order payment")
 	}
 
 	// Only commit if iPaymu payment or if order status was updated for non-iPaymu
 	// For iPaymu, the order status update will happen in the callback
-	if paymentMethod.Issuer == "iPaymu" || orderPayment.IsPaid {
-		if err := tx.Commit().Error; err != nil {
-			tx.Rollback()
-			log.Printf("Error committing order payment transaction: %v", err)
-			return nil, errors.New("failed to complete order payment")
-		}
+	// Always commit the transaction here, as the orderPayment record is created.
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		log.Printf("Error committing order payment transaction: %v", err)
+		return nil, errors.New("failed to complete order payment")
 	}
 
 	// Unmarshal Extra field from string to interface{} for the response DTO
@@ -209,4 +217,42 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		ChangeAmount:    orderPayment.ChangeAmount,
 		Extra:           extraData,
 	}, nil
+}
+
+// updateOrderAndPaymentStatus is a helper function to update order payment and order status
+func (s *OrderPaymentService) updateOrderAndPaymentStatus(tx *gorm.DB, orderPayment *models.OrderPayment, amountPaid float64) error {
+	now := time.Now()
+	orderPayment.IsPaid = true
+	orderPayment.PaidAt = &now
+
+	if err := tx.Save(orderPayment).Error; err != nil {
+		return fmt.Errorf("failed to update order payment status: %w", err)
+	}
+
+	var order models.Order
+	if err := tx.Where("id = ?", orderPayment.OrderID).First(&order).Error; err != nil {
+		return fmt.Errorf("order not found for order payment %s: %w", orderPayment.Uuid.String(), err)
+	}
+
+	// Update order's paid amount and status
+	order.PaidAmount += amountPaid
+	if order.PaidAmount >= order.TotalAmount {
+		order.Status = "completed"
+	}
+
+	if err := tx.Save(&order).Error; err != nil {
+		return fmt.Errorf("failed to update order paid amount and status: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateOrderPaymentAndStatus updates the order payment and order status based on iPaymu notification
+func (s *OrderPaymentService) UpdateOrderPaymentAndStatus(tx *gorm.DB, serviceRefID string, amountPaid float64) error {
+	var orderPayment models.OrderPayment
+	if err := tx.Where("uuid = ?", serviceRefID).First(&orderPayment).Error; err != nil {
+		return fmt.Errorf("order payment not found for ref ID %s: %w", serviceRefID, err)
+	}
+
+	return s.updateOrderAndPaymentStatus(tx, &orderPayment, amountPaid)
 }

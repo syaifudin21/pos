@@ -275,7 +275,7 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 				ReferenceID:     payment.ReferenceID,
 				CreatedAt:       payment.CreatedAt.Format(time.RFC3339),
 				PaidAt:          payment.PaidAt,
-				Extra:           func() interface{} {
+				Extra: func() interface{} {
 					var extraData interface{}
 					if payment.Extra != "" {
 						err := json.Unmarshal([]byte(payment.Extra), &extraData)

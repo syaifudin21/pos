@@ -10,7 +10,7 @@ type OrderPayment struct {
 	PaymentMethod   PaymentMethod `json:"payment_method"`
 	AmountPaid      float64       `gorm:"not null;column:amount_paid;default:0" json:"amount_paid"`
 	ReferenceID     string        `gorm:"type:varchar(255)" json:"reference_id"`
-	IsPaid          bool          `gorm:"default:true" json:"is_paid"`
+	IsPaid          bool          `json:"is_paid"`
 	PaidAt          *time.Time    `json:"paid_at"`
 	CustomerName    string        `gorm:"type:varchar(255)" json:"customer_name"`
 	CustomerEmail   string        `gorm:"type:varchar(255)" json:"customer_email"`

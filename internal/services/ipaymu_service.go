@@ -26,6 +26,7 @@ type IpaymuService struct {
 	ApiKey             string
 	DB                 *gorm.DB
 	UserContextService *UserContextService
+	OrderPaymentService *OrderPaymentService // New dependency
 }
 
 func NewIpaymuService(db *gorm.DB, userContextService *UserContextService) *IpaymuService {
@@ -36,6 +37,10 @@ func NewIpaymuService(db *gorm.DB, userContextService *UserContextService) *Ipay
 		DB:                 db,
 		UserContextService: userContextService,
 	}
+}
+
+func (s *IpaymuService) SetOrderPaymentService(orderPaymentService *OrderPaymentService) {
+	s.OrderPaymentService = orderPaymentService
 }
 
 func (s *IpaymuService) header(body interface{}, method string) map[string]string {
@@ -292,37 +297,12 @@ func (s *IpaymuService) NotifyDirectPayment(TrxId int, Status string, Settlement
 		}
 	}
 
-	// Handle Order Payment specific updates
+	// Handle Order Payment specific updates by calling OrderPaymentService
 	if log.ServiceName == "Order Payment" && Status == "berhasil" {
-		var orderPayment models.OrderPayment
-		if err := tx.Where("uuid = ?", log.ServiceRefID).First(&orderPayment).Error; err != nil {
+		// Pass the transaction to the OrderPaymentService function
+		if err := s.OrderPaymentService.UpdateOrderPaymentAndStatus(tx, log.ServiceRefID, log.Amount); err != nil {
 			tx.Rollback()
-			return fmt.Errorf("order payment not found for ref ID %s: %w", log.ServiceRefID, err)
-		}
-
-		orderPayment.IsPaid = true
-		orderPayment.PaidAt = &dateNow
-
-		if err := tx.Save(&orderPayment).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("failed to update order payment status: %w", err)
-		}
-
-		var order models.Order
-		if err := tx.Where("id = ?", orderPayment.OrderID).First(&order).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("order not found for order payment %s: %w", orderPayment.Uuid.String(), err)
-		}
-
-		// Update order's paid amount and status
-		order.PaidAmount += orderPayment.AmountPaid
-		if order.PaidAmount >= order.TotalAmount {
-			order.Status = "completed"
-		}
-
-		if err := tx.Save(&order).Error; err != nil {
-			tx.Rollback()
-			return fmt.Errorf("failed to update order paid amount and status: %w", err)
+			return fmt.Errorf("failed to update order payment and status via OrderPaymentService: %w", err)
 		}
 	}
 
