@@ -67,6 +67,8 @@ func (h *OrderHandler) GetOrdersByOutlet(c echo.Context) error {
 		return JSONError(c, http.StatusBadRequest, "invalid_outlet_uuid_format")
 	}
 
+	status := c.QueryParam("status") // Get status query parameter
+
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
 	if err != nil {
 		return JSONError(c, http.StatusUnauthorized, err.Error())
@@ -77,7 +79,7 @@ func (h *OrderHandler) GetOrdersByOutlet(c echo.Context) error {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}
 
-	orders, err := h.OrderService.GetOrdersByOutlet(outletUuid, ownerID)
+	orders, err := h.OrderService.GetOrdersByOutlet(outletUuid, ownerID, status)
 	if err != nil {
 		return JSONError(c, MapErrorToStatusCode(err), err.Error())
 	}

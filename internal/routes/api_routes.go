@@ -39,7 +39,7 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 	orderService := services.NewOrderService(db, stockService, ipaymuService, userContextService)
 	orderHandler := handlers.NewOrderHandler(orderService, userContextService)
 
-	orderPaymentService := services.NewOrderPaymentService(db, userContextService)
+	orderPaymentService := services.NewOrderPaymentService(db, userContextService, ipaymuService)
 	orderPaymentHandler := handlers.NewOrderPaymentHandler(orderPaymentService, userContextService)
 
 	reportService := services.NewReportService(db)

@@ -11,6 +11,7 @@ type CreateOrderPaymentRequest struct {
 	PaymentMethodID uint      `json:"payment_method_id" validate:"required"`
 	AmountPaid      float64   `json:"amount_paid" validate:"required,gt=0"`
 	CustomerName    string    `json:"customer_name"`
+	CustomerEmail   string    `json:"customer_email"`
 	CustomerPhone   string    `json:"customer_phone"`
 }
 
@@ -21,6 +22,7 @@ type OrderPaymentResponse struct {
 	PaymentName     string     `json:"payment_name"`
 	AmountPaid      float64    `json:"amount_paid"`
 	CustomerName    string     `json:"customer_name"`
+	CustomerEmail   string     `json:"customer_email"`
 	CustomerPhone   string     `json:"customer_phone"`
 	ChangeAmount    float64    `json:"change_amount"`
 	CreatedAt       string     `json:"created_at"`

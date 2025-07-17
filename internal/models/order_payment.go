@@ -13,6 +13,7 @@ type OrderPayment struct {
 	IsPaid          bool          `gorm:"default:true" json:"is_paid"`
 	PaidAt          *time.Time    `json:"paid_at"`
 	CustomerName    string        `gorm:"type:varchar(255)" json:"customer_name"`
+	CustomerEmail   string        `gorm:"type:varchar(255)" json:"customer_email"`
 	CustomerPhone   string        `gorm:"type:varchar(255)" json:"customer_phone"`
 	ChangeAmount    float64       `gorm:"default:0" json:"change_amount"`
 }

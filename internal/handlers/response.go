@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/pkg/localization"
 )
@@ -13,7 +14,8 @@ type SuccessResponse struct {
 }
 
 type ErrorResponse struct {
-	Message string `json:"message"`
+	Message string      `json:"message"`
+	Details interface{} `json:"details,omitempty"`
 }
 
 // JSONSuccess sends a success JSON response.
@@ -24,15 +26,31 @@ func JSONSuccess(c echo.Context, statusCode int, messageKey string, data interfa
 }
 
 // JSONError sends an error JSON response or redirects.
-func JSONError(c echo.Context, statusCode int, messageKey string, redirectURL ...string) error {
+func JSONError(c echo.Context, statusCode int, messageKey interface{}, redirectURL ...string) error {
 	lang := c.Request().Header.Get("Accept-Language")
-	localizedMessage := localization.GetLocalizedMessage(messageKey, lang)
+
+	var localizedMessage string
+	var details interface{}
+
+	switch msg := messageKey.(type) {
+	case string:
+		localizedMessage = localization.GetLocalizedMessage(msg, lang)
+	case validator.ValidationErrors:
+		localizedMessage = localization.GetLocalizedMessage("validation_error", lang)
+		errors := make(map[string]string)
+		for _, err := range msg {
+			errors[err.Field()] = localization.GetLocalizedMessage(err.Tag(), lang)
+		}
+		details = errors
+	default:
+		localizedMessage = localization.GetLocalizedMessage("unknown_error", lang)
+	}
 
 	if len(redirectURL) > 0 && redirectURL[0] != "" {
 		return c.Redirect(http.StatusTemporaryRedirect, redirectURL[0])
 	}
 
-	return c.JSON(statusCode, ErrorResponse{Message: localizedMessage})
+	return c.JSON(statusCode, ErrorResponse{Message: localizedMessage, Details: details})
 }
 
 // MapErrorToStatusCode maps common error messages to HTTP status codes.

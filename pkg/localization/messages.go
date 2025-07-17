@@ -259,6 +259,30 @@ var messages = map[string]map[string]string{
 		"en": "Contact is required.",
 		"id": "Kontak wajib diisi.",
 	},
+	"OrderUuid_required": {
+		"en": "Order UUID is required.",
+		"id": "UUID Pesanan wajib diisi.",
+	},
+	"PaymentMethodID_required": {
+		"en": "Payment Method ID is required.",
+		"id": "ID Metode Pembayaran wajib diisi.",
+	},
+	"AmountPaid_required": {
+		"en": "Amount Paid is required.",
+		"id": "Jumlah Pembayaran wajib diisi.",
+	},
+	"CustomerName_required": {
+		"en": "Customer Name is required.",
+		"id": "Nama Pelanggan wajib diisi.",
+	},
+	"CustomerEmail_required": {
+		"en": "Customer Email is required.",
+		"id": "Email Pelanggan wajib diisi.",
+	},
+	"CustomerPhone_required": {
+		"en": "Customer Phone is required.",
+		"id": "Telepon Pelanggan wajib diisi.",
+	},
 }
 
 func GetLocalizedMessage(messageKey, lang string) string {

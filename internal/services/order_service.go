@@ -176,7 +176,7 @@ func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderR
 }
 
 // GetOrdersByOutlet retrieves all orders for a specific outlet.
-func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uint) ([]dtos.OrderResponse, error) {
+func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uint, status string) ([]dtos.SimpleOrderResponse, error) {
 	ownerID, err := s.UserContextService.GetOwnerID(userID)
 	if err != nil {
 		return nil, err
@@ -187,21 +187,33 @@ func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uint) ([]d
 		return nil, errors.New("outlet not found")
 	}
 
-	if err := s.DB.Preload("User").Where("outlet_id = ? AND user_id = ?", outlet.ID, ownerID).Find(&orders).Error; err != nil {
+	query := s.DB.Preload("User").Where("outlet_id = ? AND user_id = ?", outlet.ID, ownerID)
+
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	if err := query.Find(&orders).Error; err != nil {
 		log.Printf("Error getting orders by outlet: %v", err)
 		return nil, errors.New("failed to retrieve orders")
 	}
 
-	var orderResponses []dtos.OrderResponse
+	var orderResponses []dtos.SimpleOrderResponse
 	for _, order := range orders {
-		// Load relations for each order
-		if err := s.DB.Preload("User").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").First(&order, order.ID).Error; err != nil {
-			log.Printf("Error preloading order relations for GetOrdersByOutlet: %v", err)
-			continue // Skip this order if relations cannot be loaded
-		}
-		orderResponses = append(orderResponses, *mapOrderToOrderResponse(order, outlet))
+		orderResponses = append(orderResponses, *mapOrderToSimpleOrderResponse(order))
 	}
 	return orderResponses, nil
+}
+
+func mapOrderToSimpleOrderResponse(order models.Order) *dtos.SimpleOrderResponse {
+	return &dtos.SimpleOrderResponse{
+		Uuid:          order.Uuid,
+		OrderDate:     order.CreatedAt.Format(time.RFC3339),
+		TotalAmount:   order.TotalAmount,
+		PaidAmount:    order.PaidAmount,
+		PaymentMethod: order.PaymentMethod,
+		Status:        order.Status,
+	}
 }
 
 func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.OrderResponse {

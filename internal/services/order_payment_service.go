@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -13,10 +14,11 @@ import (
 type OrderPaymentService struct {
 	DB                 *gorm.DB
 	UserContextService *UserContextService
+	IpaymuService      *IpaymuService
 }
 
-func NewOrderPaymentService(db *gorm.DB, userContextService *UserContextService) *OrderPaymentService {
-	return &OrderPaymentService{DB: db, UserContextService: userContextService}
+func NewOrderPaymentService(db *gorm.DB, userContextService *UserContextService, ipaymuService *IpaymuService) *OrderPaymentService {
+	return &OrderPaymentService{DB: db, UserContextService: userContextService, IpaymuService: ipaymuService}
 }
 
 func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequest, userID uint) (*dtos.OrderPaymentResponse, error) {
@@ -37,6 +39,24 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 	var paymentMethod models.PaymentMethod
 	if err := s.DB.Where("id = ? AND is_active = ?", req.PaymentMethodID, true).First(&paymentMethod).Error; err != nil {
 		return nil, errors.New("payment method not found or not active")
+	}
+
+	// Conditional validation for iPaymu
+	if paymentMethod.Issuer == "iPaymu" {
+		if req.CustomerName == "" {
+			return nil, errors.New("customer name is required for iPaymu payments")
+		}
+		if req.CustomerEmail == "" {
+			return nil, errors.New("customer email is required for iPaymu payments")
+		}
+		if req.CustomerPhone == "" {
+			return nil, errors.New("customer phone is required for iPaymu payments")
+		}
+	}
+
+	var user models.User
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return nil, errors.New("user not found")
 	}
 
 	tx := s.DB.Begin()
@@ -64,10 +84,68 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		PaymentMethodID: req.PaymentMethodID,
 		AmountPaid:      amountToPay,
 		CustomerName:    req.CustomerName,
+		CustomerEmail:   req.CustomerEmail,
 		CustomerPhone:   req.CustomerPhone,
 		PaidAt:          &now,
 		IsPaid:          true,
 		ChangeAmount:    changeAmount,
+	}
+
+	// Handle iPaymu payment
+	if paymentMethod.Issuer == "iPaymu" {
+		// Preload order items to get product details
+		// Note: This preloading is done outside the main transaction to avoid issues if the transaction rolls back.
+		// However, for iPaymu, we need the product details before creating the payment record.
+		// If order items are not already loaded, load them here.
+		if len(order.OrderItems) == 0 {
+			if err := s.DB.Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").First(&order, order.ID).Error; err != nil {
+				tx.Rollback()
+				return nil, errors.New("failed to preload order items for iPaymu payment")
+			}
+		}
+
+		var products []string
+		var qtys []int
+		var prices []int
+		for _, item := range order.OrderItems {
+			productName := ""
+			if item.Product != nil {
+				productName = item.Product.Name
+			} else if item.ProductVariant != nil && item.ProductVariant.Product.ID != 0 {
+				productName = item.ProductVariant.Product.Name
+			}
+			products = append(products, productName)
+			qtys = append(qtys, int(item.Quantity))
+			prices = append(prices, int(item.Price))
+		}
+
+					log.Printf("Calling iPaymuService.CreateDirectPayment with products: %v, qtys: %v, prices: %v", products, qtys, prices)
+			ipaymuRes, err := s.IpaymuService.CreateDirectPayment(
+			userID,
+			"Order Payment",     // ServiceName
+			order.Uuid.String(), // ServiceRefID
+			products,
+			qtys,
+			prices,
+			req.CustomerName,
+			req.CustomerEmail,
+			req.CustomerPhone,
+			paymentMethod.PaymentMethod,
+			paymentMethod.PaymentChannel,
+			nil, // account (optional)
+		)
+		if err != nil {
+			tx.Rollback()
+			log.Printf("iPaymu direct payment failed: %v", err)
+			return nil, fmt.Errorf("iPaymu direct payment failed: %w", err)
+		}
+
+		if data, ok := ipaymuRes["Data"].(map[string]interface{}); ok {
+			if trxId, ok := data["TransactionId"].(string); ok {
+				orderPayment.ReferenceID = trxId
+			}
+		}
+		// You might want to update PaidAt based on iPaymu response if it provides a specific timestamp
 	}
 
 	if err := tx.Create(&orderPayment).Error; err != nil {
@@ -101,6 +179,7 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		PaymentName:     paymentMethod.Name,
 		AmountPaid:      orderPayment.AmountPaid,
 		CustomerName:    orderPayment.CustomerName,
+		CustomerEmail:   orderPayment.CustomerEmail,
 		CustomerPhone:   orderPayment.CustomerPhone,
 		CreatedAt:       orderPayment.CreatedAt.Format("2006-01-02 15:04:05"),
 		IsPaid:          orderPayment.IsPaid,

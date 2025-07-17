@@ -1,7 +1,10 @@
 package dtos
 
-import "github.com/google/uuid"
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type CreateOrderRequest struct {
 	OutletUuid      uuid.UUID          `json:"outlet_uuid" validate:"required"`
@@ -40,6 +43,9 @@ type OrderPaymentDetailResponse struct {
 	Uuid            uuid.UUID  `json:"uuid"`
 	PaymentMethodID uint       `json:"payment_method_id"`
 	PaidAmount      float64    `json:"paid_amount"`
+	CustomerName    string     `json:"customer_name"`
+	CustomerEmail   string     `json:"customer_email"`
+	CustomerPhone   string     `json:"customer_phone"`
 	Name            string     `json:"name"` // Payment method name
 	PaymentMethod   string     `json:"payment_method"`
 	PaymentChannel  string     `json:"payment_channel"`
@@ -68,14 +74,23 @@ type OrderItemDetailResponse struct {
 
 // OrderResponse represents the comprehensive response structure for an order.
 type OrderResponse struct {
-	Uuid          uuid.UUID              `json:"uuid"`
-	OrderDate     string                 `json:"order_date"`
-	TotalAmount   float64                `json:"total_amount"`
-	PaidAmount    float64                `json:"paid_amount"`
-	PaymentMethod string                 `json:"payment_method"`
-	Status        string                 `json:"status"`
-	CreatedBy     *UserDetailResponse     `json:"created_by"`
-	Outlet        OutletDetailResponse   `json:"outlet"`
+	Uuid          uuid.UUID                    `json:"uuid"`
+	OrderDate     string                       `json:"order_date"`
+	TotalAmount   float64                      `json:"total_amount"`
+	PaidAmount    float64                      `json:"paid_amount"`
+	PaymentMethod string                       `json:"payment_method"`
+	Status        string                       `json:"status"`
+	CreatedBy     *UserDetailResponse          `json:"created_by"`
+	Outlet        OutletDetailResponse         `json:"outlet"`
 	Payments      []OrderPaymentDetailResponse `json:"payments"`
 	Items         []OrderItemDetailResponse    `json:"items"`
+}
+
+type SimpleOrderResponse struct {
+	Uuid          uuid.UUID `json:"uuid"`
+	OrderDate     string    `json:"order_date"`
+	TotalAmount   float64   `json:"total_amount"`
+	PaidAmount    float64   `json:"paid_amount"`
+	PaymentMethod string    `json:"payment_method"`
+	Status        string    `json:"status"`
 }

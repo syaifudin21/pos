@@ -4,14 +4,13 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/handlers"
 	"github.com/msyaifudin/pos/pkg/localization"
 )
 
-// ValidationMiddleware is a generic middleware for request validation.
-// It takes an empty DTO instance and a validator function.
-func ValidationMiddleware(dtoType interface{}, validatorFunc func(interface{}) []string) echo.MiddlewareFunc {
+func ValidationMiddleware(dtoType interface{}, validatorFunc func(interface{}) interface{}) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Create a new instance of the DTO type using reflection
@@ -27,14 +26,18 @@ func ValidationMiddleware(dtoType interface{}, validatorFunc func(interface{}) [
 			}
 
 			lang := c.Get("lang").(string)
-			if messageKeys := validatorFunc(req); messageKeys != nil {
-				localizedMessages := make([]string, 0, len(messageKeys))
-				for _, key := range messageKeys {
-					localizedMessages = append(localizedMessages, localization.GetLocalizedMessage(key, lang))
+			if validationResult := validatorFunc(req); validationResult != nil {
+				if messageKeys, ok := validationResult.([]string); ok {
+					localizedMessages := make([]string, 0, len(messageKeys))
+					for _, key := range messageKeys {
+						localizedMessages = append(localizedMessages, localization.GetLocalizedMessage(key, lang))
+					}
+					return c.JSON(http.StatusBadRequest, map[string]interface{}{
+						"message": localizedMessages,
+					})
+				} else if ve, ok := validationResult.(validator.ValidationErrors); ok {
+					return handlers.JSONError(c, http.StatusBadRequest, ve)
 				}
-				return c.JSON(http.StatusBadRequest, map[string]interface{}{
-					"message": localizedMessages,
-				})
 			}
 
 			// Store the validated request in context
