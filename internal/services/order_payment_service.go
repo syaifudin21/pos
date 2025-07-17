@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -141,6 +142,14 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 				orderPayment.ReferenceID = trxId
 			}
 		}
+		// Store the full iPaymu response in the Extra field
+		rawExtra, err := json.Marshal(ipaymuRes["Data"].(map[string]interface{}))
+		if err != nil {
+			log.Printf("Failed to marshal iPaymu response to JSON for Extra field: %v", err)
+			// Continue without extra data if marshaling fails
+		} else {
+			orderPayment.Extra = string(rawExtra)
+		}
 		// You might want to update PaidAt based on iPaymu response if it provides a specific timestamp
 	} else {
 		// For non-iPaymu payments, mark as paid and update order status immediately
@@ -176,6 +185,15 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		}
 	}
 
+	// Unmarshal Extra field from string to interface{} for the response DTO
+	var extraData interface{}
+	if orderPayment.Extra != "" {
+		if err := json.Unmarshal([]byte(orderPayment.Extra), &extraData); err != nil {
+			log.Printf("Failed to unmarshal Extra field for response DTO: %v", err)
+			extraData = nil // Set to nil if unmarshaling fails
+		}
+	}
+
 	return &dtos.OrderPaymentResponse{
 		Uuid:            orderPayment.Uuid,
 		OrderUuid:       order.Uuid,
@@ -189,5 +207,6 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		IsPaid:          orderPayment.IsPaid,
 		PaidAt:          orderPayment.PaidAt,
 		ChangeAmount:    orderPayment.ChangeAmount,
+		Extra:           extraData,
 	}, nil
 }

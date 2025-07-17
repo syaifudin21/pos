@@ -16,4 +16,5 @@ type OrderPayment struct {
 	CustomerEmail   string        `gorm:"type:varchar(255)" json:"customer_email"`
 	CustomerPhone   string        `gorm:"type:varchar(255)" json:"customer_phone"`
 	ChangeAmount    float64       `gorm:"default:0" json:"change_amount"`
+	Extra           string        `gorm:"type:jsonb" json:"extra,omitempty"`
 }

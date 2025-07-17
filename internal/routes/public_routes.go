@@ -5,7 +5,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/msyaifudin/pos/internal/handlers"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"github.com/msyaifudin/pos/internal/services"
+	"github.com/msyaifudin/pos/internal/validators"
 	"gorm.io/gorm" // Import gorm
 )
 
@@ -18,5 +20,5 @@ func RegisterPublicRoutes(e *echo.Echo, db *gorm.DB) {
 	e.GET("", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Welcome to POS API!")
 	})
-	e.POST("/api/payment/ipaymu/notify", ipaymuHandler.IpaymuNotify)
+	e.POST("/api/payment/ipaymu/notify", ipaymuHandler.IpaymuNotify, WithValidation(&dtos.IpaymuNotifyRequest{}, validators.ValidateIpaymuNotify))
 }

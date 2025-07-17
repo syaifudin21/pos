@@ -28,5 +28,5 @@ type OrderPaymentResponse struct {
 	CreatedAt       string     `json:"created_at"`
 	IsPaid          bool       `json:"is_paid"` // This might be derived or from a new field in OrderPayment model
 	PaidAt          *time.Time `json:"paid_at"` // Use pointer for nullable timestamp
-
+	Extra           interface{} `json:"extra,omitempty"`
 }

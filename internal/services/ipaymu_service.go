@@ -257,9 +257,16 @@ func (s *IpaymuService) CreateDirectPayment(
 
 // UpdateIpaymuLogStatus updates the IpaymuLog status and timestamps based on notification
 func (s *IpaymuService) NotifyDirectPayment(TrxId int, Status string, SettlementStatus string) error {
-	// INSERT_YOUR_CODE
+	tx := s.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
 	var log models.IpaymuLog
-	if err := s.DB.Where("reference_ipaymu = ?", fmt.Sprintf("%v", TrxId)).First(&log).Error; err != nil {
+	if err := tx.Where("reference_ipaymu = ?", fmt.Sprintf("%v", TrxId)).First(&log).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 
@@ -279,9 +286,48 @@ func (s *IpaymuService) NotifyDirectPayment(TrxId int, Status string, Settlement
 	}
 
 	if updated {
-		if err := s.DB.Save(&log).Error; err != nil {
+		if err := tx.Save(&log).Error; err != nil {
+			tx.Rollback()
 			return err
 		}
+	}
+
+	// Handle Order Payment specific updates
+	if log.ServiceName == "Order Payment" && Status == "berhasil" {
+		var orderPayment models.OrderPayment
+		if err := tx.Where("uuid = ?", log.ServiceRefID).First(&orderPayment).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("order payment not found for ref ID %s: %w", log.ServiceRefID, err)
+		}
+
+		orderPayment.IsPaid = true
+		orderPayment.PaidAt = &dateNow
+
+		if err := tx.Save(&orderPayment).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to update order payment status: %w", err)
+		}
+
+		var order models.Order
+		if err := tx.Where("id = ?", orderPayment.OrderID).First(&order).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("order not found for order payment %s: %w", orderPayment.Uuid.String(), err)
+		}
+
+		// Update order's paid amount and status
+		order.PaidAmount += orderPayment.AmountPaid
+		if order.PaidAmount >= order.TotalAmount {
+			order.Status = "completed"
+		}
+
+		if err := tx.Save(&order).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to update order paid amount and status: %w", err)
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

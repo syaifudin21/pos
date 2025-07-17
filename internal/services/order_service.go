@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"time"
@@ -274,6 +275,17 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 				ReferenceID:     payment.ReferenceID,
 				CreatedAt:       payment.CreatedAt.Format(time.RFC3339),
 				PaidAt:          payment.PaidAt,
+				Extra:           func() interface{} {
+					var extraData interface{}
+					if payment.Extra != "" {
+						err := json.Unmarshal([]byte(payment.Extra), &extraData)
+						if err != nil {
+							log.Printf("Failed to unmarshal Extra field for OrderPaymentDetailResponse: %v", err)
+							return nil // Return nil if unmarshaling fails
+						}
+					}
+					return extraData
+				}(),
 			})
 		}
 	}

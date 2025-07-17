@@ -54,6 +54,7 @@ type OrderPaymentDetailResponse struct {
 	CreatedAt       string     `json:"created_at"`
 	PaidAt          *time.Time `json:"paid_at"` // Use pointer for nullable timestamp
 	ChangeAmount    float64    `json:"change_amount"`
+	Extra           interface{} `json:"extra,omitempty"`
 }
 
 // OrderItemAddonDetailResponse for add_ons within order items
