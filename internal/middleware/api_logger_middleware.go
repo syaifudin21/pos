@@ -63,7 +63,7 @@ func APILoggerMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				"response": respBody,
 			},
 		}
-		elasticsearch.LogAPI(logData)
+		elasticsearch.LogAPI("apilog", logData)
 
 		return err
 	}

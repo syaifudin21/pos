@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/pkg/elasticsearch"
 	"gorm.io/gorm"
 )
 
@@ -136,6 +137,8 @@ func (s *IpaymuService) CreateDirectPayment(
 	name, email, phone, method, channel string,
 	account *string,
 ) (map[string]interface{}, error) {
+	start := time.Now()
+
 	// Hitung total amount dari seluruh produk
 	amount := 0
 	for i := range product {
@@ -165,10 +168,47 @@ func (s *IpaymuService) CreateDirectPayment(
 	}
 	endPoint := "/api/v2/payment/direct"
 
+	// Capture request body for logging
+	reqBodyBytes, _ := json.Marshal(body)
+	reqBodyStr := string(reqBodyBytes)
+
 	res, err := s.send(endPoint, body, "application/json", "POST")
 	if err != nil {
+		// Log error response
+		logData := elasticsearch.APILog{
+			Method:     "POST",
+			Path:       endPoint,
+			Status:     0, // No HTTP status if request failed
+			DurationMs: time.Since(start).Milliseconds(),
+			Error:      err.Error(),
+			Extra: map[string]interface{}{
+				"request_payload": reqBodyStr,
+				"service_name":    ServiceName,
+				"service_ref_id":  ServiceRefID,
+			},
+		}
+		elasticsearch.LogAPI("ipaymu_curl_logs", logData)
 		return nil, err
 	}
+
+	// Capture response body for logging
+	respBodyBytes, _ := json.Marshal(res)
+	respBodyStr := string(respBodyBytes)
+
+	// Log successful response
+	logData := elasticsearch.APILog{
+		Method:     "POST",
+		Path:       endPoint,
+		Status:     200, // Assuming 200 OK for successful iPaymu response
+		DurationMs: time.Since(start).Milliseconds(),
+		Extra: map[string]interface{}{
+			"request_payload":  reqBodyStr,
+			"response_payload": respBodyStr,
+			"service_name":     ServiceName,
+			"service_ref_id":   ServiceRefID,
+		},
+	}
+	elasticsearch.LogAPI("ipaymu_curl_logs", logData)
 
 	// Ambil referenceIpaymu, totalStr, reqBodyStr, bodyBytes dari response
 	var referenceIpaymu string

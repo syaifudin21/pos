@@ -45,7 +45,7 @@ func InitElasticLogger() {
 	log.Println("Elasticsearch logger siap!")
 }
 
-func LogAPI(logData APILog) {
+func LogAPI(indexName string, logData APILog) {
 	if esClient == nil {
 		log.Println("Elasticsearch client belum diinisialisasi")
 		return
@@ -56,10 +56,7 @@ func LogAPI(logData APILog) {
 		log.Printf("Gagal marshal log: %v", err)
 		return
 	}
-	indexName := os.Getenv("ELASTIC_LOG_INDEX")
-	if indexName == "" {
-		indexName = "apilog" // default
-	}
+	
 	res, err := esClient.Index(
 		indexName,
 		strings.NewReader(string(body)),
