@@ -73,6 +73,7 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 		var price float64
 		var productID *uint
 		var variantID *uint
+		var productName string
 
 		if item.ProductVariantUuid != uuid.Nil {
 			if err := tx.Where("uuid = ? AND user_id = ?", item.ProductVariantUuid, ownerID).First(&variant).Error; err != nil {
@@ -81,6 +82,7 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 			}
 			price = variant.Price
 			variantID = &variant.ID
+			productName = variant.Name // Use variant name
 		} else if item.ProductUuid != uuid.Nil {
 			if err := tx.Where("uuid = ? AND user_id = ?", item.ProductUuid, ownerID).First(&product).Error; err != nil {
 				tx.Rollback()
@@ -88,6 +90,7 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 			}
 			price = product.Price
 			productID = &product.ID
+			productName = product.Name // Use product name
 		} else {
 			tx.Rollback()
 			return nil, errors.New("product_uuid or product_variant_uuid is required for each item")
@@ -104,6 +107,7 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 			ProductVariantID: variantID,
 			Quantity:         float64(item.Quantity),
 			Price:            price,
+			ProductName:      productName,
 		}
 
 		if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&orderItem).Error; err != nil {

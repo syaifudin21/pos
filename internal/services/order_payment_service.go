@@ -110,19 +110,13 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		var qtys []int
 		var prices []int
 		for _, item := range order.OrderItems {
-			productName := ""
-			if item.Product != nil {
-				productName = item.Product.Name
-			} else if item.ProductVariant != nil && item.ProductVariant.Product.ID != 0 {
-				productName = item.ProductVariant.Product.Name
-			}
-			products = append(products, productName)
+			products = append(products, item.ProductName)
 			qtys = append(qtys, int(item.Quantity))
 			prices = append(prices, int(item.Price))
 		}
 
-					log.Printf("Calling iPaymuService.CreateDirectPayment with products: %v, qtys: %v, prices: %v", products, qtys, prices)
-			ipaymuRes, err := s.IpaymuService.CreateDirectPayment(
+		log.Printf("Calling iPaymuService.CreateDirectPayment with products: %v, qtys: %v, prices: %v", products, qtys, prices)
+		ipaymuRes, err := s.IpaymuService.CreateDirectPayment(
 			userID,
 			"Order Payment",     // ServiceName
 			order.Uuid.String(), // ServiceRefID
