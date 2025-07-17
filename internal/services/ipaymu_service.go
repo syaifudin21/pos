@@ -193,6 +193,14 @@ func (s *IpaymuService) CreateDirectPayment(
 		RequestAt:       time.Now(),
 		ReferenceIpaymu: referenceIpaymu,
 	}
+
+	// Convert the entire response map to a JSON string and store it
+	responseJSON, err := json.Marshal(res)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal iPaymu response to JSON: %w", err)
+	}
+	log.ResponseData = string(responseJSON)
+
 	// Ubah totalStr ke float64
 	var amountFloat float64
 	if totalStr != "" {

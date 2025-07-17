@@ -18,6 +18,7 @@ type IpaymuLog struct {
 	RequestAt       time.Time  `json:"request_at"`
 	SuccessAt       *time.Time `json:"success_at"`
 	SettlementAt    *time.Time `json:"settlement_at"`
+	ResponseData    string     `gorm:"type:jsonb" json:"response_data"` // To store the full iPaymu response
 }
 
 

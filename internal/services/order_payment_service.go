@@ -84,7 +84,7 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		PaymentMethodID: req.PaymentMethodID,
 		AmountPaid:      amountToPay,
 		PaidAt:          &now,
-		IsPaid:          true,
+		IsPaid:          false, // Initially set to false
 		ChangeAmount:    changeAmount,
 		CustomerName:    req.CustomerName,
 		CustomerEmail:   req.CustomerEmail,
@@ -93,6 +93,8 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 
 	// Handle iPaymu payment
 	if paymentMethod.Issuer == "iPaymu" {
+		// For iPaymu, IsPaid remains false until callback
+		// Order status and paid amount will be updated in iPaymu callback
 		// Preload order items to get product details
 		// Note: This preloading is done outside the main transaction to avoid issues if the transaction rolls back.
 		// However, for iPaymu, we need the product details before creating the payment record.
@@ -146,6 +148,22 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 			}
 		}
 		// You might want to update PaidAt based on iPaymu response if it provides a specific timestamp
+	} else {
+		// For non-iPaymu payments, mark as paid and update order status immediately
+		orderPayment.IsPaid = true
+		orderPayment.PaidAt = &now
+
+		// Update order's paid amount
+		order.PaidAmount += amountToPay
+		if order.PaidAmount >= order.TotalAmount {
+			order.Status = "completed"
+		}
+
+		if err := tx.Save(&order).Error; err != nil {
+			tx.Rollback()
+			log.Printf("Error updating order paid amount for non-iPaymu: %v", err)
+			return nil, errors.New("failed to update order paid amount")
+		}
 	}
 
 	if err := tx.Create(&orderPayment).Error; err != nil {
@@ -154,22 +172,14 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		return nil, errors.New("failed to create order payment")
 	}
 
-	// Update order's paid amount
-	order.PaidAmount += amountToPay
-	if order.PaidAmount >= order.TotalAmount {
-		order.Status = "completed"
-	}
-
-	if err := tx.Save(&order).Error; err != nil {
-		tx.Rollback()
-		log.Printf("Error updating order paid amount: %v", err)
-		return nil, errors.New("failed to update order paid amount")
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		tx.Rollback()
-		log.Printf("Error committing order payment transaction: %v", err)
-		return nil, errors.New("failed to complete order payment")
+	// Only commit if iPaymu payment or if order status was updated for non-iPaymu
+	// For iPaymu, the order status update will happen in the callback
+	if paymentMethod.Issuer == "iPaymu" || orderPayment.IsPaid {
+		if err := tx.Commit().Error; err != nil {
+			tx.Rollback()
+			log.Printf("Error committing order payment transaction: %v", err)
+			return nil, errors.New("failed to complete order payment")
+		}
 	}
 
 	return &dtos.OrderPaymentResponse{
