@@ -83,12 +83,12 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		OrderID:         order.ID,
 		PaymentMethodID: req.PaymentMethodID,
 		AmountPaid:      amountToPay,
-		CustomerName:    req.CustomerName,
-		CustomerEmail:   req.CustomerEmail,
-		CustomerPhone:   req.CustomerPhone,
 		PaidAt:          &now,
 		IsPaid:          true,
 		ChangeAmount:    changeAmount,
+		CustomerName:    req.CustomerName,
+		CustomerEmail:   req.CustomerEmail,
+		CustomerPhone:   req.CustomerPhone,
 	}
 
 	// Handle iPaymu payment

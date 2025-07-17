@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/msyaifudin/pos/internal/models"
+	"github.com/msyaifudin/pos/internal/models/dtos"
 	"gorm.io/gorm"
 )
 
@@ -150,4 +151,37 @@ func (s *UserPaymentService) GetUserIpaymuVa(userID uint) (string, error) {
 		return "", err
 	}
 	return userIpaymu.VaIpaymu, nil
+}
+
+func (s *UserPaymentService) ListPaymentMethodsWithUserStatus(userID uint) ([]dtos.PaymentMethodWithUserStatusResponse, error) {
+	var paymentMethods []models.PaymentMethod
+	var result []dtos.PaymentMethodWithUserStatusResponse
+
+	// Find all active payment methods
+	if err := s.DB.Where("is_active = ?", true).Find(&paymentMethods).Error; err != nil {
+		return nil, err
+	}
+
+	for _, pm := range paymentMethods {
+		var userPayment models.UserPayment
+		isUserActive := false
+
+		// Check if this payment method is active for the current user
+		err := s.DB.Where("user_id = ? AND payment_method_id = ? AND is_active = ?", userID, pm.ID, true).First(&userPayment).Error
+		if err == nil {
+			isUserActive = true
+		}
+
+		result = append(result, dtos.PaymentMethodWithUserStatusResponse{
+			ID:             pm.ID,
+			Name:           pm.Name,
+			Type:           pm.Type,
+			PaymentMethod:  pm.PaymentMethod,
+			PaymentChannel: pm.PaymentChannel,
+			Issuer:         pm.Issuer,
+			IsUserActive:   isUserActive,
+		})
+	}
+
+	return result, nil
 }

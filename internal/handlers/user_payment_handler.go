@@ -139,3 +139,17 @@ func (h *UserPaymentHandler) ListUserPayments(c echo.Context) error {
 
 	return JSONSuccess(c, http.StatusOK, "user_payments_listed_successfully", responses)
 }
+
+func (h *UserPaymentHandler) ListAllPaymentMethodsWithUserStatus(c echo.Context) error {
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_user_id")
+	}
+
+	paymentMethods, err := h.UserPaymentService.ListPaymentMethodsWithUserStatus(userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "payment_methods_with_user_status_listed_successfully", paymentMethods)
+}

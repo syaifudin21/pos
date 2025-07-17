@@ -70,7 +70,7 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 		userPaymentGroup := authorizedGroup.Group("/account/payment-methods")
 		userPaymentGroup.POST("/activate", userPaymentHandler.ActivateUserPayment, internalmw.Authorize("user_payments", "activate"))
 		userPaymentGroup.POST("/deactivate", userPaymentHandler.DeactivateUserPayment, internalmw.Authorize("user_payments", "deactivate"))
-		userPaymentGroup.GET("", userPaymentHandler.ListUserPayments, internalmw.Authorize("user_payments", "read"))
+		userPaymentGroup.GET("", userPaymentHandler.ListAllPaymentMethodsWithUserStatus, internalmw.Authorize("user_payments", "read"))
 
 		// Product routes
 		productGroup := authorizedGroup.Group("/products", internalmw.Authorize("products", "read"))

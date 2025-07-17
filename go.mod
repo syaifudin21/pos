@@ -15,6 +15,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.13.4
+	github.com/lib/pq v1.10.2
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
 	golang.org/x/crypto v0.38.0
 	golang.org/x/oauth2 v0.30.0

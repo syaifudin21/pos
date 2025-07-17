@@ -60,7 +60,7 @@ func MapErrorToStatusCode(err error) int {
 		return http.StatusNotFound
 	case "invalid credentials", "unauthorized", "user not verified":
 		return http.StatusUnauthorized
-	case "username already exists", "invalid input", "validation error":
+	case "username already exists", "invalid input", "validation error", "ipaymu VA already registered":
 		return http.StatusBadRequest
 	case "forbidden":
 		return http.StatusForbidden

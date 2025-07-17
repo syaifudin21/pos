@@ -283,6 +283,10 @@ var messages = map[string]map[string]string{
 		"en": "Customer Phone is required.",
 		"id": "Telepon Pelanggan wajib diisi.",
 	},
+	"ipaymu_va_already_registered": {
+		"en": "Your iPaymu VA is already registered.",
+		"id": "VA iPaymu Anda sudah terdaftar.",
+	},
 }
 
 func GetLocalizedMessage(messageKey, lang string) string {
