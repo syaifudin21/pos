@@ -287,6 +287,14 @@ var messages = map[string]map[string]string{
 		"en": "Your iPaymu VA is already registered.",
 		"id": "VA iPaymu Anda sudah terdaftar.",
 	},
+	"order_retrieved_successfully": {
+		"en": "Order retrieved successfully.",
+		"id": "Pesanan berhasil diambil.",
+	},
+	"order_item_deleted_successfully": {
+		"en": "Order item deleted successfully.",
+		"id": "Item pesanan berhasil dihapus.",
+	},
 }
 
 func GetLocalizedMessage(messageKey, lang string) string {

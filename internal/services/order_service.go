@@ -218,15 +218,23 @@ func (s *OrderService) UpdateOrderItem(orderUuid uuid.UUID, req dtos.UpdateOrder
 	}()
 
 	var order models.Order
-	if err := tx.Preload("OrderItems.AddOns").Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&order).Error; err != nil {
+	if err := tx.Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&order).Error; err != nil {
 		tx.Rollback()
 		return nil, errors.New("order not found")
 	}
 
 	var orderItem models.OrderItem
-	if err := tx.Preload("AddOns").Where("uuid = ? AND order_id = ?", req.OrderItemUuid, order.ID).First(&orderItem).Error; err != nil {
+	if err := tx.Preload("AddOns").Preload("OrderPaymentItems.OrderPayment").Where("uuid = ? AND order_id = ?", req.OrderItemUuid, order.ID).First(&orderItem).Error; err != nil {
 		tx.Rollback()
 		return nil, errors.New("order item not found")
+	}
+
+	// Check if the order item is already paid
+	for _, opItem := range orderItem.OrderPaymentItems {
+		if opItem.OrderPayment != nil && opItem.OrderPayment.IsPaid {
+			tx.Rollback()
+			return nil, errors.New("cannot update a paid order item")
+		}
 	}
 
 	// Return stock for old item and add-ons
@@ -333,7 +341,7 @@ func (s *OrderService) UpdateOrderItem(orderUuid uuid.UUID, req dtos.UpdateOrder
 	}
 
 	// Reload the order with all its relations for the comprehensive response
-	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").First(&order, order.ID).Error; err != nil {
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").Preload("OrderItems.OrderPaymentItems.OrderPayment").First(&order, order.ID).Error; err != nil {
 		log.Printf("Error preloading order relations after commit: %v", err)
 		return nil, errors.New("failed to retrieve full order details after commit")
 	}
@@ -355,15 +363,29 @@ func (s *OrderService) DeleteOrderItem(orderUuid uuid.UUID, req dtos.DeleteOrder
 	}()
 
 	var order models.Order
-	if err := tx.Preload("OrderItems.AddOns").Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&order).Error; err != nil {
+	if err := tx.Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&order).Error; err != nil {
 		tx.Rollback()
 		return nil, errors.New("order not found")
 	}
 
 	var orderItem models.OrderItem
-	if err := tx.Preload("AddOns").Where("uuid = ? AND order_id = ?", req.OrderItemUuid, order.ID).First(&orderItem).Error; err != nil {
+	if err := tx.Preload("AddOns").Preload("OrderPaymentItems.OrderPayment").Where("uuid = ? AND order_id = ?", req.OrderItemUuid, order.ID).First(&orderItem).Error; err != nil {
 		tx.Rollback()
 		return nil, errors.New("order item not found")
+	}
+	log.Printf("Retrieved OrderItem for deletion: ID=%d, UUID=%s", orderItem.ID, orderItem.Uuid.String())
+
+	if orderItem.ID == 0 {
+		tx.Rollback()
+		return nil, errors.New("retrieved order item has invalid ID for deletion")
+	}
+
+	// Check if the order item is already paid
+	for _, opItem := range orderItem.OrderPaymentItems {
+		if opItem.OrderPayment != nil && opItem.OrderPayment.IsPaid {
+			tx.Rollback()
+			return nil, errors.New("cannot delete a paid order item")
+		}
 	}
 
 	// Return stock for the deleted item and its add-ons
@@ -387,14 +409,43 @@ func (s *OrderService) DeleteOrderItem(orderUuid uuid.UUID, req dtos.DeleteOrder
 	}
 
 	// Delete the order item and its add-ons
-	if err := tx.Where("order_item_id = ?", orderItem.ID).Delete(&models.OrderItemAddOn{}).Error; err != nil {
+	log.Printf("Attempting to delete OrderItemAddOn for order_item_id: %d", orderItem.ID)
+	result := tx.Unscoped().Where("order_item_id = ?", orderItem.ID).Delete(&models.OrderItemAddOn{})
+	if result.Error != nil {
 		tx.Rollback()
-		return nil, errors.New("failed to delete order item add-ons")
+		return nil, errors.New("failed to delete order item add-ons: " + result.Error.Error())
 	}
-	if err := tx.Delete(&orderItem).Error; err != nil {
+	log.Printf("Deleted %d OrderItemAddOn rows for order_item_id: %d", result.RowsAffected, orderItem.ID)
+
+	// Delete associated order payment items
+	log.Printf("Attempting to delete OrderPaymentItem for order_item_id: %d", orderItem.ID)
+	result = tx.Unscoped().Where("order_item_id = ?", orderItem.ID).Delete(&models.OrderPaymentItem{})
+	if result.Error != nil {
 		tx.Rollback()
-		return nil, errors.New("failed to delete order item")
+		return nil, errors.New("failed to delete associated order payment items: " + result.Error.Error())
 	}
+	log.Printf("Deleted %d OrderPaymentItem rows for order_item_id: %d", result.RowsAffected, orderItem.ID)
+
+		log.Printf("Attempting to delete OrderItem with ID: %d (UUID: %s)", orderItem.ID, orderItem.Uuid.String())
+	result = tx.Unscoped().Delete(&models.OrderItem{}, orderItem.ID) // Reverted to Unscoped().Delete()
+	if result.Error != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to delete order item: " + result.Error.Error())
+	}
+	log.Printf("Deleted %d OrderItem rows for ID: %d", result.RowsAffected, orderItem.ID)
+
+	// Add verification step here
+	var verifyItem models.OrderItem
+	checkErr := tx.Unscoped().Where("id = ?", orderItem.ID).First(&verifyItem).Error
+	if checkErr == nil {
+		tx.Rollback()
+		return nil, errors.New("order item still exists after deletion attempt")
+	}
+	if !errors.Is(checkErr, gorm.ErrRecordNotFound) {
+		tx.Rollback()
+		return nil, errors.New("error verifying order item deletion: " + checkErr.Error())
+	}
+	log.Printf("Order item with ID %d successfully verified as deleted from DB.", orderItem.ID)
 
 	// Recalculate total amount for the order
 	if err := s.recalculateOrderTotal(tx, &order, ownerID); err != nil {
@@ -402,18 +453,47 @@ func (s *OrderService) DeleteOrderItem(orderUuid uuid.UUID, req dtos.DeleteOrder
 		return nil, err
 	}
 
+	log.Printf("Attempting to commit transaction for order item deletion.")
 	if err := tx.Commit().Error; err != nil {
+		log.Printf("Error committing transaction: %v", err)
 		tx.Rollback()
-		return nil, errors.New("failed to commit order item deletion transaction")
+		return nil, errors.New("failed to commit order item deletion transaction: " + err.Error())
+	}
+	log.Printf("Transaction committed successfully.")
+
+	// Fetch a fresh order object after commit
+	var freshOrder models.Order
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&freshOrder).Error; err != nil {
+		log.Printf("Error fetching fresh order after commit: %v", err)
+		return nil, errors.New("failed to retrieve fresh order details after commit")
 	}
 
-	// Reload the order with all its relations for the comprehensive response
-	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").First(&order, order.ID).Error; err != nil {
-		log.Printf("Error preloading order relations after commit: %v", err)
-		return nil, errors.New("failed to retrieve full order details after commit")
+	// Explicitly re-fetch OrderItems to ensure deleted item is not present
+	// Use a new DB session to bypass any potential transaction-level caching
+	if err := s.DB.Session(&gorm.Session{NewDB: true}).Where("order_id = ?", freshOrder.ID).Find(&freshOrder.OrderItems).Error; err != nil {
+		log.Printf("Error re-fetching order items after deletion: %v", err)
+		return nil, errors.New("failed to re-fetch order items after deletion")
 	}
 
-	return mapOrderToOrderResponse(order, order.Outlet), nil
+	// Now preload the necessary relations for the re-fetched OrderItems
+	for i := range freshOrder.OrderItems {
+		if freshOrder.OrderItems[i].ProductID != nil {
+			s.DB.Where("id = ?", freshOrder.OrderItems[i].ProductID).First(&freshOrder.OrderItems[i].Product)
+		}
+		if freshOrder.OrderItems[i].ProductVariantID != nil {
+			s.DB.Preload("Product").Where("id = ?", freshOrder.OrderItems[i].ProductVariantID).First(&freshOrder.OrderItems[i].ProductVariant)
+		}
+		s.DB.Preload("AddOn").Where("order_item_id = ?", freshOrder.OrderItems[i].ID).Find(&freshOrder.OrderItems[i].AddOns)
+		s.DB.Preload("OrderPayment").Where("order_item_id = ?", freshOrder.OrderItems[i].ID).Find(&freshOrder.OrderItems[i].OrderPaymentItems)
+	}
+
+	log.Printf("Fresh Order %d now has %d items after re-fetch.", freshOrder.ID, len(freshOrder.OrderItems))
+	log.Printf("Final OrderItems count before mapping to response: %d", len(freshOrder.OrderItems))
+	for i, item := range freshOrder.OrderItems {
+		log.Printf("Item %d UUID: %s", i, item.Uuid.String())
+	}
+
+	return mapOrderToOrderResponse(freshOrder, freshOrder.Outlet), nil
 }
 
 func (s *OrderService) CreateOrderItem(orderUuid uuid.UUID, req dtos.CreateOrderItemRequest, userID uint) (*dtos.OrderResponse, error) {
@@ -430,9 +510,15 @@ func (s *OrderService) CreateOrderItem(orderUuid uuid.UUID, req dtos.CreateOrder
 	}()
 
 	var order models.Order
-	if err := tx.Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&order).Error; err != nil {
+	if err := tx.Preload("OrderPayments").Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&order).Error; err != nil {
 		tx.Rollback()
 		return nil, errors.New("order not found")
+	}
+
+	// Check if the order is already paid
+	if order.Status == "paid" {
+		tx.Rollback()
+		return nil, errors.New("cannot add item to a paid order")
 	}
 
 	var product *models.Product
@@ -516,7 +602,7 @@ func (s *OrderService) CreateOrderItem(orderUuid uuid.UUID, req dtos.CreateOrder
 	}
 
 	// Reload the order with all its relations for the comprehensive response
-	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").First(&order, order.ID).Error; err != nil {
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").Preload("OrderItems.OrderPaymentItems.OrderPayment").First(&order, order.ID).Error; err != nil {
 		log.Printf("Error preloading order relations after commit: %v", err)
 		return nil, errors.New("failed to retrieve full order details after commit")
 	}
