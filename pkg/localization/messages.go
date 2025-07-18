@@ -295,6 +295,10 @@ var messages = map[string]map[string]string{
 		"en": "Order item deleted successfully.",
 		"id": "Item pesanan berhasil dihapus.",
 	},
+	"failed_to_unmarshal_response_json": {
+		"en": "Failed to unmarshal response JSON: invalid character '<' looking for beginning of value",
+		"id": "Gagal mengurai JSON respons: karakter '<' tidak valid saat mencari awal nilai.",
+	},
 }
 
 func GetLocalizedMessage(messageKey, lang string) string {
