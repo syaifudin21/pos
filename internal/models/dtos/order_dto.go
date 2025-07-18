@@ -73,6 +73,7 @@ type OrderItemDetailResponse struct {
 	Quantity           int                            `json:"quantity"`
 	Price              float64                        `json:"price"`
 	Total              float64                        `json:"total"`
+	IsPaid             bool                           `json:"is_paid"`
 	AddOns             []OrderItemAddonDetailResponse `json:"add_ons,omitempty"`
 }
 

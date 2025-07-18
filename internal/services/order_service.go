@@ -163,7 +163,7 @@ func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderR
 		return nil, err
 	}
 	var order models.Order
-	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant.Product").Preload("OrderItems.AddOns.AddOn").Where("uuid = ? AND user_id = ?", uuid, ownerID).First(&order).Error; err != nil {
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant.Product").Preload("OrderItems.AddOns.AddOn").Preload("OrderItems.OrderPaymentItems.OrderPayment").Where("uuid = ? AND user_id = ?", uuid, ownerID).First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("order not found")
 		}
@@ -591,6 +591,14 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 			itemTotal += addOn.Price * addOn.Quantity
 		}
 
+		var itemIsPaid bool
+		for _, opItem := range item.OrderPaymentItems {
+			if opItem.OrderPayment != nil && opItem.OrderPayment.IsPaid {
+				itemIsPaid = true
+				break
+			}
+		}
+
 		orderItemsResponse = append(orderItemsResponse, dtos.OrderItemDetailResponse{
 			ID:                 item.ID,
 			Uuid:               item.Uuid,
@@ -600,6 +608,7 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 			Quantity:           int(item.Quantity),
 			Price:              itemPrice,
 			Total:              itemTotal,
+			IsPaid:             itemIsPaid,
 			AddOns:             addOnsResponse,
 		})
 	}
