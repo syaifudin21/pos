@@ -39,9 +39,6 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 	orderService := services.NewOrderService(db, stockService, ipaymuService, userContextService)
 	orderHandler := handlers.NewOrderHandler(orderService, userContextService)
 
-	orderPaymentService := services.NewOrderPaymentService(db, userContextService, ipaymuService)
-	orderPaymentHandler := handlers.NewOrderPaymentHandler(orderPaymentService, userContextService)
-
 	reportService := services.NewReportService(db)
 	reportHandler := handlers.NewReportHandler(reportService, userContextService)
 
@@ -54,6 +51,9 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 	tsmLogService := services.NewTsmLogService(db)
 	tsmService := services.NewTsmService(db, userContextService, userPaymentService, tsmLogService)
 	tsmHandler := handlers.NewTsmHandler(tsmService, userContextService, userPaymentService)
+
+	orderPaymentService := services.NewOrderPaymentService(db, userContextService, ipaymuService, tsmService)
+	orderPaymentHandler := handlers.NewOrderPaymentHandler(orderPaymentService, userContextService)
 
 	authorizedGroup := e.Group("")
 	{

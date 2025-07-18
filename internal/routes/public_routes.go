@@ -15,8 +15,13 @@ func RegisterPublicRoutes(e *echo.Echo, db *gorm.DB) {
 	// Initialize services and handlers for public routes
 	userContextService := services.NewUserContextService(db)
 
+	// Dependencies for TsmService & OrderPaymentService
+	userPaymentService := services.NewUserPaymentService(db, userContextService)
+	tsmLogService := services.NewTsmLogService(db)
+	tsmService := services.NewTsmService(db, userContextService, userPaymentService, tsmLogService)
+
 	// Initialize OrderPaymentService first
-	orderPaymentService := services.NewOrderPaymentService(db, userContextService, nil) // ipaymuService is nil for now to avoid circular dependency
+	orderPaymentService := services.NewOrderPaymentService(db, userContextService, nil, tsmService) // ipaymuService is nil for now to avoid circular dependency
 
 	// Initialize IpaymuService
 	ipaymuService := services.NewIpaymuService(db, userContextService)

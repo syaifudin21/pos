@@ -15,10 +15,11 @@ type OrderPaymentService struct {
 	DB                 *gorm.DB
 	UserContextService *UserContextService
 	IpaymuService      *IpaymuService
+	TsmService         *TsmService
 }
 
-func NewOrderPaymentService(db *gorm.DB, userContextService *UserContextService, ipaymuService *IpaymuService) *OrderPaymentService {
-	return &OrderPaymentService{DB: db, UserContextService: userContextService, IpaymuService: ipaymuService}
+func NewOrderPaymentService(db *gorm.DB, userContextService *UserContextService, ipaymuService *IpaymuService, tsmService *TsmService) *OrderPaymentService {
+	return &OrderPaymentService{DB: db, UserContextService: userContextService, IpaymuService: ipaymuService, TsmService: tsmService}
 }
 
 func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequest, userID uint) (*dtos.OrderPaymentResponse, error) {
@@ -55,6 +56,14 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		if req.CustomerName == "" || req.CustomerEmail == "" || req.CustomerPhone == "" {
 			tx.Rollback()
 			return nil, errors.New("customer details are required for iPaymu payments")
+		}
+	}
+
+	if paymentMethod.Issuer == "TSM" {
+		var userPayment models.UserPayment
+		if err := tx.Where("user_id = ? AND payment_method_id = ? AND is_active = ?", ownerID, paymentMethod.ID, true).First(&userPayment).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("user has not activated TSM payment")
 		}
 	}
 
@@ -178,6 +187,43 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 		if err := tx.Save(&orderPayment).Error; err != nil {
 			tx.Rollback()
 			return nil, errors.New("failed to update order payment with iPaymu details")
+		}
+	}
+
+	if paymentMethod.Issuer == "TSM" {
+		var userTsm models.UserTsm
+		if err := tx.Where("user_id = ?", ownerID).First(&userTsm).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("user tsm data not found")
+		}
+
+		var productNames []string
+		for _, item := range selectedOrderItems {
+			productNames = append(productNames, item.ProductName)
+		}
+
+		tsmReq := dtos.TsmGenerateApplinkRequest{
+			AppCode:      userTsm.AppCode,
+			Amount:       orderPayment.AmountPaid,
+			TrxID:        orderPayment.Uuid.String(),
+			TerminalCode: userTsm.TerminalCode,
+			MerchantCode: userTsm.MerchantCode,
+		}
+		tsmLink, err := s.TsmService.GenerateAPPLink(ownerID, tsmReq)
+		if err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("TSM generate app link failed: %w", err)
+		}
+
+		// Construct the desired extra data structure
+		extraDataMap := make(map[string]interface{})
+		if tsmLinkResponseCode, ok := tsmLink["data"]; ok {
+			extraDataMap["data"] = tsmLinkResponseCode
+		}
+
+		rawExtra, err := json.Marshal(extraDataMap["data"])
+		if err == nil {
+			orderPayment.Extra = string(rawExtra)
 		}
 	}
 

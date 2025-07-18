@@ -119,13 +119,13 @@ func (s *TsmService) generateHeader(bodyPart string) (string, error) {
 	return headerToken, nil
 }
 
-func (s *TsmService) GenerateAPPLink(userID uint, req dtos.TsmGenerateApplinkRequest) (map[string]interface{}, error) {
+func (s *TsmService) generateAPPLinkRequest(userID uint, appCode string, amount float64, trxID string, terminalCode string, merchantCode string) (map[string]interface{}, error) {
 	body := map[string]interface{}{
-		"app_code":       req.AppCode,
-		"amount":         strconv.FormatFloat(req.Amount, 'f', -1, 64),
-		"partner_trx_id": req.TrxID,
-		"terminal_code":  req.TerminalCode,
-		"merchant_code":  req.MerchantCode,
+		"app_code":       appCode,
+		"amount":         strconv.FormatFloat(amount, 'f', -1, 64),
+		"partner_trx_id": trxID,
+		"terminal_code":  terminalCode,
+		"merchant_code":  merchantCode,
 		"payment_method": "CARD",
 		"timestamp":      time.Now().UnixNano() / int64(time.Millisecond),
 	}
@@ -206,4 +206,8 @@ func (s *TsmService) GenerateAPPLink(userID uint, req dtos.TsmGenerateApplinkReq
 		return nil, finalErr
 	}
 	return finalRes, nil
+}
+
+func (s *TsmService) GenerateAPPLink(userID uint, req dtos.TsmGenerateApplinkRequest) (map[string]interface{}, error) {
+	return s.generateAPPLinkRequest(userID, req.AppCode, req.Amount, req.TrxID, req.TerminalCode, req.MerchantCode)
 }

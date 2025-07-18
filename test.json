@@ -1,60 +1,27 @@
 {
-    "message": "order_created_successfully",
-    "data": {
-        "uuid": "9e40485b-c726-4b7f-960a-3d35f45532c4",
-        "order_date": "2025-07-11T03:52:28+08:00",
-        "total_amount": 17000,
-        "paid_amount": 10000,
-        "payment_method": "Cash",
-        "status": "completed",
-        "created_by": {
-            "uuid": "uuid_user",
-            "name": "name user"
-        },
-        "outelt": {
-            "uuid": "uuid_outlet",
-            "name": "nama outlet",
-            "adderss": "alamat outlet",
-            "contact": "contact outlet"
-        },
-        "payments": [
-            {
-                "payment_method_id": "1",
-                "paid_amount": 7000,
-                "name": "Cash",
-                "payment_method": "cash",
-                "payment_channel": "manual",
-                "is_paid": true,
-                "reference_id": "",
-                "created_at": "2025-07-11T03:52:28+08:00",
-                "paid_at": "2025-07-11T03:52:28+08:00"
-            },
-            {
-                "payment_method_id": "2",
-                "paid_amount": 10000,
-                "name": "QRIS",
-                "payment_method": "qris",
-                "payment_channel": "qris",
-                "is_paid": true,
-                "reference_id": "",
-                "created_at": "2025-07-11T03:52:28+08:00",
-                "paid_at": "2025-07-11T03:52:28+08:00"
-            }
-        ],
-        "items": [
-            {
-                "product_uuid": "{{main_product_uuid}}",
-                "product_variant_uuid": "{{product_uuid}}",
-                "name": "name product",
-                "quantity": 1,
-                "add_ons": [
-                    {
-                        "name": "name add on",
-                        "add_on_uuid": "{{uuid_add_on}}",
-                        "quantity": 1
-                    }
-                ]
-            }
-        ]
+  "message": "order_payment_created_successfully",
+  "data": {
+    "uuid": "ff90ee6f-59a9-49b8-8092-e2dd4fd67b09",
+    "order_uuid": "91c445df-cfa6-4487-be87-7c7c390df4d9",
+    "payment_method_id": 3,
+    "payment_name": "Credit Card",
+    "amount_paid": 550000,
+    "customer_name": "John Doe",
+    "customer_email": "mail@com.com",
+    "customer_phone": "08123456789",
+    "change_amount": 0,
+    "created_at": "2025-07-18 16:45:17",
+    "is_paid": true,
+    "paid_at": "2025-07-18T16:45:17.252938+08:00",
+    "extra": {
+      "amount": 550000,
+      "detail": {
+        "timestamp": "1752828317384",
+        "url": "https://rpayku.id/payment?data=3E25B8E0978FD56CEE8B7F001563580252AC9CD25E0B9F28932075D74C195BDB3CE6806F52D742750335B94B4EF8D43DCD6C0DF1201E96BD8CB5207D0A6C6D52FAF5E77255CF0E300B7D45458445B87F169C2D71A2418D0E2A3BED61FB354DBA9005AB1D1E6B343BC0B9F8D02DD814B0A47B57FD593FF11654B0910121DEEA8D"
+      },
+      "index": "0",
+      "partner_trx_id": "ff90ee6f-59a9-49b8-8092-e2dd4fd67b09",
+      "response_code": "00"
     }
+  }
 }
