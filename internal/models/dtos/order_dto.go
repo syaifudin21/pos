@@ -7,9 +7,8 @@ import (
 )
 
 type CreateOrderRequest struct {
-	OutletUuid      uuid.UUID          `json:"outlet_uuid" validate:"required"`
-	Items           []OrderItemRequest `json:"items" validate:"required,dive"`
-	PaymentMethodID uint               `json:"payment_method_id" validate:"required"`
+	OutletUuid uuid.UUID          `json:"outlet_uuid" validate:"required"`
+	Items      []OrderItemRequest `json:"items" validate:"required,dive"`
 }
 
 type OrderItemRequest struct {
@@ -80,8 +79,8 @@ type OrderResponse struct {
 	OrderDate     string                       `json:"order_date"`
 	TotalAmount   float64                      `json:"total_amount"`
 	PaidAmount    float64                      `json:"paid_amount"`
-	PaymentMethod string                       `json:"payment_method"`
 	Status        string                       `json:"status"`
+	PaymentMethods []string                    `json:"payment_methods"`
 	CreatedBy     *UserDetailResponse          `json:"created_by"`
 	Outlet        OutletDetailResponse         `json:"outlet"`
 	Payments      []OrderPaymentDetailResponse `json:"payments"`
@@ -93,6 +92,5 @@ type SimpleOrderResponse struct {
 	OrderDate     string    `json:"order_date"`
 	TotalAmount   float64   `json:"total_amount"`
 	PaidAmount    float64   `json:"paid_amount"`
-	PaymentMethod string    `json:"payment_method"`
 	Status        string    `json:"status"`
 }

@@ -37,11 +37,6 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 		return nil, errors.New("outlet not found")
 	}
 
-	var userPayment models.UserPayment
-	if err := s.DB.Preload("PaymentMethod").Where("payment_method_id = ? AND user_id = ? AND is_active = ?", req.PaymentMethodID, ownerID, true).First(&userPayment).Error; err != nil {
-		return nil, errors.New("payment method not found or not active")
-	}
-
 	var user models.User
 	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		return nil, errors.New("user not found")
@@ -55,11 +50,10 @@ func (s *OrderService) CreateOrder(req dtos.CreateOrderRequest, userID uint) (*d
 	}()
 
 	order := models.Order{
-		OutletID:      outlet.ID,
-		UserID:        ownerID,
-		Status:        "pending",
-		TotalAmount:   0,
-		PaymentMethod: userPayment.PaymentMethod.Name,
+		OutletID:    outlet.ID,
+		UserID:      ownerID,
+		Status:      "pending",
+		TotalAmount: 0,
 	}
 
 	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&order).Error; err != nil {
@@ -169,7 +163,7 @@ func (s *OrderService) GetOrderByUuid(uuid uuid.UUID, userID uint) (*dtos.OrderR
 		return nil, err
 	}
 	var order models.Order
-	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").Where("uuid = ? AND user_id = ?", uuid, ownerID).First(&order).Error; err != nil {
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant.Product").Preload("OrderItems.AddOns.AddOn").Where("uuid = ? AND user_id = ?", uuid, ownerID).First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("order not found")
 		}
@@ -212,12 +206,11 @@ func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uint, stat
 
 func mapOrderToSimpleOrderResponse(order models.Order) *dtos.SimpleOrderResponse {
 	return &dtos.SimpleOrderResponse{
-		Uuid:          order.Uuid,
-		OrderDate:     order.CreatedAt.Format(time.RFC3339),
-		TotalAmount:   order.TotalAmount,
-		PaidAmount:    order.PaidAmount,
-		PaymentMethod: order.PaymentMethod,
-		Status:        order.Status,
+		Uuid:        order.Uuid,
+		OrderDate:   order.CreatedAt.Format(time.RFC3339),
+		TotalAmount: order.TotalAmount,
+		PaidAmount:  order.PaidAmount,
+		Status:      order.Status,
 	}
 }
 
@@ -235,6 +228,9 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 		if item.ProductVariant != nil {
 			productName = item.ProductVariant.Name
 			productVariantUuid = item.ProductVariant.Uuid
+			if item.ProductVariant.Product.Uuid != uuid.Nil { // Get parent product UUID if variant exists
+				productUuid = item.ProductVariant.Product.Uuid
+			}
 		}
 
 		var addOnsResponse []dtos.OrderItemAddonDetailResponse
@@ -259,6 +255,9 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 	}
 
 	var paymentsResponse []dtos.OrderPaymentDetailResponse
+	var paymentMethods []string
+	uniquePaymentMethods := make(map[string]bool)
+
 	for _, payment := range order.OrderPayments {
 		if payment.PaymentMethod.ID != 0 {
 			paymentsResponse = append(paymentsResponse, dtos.OrderPaymentDetailResponse{
@@ -288,7 +287,15 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 					return extraData
 				}(),
 			})
+
+			if payment.PaymentMethod.PaymentChannel != "" {
+				uniquePaymentMethods[payment.PaymentMethod.PaymentChannel] = true
+			}
 		}
+	}
+
+	for method := range uniquePaymentMethods {
+		paymentMethods = append(paymentMethods, method)
 	}
 
 	var createdBy *dtos.UserDetailResponse
@@ -304,8 +311,8 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 		OrderDate:     order.CreatedAt.Format(time.RFC3339),
 		TotalAmount:   order.TotalAmount,
 		PaidAmount:    order.PaidAmount,
-		PaymentMethod: order.PaymentMethod,
 		Status:        order.Status,
+		PaymentMethods: paymentMethods,
 		CreatedBy:     createdBy,
 		Outlet: dtos.OutletDetailResponse{
 			Uuid:    outlet.Uuid,
