@@ -275,7 +275,7 @@ func (s *IpaymuService) NotifyDirectPayment(TrxId int, Status string, Settlement
 		return err
 	}
 
-	fmt.Println("Debug Signature:", log) // Debugging output
+	
 
 	dateNow := time.Now()
 

@@ -136,7 +136,7 @@ func (s *OrderPaymentService) CreateOrderPayment(req dtos.CreateOrderPaymentRequ
 	}
 	orderPayment.OrderPaymentItems = paymentItems
 
-	if paymentMethod.Issuer != "iPaymu" {
+	if paymentMethod.Issuer != "iPaymu" && paymentMethod.Issuer != "TSM" {
 		orderPayment.IsPaid = true
 		orderPayment.PaidAt = &now
 		order.PaidAmount += totalAmountToPay

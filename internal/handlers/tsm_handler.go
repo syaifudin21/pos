@@ -25,24 +25,21 @@ func NewTsmHandler(tsmService *services.TsmService, userContextService *services
 func (h *TsmHandler) RegisterTsm(c echo.Context) error {
 	req, ok := c.Get("validated_data").(*dtos.TsmRegisterRequest)
 	if !ok {
-		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
+		return JSONError(c, http.StatusBadRequest, "invalid_request_body")
 	}
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
 	if err != nil {
-		return JSONError(c, http.StatusInternalServerError, "failed_to_get_user_id")
+		return JSONError(c, http.StatusUnauthorized, "unauthorized")
 	}
 
-	hasIpaymu, err := h.UserPaymentService.HasIpaymuConnection(userID)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
-		return JSONError(c, http.StatusInternalServerError, "failed_to_check_ipaymu_connection")
-	}
-	if !hasIpaymu {
-		return JSONError(c, http.StatusForbidden, "ipaymu_registration_required_to_access_tsm_register")
+		return JSONError(c, http.StatusForbidden, "forbidden")
 	}
 
-	if err := h.TsmService.RegisterTsm(userID, *req); err != nil {
-		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	if err := h.TsmService.RegisterTsm(ownerID, *req); err != nil {
+		return JSONError(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return JSONSuccess(c, http.StatusOK, "tsm_registered_successfully", nil)
@@ -51,20 +48,36 @@ func (h *TsmHandler) RegisterTsm(c echo.Context) error {
 func (h *TsmHandler) GenerateApplink(c echo.Context) error {
 	req, ok := c.Get("validated_data").(*dtos.TsmGenerateApplinkRequest)
 	if !ok {
-		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
+		return JSONError(c, http.StatusBadRequest, "invalid_request_body")
 	}
-
-	// You might want to add authorization checks here if needed
 
 	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
 	if err != nil {
-		return JSONError(c, http.StatusInternalServerError, "failed_to_get_user_id")
+		return JSONError(c, http.StatusUnauthorized, "unauthorized")
 	}
 
-	resp, err := h.TsmService.GenerateAPPLink(userID, *req)
+	ownerID, err := h.UserContextService.GetOwnerID(userID)
 	if err != nil {
-		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+		return JSONError(c, http.StatusForbidden, "forbidden")
+	}
+
+	resp, err := h.TsmService.GenerateAPPLink(ownerID, *req)
+	if err != nil {
+		return JSONError(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return JSONSuccess(c, http.StatusOK, "applink_generated_successfully", resp)
+}
+
+func (h *TsmHandler) Callback(c echo.Context) error {
+	var req dtos.TsmCallbackRequest
+	if err := c.Bind(&req); err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_request_body")
+	}
+
+	if err := h.TsmService.HandleCallback(req); err != nil {
+		return JSONError(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "callback_processed_successfully", nil)
 }

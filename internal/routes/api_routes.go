@@ -49,10 +49,12 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 	poHandler := handlers.NewPurchaseOrderHandler(poService, userContextService)
 
 	tsmLogService := services.NewTsmLogService(db)
-	tsmService := services.NewTsmService(db, userContextService, userPaymentService, tsmLogService)
-	tsmHandler := handlers.NewTsmHandler(tsmService, userContextService, userPaymentService)
+	orderPaymentService := services.NewOrderPaymentService(db, userContextService, ipaymuService, nil)
+	tsmService := services.NewTsmService(db, userContextService, userPaymentService, tsmLogService, orderPaymentService)
+	orderPaymentService.TsmService = tsmService
+	ipaymuService.SetOrderPaymentService(orderPaymentService)
 
-	orderPaymentService := services.NewOrderPaymentService(db, userContextService, ipaymuService, tsmService)
+	tsmHandler := handlers.NewTsmHandler(tsmService, userContextService, userPaymentService)
 	orderPaymentHandler := handlers.NewOrderPaymentHandler(orderPaymentService, userContextService)
 
 	authorizedGroup := e.Group("")
