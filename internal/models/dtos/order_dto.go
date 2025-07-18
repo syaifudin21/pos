@@ -66,6 +66,7 @@ type OrderItemAddonDetailResponse struct {
 
 // OrderItemDetailResponse for items
 type OrderItemDetailResponse struct {
+	ID                 uint                           `json:"id"`
 	ProductUuid        uuid.UUID                      `json:"product_uuid,omitempty"`
 	ProductVariantUuid uuid.UUID                      `json:"product_variant_uuid,omitempty"`
 	Name               string                         `json:"name"` // Product name

@@ -44,6 +44,7 @@ func PerformMigration() {
 		&models.ProductAddOn{},
 		&models.TsmLog{},
 		&models.OrderPayment{},
+		&models.OrderPaymentItem{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to auto-migrate database: %v", err)

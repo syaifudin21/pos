@@ -249,6 +249,7 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 		}
 
 		orderItemsResponse = append(orderItemsResponse, dtos.OrderItemDetailResponse{
+			ID:                 item.ID,
 			ProductUuid:        productUuid,
 			ProductVariantUuid: productVariantUuid,
 			Name:               productName,

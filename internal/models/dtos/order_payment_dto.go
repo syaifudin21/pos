@@ -9,7 +9,7 @@ import (
 type CreateOrderPaymentRequest struct {
 	OrderUuid       uuid.UUID `json:"order_uuid" validate:"required"`
 	PaymentMethodID uint      `json:"payment_method_id" validate:"required"`
-	AmountPaid      float64   `json:"amount_paid" validate:"required,gt=0"`
+	OrderItemIDs    []uint    `json:"order_item_ids" validate:"required,min=1"`
 	CustomerName    string    `json:"customer_name"`
 	CustomerEmail   string    `json:"customer_email"`
 	CustomerPhone   string    `json:"customer_phone"`
