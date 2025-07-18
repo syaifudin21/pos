@@ -119,6 +119,9 @@ func RegisterApiRoutes(e *echo.Echo, db *gorm.DB) {
 		orderGroup := authorizedGroup.Group("/orders")
 		orderGroup.POST("", orderHandler.CreateOrder, internalmw.Authorize("orders", "write"), WithValidation(&dtos.CreateOrderRequest{}, validators.ValidateCreateOrder))
 		orderGroup.GET("/:uuid", orderHandler.GetOrderByUuid, internalmw.Authorize("orders", "read"))
+		orderGroup.PUT("/:uuid/items", orderHandler.UpdateOrderItem, internalmw.Authorize("orders", "write"), WithValidation(&dtos.UpdateOrderItemRequest{}, validators.ValidateUpdateOrderItemRequest))
+		orderGroup.DELETE("/:uuid/items", orderHandler.DeleteOrderItem, internalmw.Authorize("orders", "write"), WithValidation(&dtos.DeleteOrderItemRequest{}, validators.ValidateDeleteOrderItemRequest))
+		orderGroup.POST("/:uuid/items", orderHandler.CreateOrderItem, internalmw.Authorize("orders", "write"), WithValidation(&dtos.CreateOrderItemRequest{}, validators.ValidateCreateOrderItemRequest))
 
 		// Order Payment routes
 		orderPaymentGroup := authorizedGroup.Group("/order-payments")

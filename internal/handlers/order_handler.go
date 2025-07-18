@@ -85,3 +85,78 @@ func (h *OrderHandler) GetOrdersByOutlet(c echo.Context) error {
 	}
 	return JSONSuccess(c, http.StatusOK, "orders_retrieved_successfully", orders)
 }
+
+func (h *OrderHandler) UpdateOrderItem(c echo.Context) error {
+	orderUuidParam := c.Param("uuid")
+	orderUuid, err := uuid.Parse(orderUuidParam)
+	if err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_order_uuid_format")
+	}
+
+	req, ok := c.Get("validated_data").(*dtos.UpdateOrderItemRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
+	}
+
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
+
+	order, err := h.OrderService.UpdateOrderItem(orderUuid, *req, userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "order_item_updated_successfully", order)
+}
+
+func (h *OrderHandler) DeleteOrderItem(c echo.Context) error {
+	orderUuidParam := c.Param("uuid")
+	orderUuid, err := uuid.Parse(orderUuidParam)
+	if err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_order_uuid_format")
+	}
+
+	req, ok := c.Get("validated_data").(*dtos.DeleteOrderItemRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
+	}
+
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
+
+	order, err := h.OrderService.DeleteOrderItem(orderUuid, *req, userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusOK, "order_item_deleted_successfully", order)
+}
+
+func (h *OrderHandler) CreateOrderItem(c echo.Context) error {
+	orderUuidParam := c.Param("uuid")
+	orderUuid, err := uuid.Parse(orderUuidParam)
+	if err != nil {
+		return JSONError(c, http.StatusBadRequest, "invalid_order_uuid_format")
+	}
+
+	req, ok := c.Get("validated_data").(*dtos.CreateOrderItemRequest)
+	if !ok {
+		return JSONError(c, http.StatusInternalServerError, "failed_to_get_validated_request")
+	}
+
+	userID, err := h.UserContextService.GetUserIDFromEchoContext(c)
+	if err != nil {
+		return JSONError(c, http.StatusUnauthorized, err.Error())
+	}
+
+	order, err := h.OrderService.CreateOrderItem(orderUuid, *req, userID)
+	if err != nil {
+		return JSONError(c, MapErrorToStatusCode(err), err.Error())
+	}
+
+	return JSONSuccess(c, http.StatusCreated, "order_item_created_successfully", order)
+}

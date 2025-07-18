@@ -204,6 +204,347 @@ func (s *OrderService) GetOrdersByOutlet(outletUuid uuid.UUID, userID uint, stat
 	return orderResponses, nil
 }
 
+func (s *OrderService) UpdateOrderItem(orderUuid uuid.UUID, req dtos.UpdateOrderItemRequest, userID uint) (*dtos.OrderResponse, error) {
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := s.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var order models.Order
+	if err := tx.Preload("OrderItems.AddOns").Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&order).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("order not found")
+	}
+
+	var orderItem models.OrderItem
+	if err := tx.Preload("AddOns").Where("uuid = ? AND order_id = ?", req.OrderItemUuid, order.ID).First(&orderItem).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("order item not found")
+	}
+
+	// Return stock for old item and add-ons
+	if orderItem.ProductID != nil {
+		if err := s.StockService.AddStockFromSale(tx, order.OutletID, orderItem.ProductID, nil, orderItem.Quantity, ownerID); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	} else if orderItem.ProductVariantID != nil {
+		if err := s.StockService.AddStockFromSale(tx, order.OutletID, nil, orderItem.ProductVariantID, orderItem.Quantity, ownerID); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+
+	for _, addOn := range orderItem.AddOns {
+		if err := s.StockService.AddStockFromSale(tx, order.OutletID, &addOn.AddOnID, nil, addOn.Quantity, ownerID); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+
+	// Delete old add-ons
+	if err := tx.Where("order_item_id = ?", orderItem.ID).Delete(&models.OrderItemAddOn{}).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to delete old order item add-ons")
+	}
+
+	var product *models.Product
+	var variant *models.ProductVariant
+	var price float64
+	var productID *uint
+	var variantID *uint
+	var productName string
+
+	if req.ProductVariantUuid != uuid.Nil {
+		if err := tx.Where("uuid = ? AND user_id = ?", req.ProductVariantUuid, ownerID).First(&variant).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("product variant not found")
+		}
+		price = variant.Price
+		variantID = &variant.ID
+		productName = variant.Name
+	} else if req.ProductUuid != uuid.Nil {
+		if err := tx.Where("uuid = ? AND user_id = ?", req.ProductUuid, ownerID).First(&product).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("product not found")
+		}
+		price = product.Price
+		productID = &product.ID
+		productName = product.Name
+	} else {
+		tx.Rollback()
+		return nil, errors.New("product_uuid or product_variant_uuid is required for each item")
+	}
+
+	if err := s.StockService.DeductStockForSale(tx, order.OutletID, productID, variantID, float64(req.Quantity), ownerID); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	orderItem.ProductID = productID
+	orderItem.ProductVariantID = variantID
+	orderItem.Quantity = float64(req.Quantity)
+	orderItem.Price = price
+	orderItem.ProductName = productName
+
+	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Save(&orderItem).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to update order item")
+	}
+
+	// Process new add-ons
+	for _, addOnReq := range req.AddOns {
+		var addOnProduct models.Product
+		if err := tx.Where("uuid = ? AND user_id = ? AND type = ?", addOnReq.AddOnUuid, ownerID, "add_on").First(&addOnProduct).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("add-on product not found or not of type add_on")
+		}
+
+		orderItemAddOn := models.OrderItemAddOn{
+			OrderItemID: orderItem.ID,
+			AddOnID:     addOnProduct.ID,
+			Quantity:    float64(addOnReq.Quantity),
+			Price:       addOnProduct.Price,
+			UserID:      ownerID,
+		}
+
+		if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&orderItemAddOn).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("failed to create order item add-on")
+		}
+	}
+
+	// Recalculate total amount for the order
+	if err := s.recalculateOrderTotal(tx, &order, ownerID); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to commit order item update transaction")
+	}
+
+	// Reload the order with all its relations for the comprehensive response
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").First(&order, order.ID).Error; err != nil {
+		log.Printf("Error preloading order relations after commit: %v", err)
+		return nil, errors.New("failed to retrieve full order details after commit")
+	}
+
+	return mapOrderToOrderResponse(order, order.Outlet), nil
+}
+
+func (s *OrderService) DeleteOrderItem(orderUuid uuid.UUID, req dtos.DeleteOrderItemRequest, userID uint) (*dtos.OrderResponse, error) {
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := s.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var order models.Order
+	if err := tx.Preload("OrderItems.AddOns").Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&order).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("order not found")
+	}
+
+	var orderItem models.OrderItem
+	if err := tx.Preload("AddOns").Where("uuid = ? AND order_id = ?", req.OrderItemUuid, order.ID).First(&orderItem).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("order item not found")
+	}
+
+	// Return stock for the deleted item and its add-ons
+	if orderItem.ProductID != nil {
+		if err := s.StockService.AddStockFromSale(tx, order.OutletID, orderItem.ProductID, nil, orderItem.Quantity, ownerID); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	} else if orderItem.ProductVariantID != nil {
+		if err := s.StockService.AddStockFromSale(tx, order.OutletID, nil, orderItem.ProductVariantID, orderItem.Quantity, ownerID); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+
+	for _, addOn := range orderItem.AddOns {
+		if err := s.StockService.AddStockFromSale(tx, order.OutletID, &addOn.AddOnID, nil, addOn.Quantity, ownerID); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+
+	// Delete the order item and its add-ons
+	if err := tx.Where("order_item_id = ?", orderItem.ID).Delete(&models.OrderItemAddOn{}).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to delete order item add-ons")
+	}
+	if err := tx.Delete(&orderItem).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to delete order item")
+	}
+
+	// Recalculate total amount for the order
+	if err := s.recalculateOrderTotal(tx, &order, ownerID); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to commit order item deletion transaction")
+	}
+
+	// Reload the order with all its relations for the comprehensive response
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").First(&order, order.ID).Error; err != nil {
+		log.Printf("Error preloading order relations after commit: %v", err)
+		return nil, errors.New("failed to retrieve full order details after commit")
+	}
+
+	return mapOrderToOrderResponse(order, order.Outlet), nil
+}
+
+func (s *OrderService) CreateOrderItem(orderUuid uuid.UUID, req dtos.CreateOrderItemRequest, userID uint) (*dtos.OrderResponse, error) {
+	ownerID, err := s.UserContextService.GetOwnerID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := s.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var order models.Order
+	if err := tx.Where("uuid = ? AND user_id = ?", orderUuid, ownerID).First(&order).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("order not found")
+	}
+
+	var product *models.Product
+	var variant *models.ProductVariant
+	var price float64
+	var productID *uint
+	var variantID *uint
+	var productName string
+
+	if req.ProductVariantUuid != uuid.Nil {
+		if err := tx.Where("uuid = ? AND user_id = ?", req.ProductVariantUuid, ownerID).First(&variant).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("product variant not found")
+		}
+		price = variant.Price
+		variantID = &variant.ID
+		productName = variant.Name
+	} else if req.ProductUuid != uuid.Nil {
+		if err := tx.Where("uuid = ? AND user_id = ?", req.ProductUuid, ownerID).First(&product).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("product not found")
+		}
+		price = product.Price
+		productID = &product.ID
+		productName = product.Name
+	} else {
+		tx.Rollback()
+		return nil, errors.New("product_uuid or product_variant_uuid is required for each item")
+	}
+
+	if err := s.StockService.DeductStockForSale(tx, order.OutletID, productID, variantID, float64(req.Quantity), ownerID); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	orderItem := models.OrderItem{
+		OrderID:          order.ID,
+		ProductID:        productID,
+		ProductVariantID: variantID,
+		Quantity:         float64(req.Quantity),
+		Price:            price,
+		ProductName:      productName,
+	}
+
+	if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&orderItem).Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to create order item")
+	}
+
+	// Process add-ons for the current order item
+	for _, addOnReq := range req.AddOns {
+		var addOnProduct models.Product
+		if err := tx.Where("uuid = ? AND user_id = ? AND type = ?", addOnReq.AddOnUuid, ownerID, "add_on").First(&addOnProduct).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("add-on product not found or not of type add_on")
+		}
+
+		orderItemAddOn := models.OrderItemAddOn{
+			OrderItemID: orderItem.ID,
+			AddOnID:     addOnProduct.ID,
+			Quantity:    float64(addOnReq.Quantity),
+			Price:       addOnProduct.Price,
+			UserID:      ownerID,
+		}
+
+		if err := tx.WithContext(context.WithValue(context.Background(), database.UserIDContextKey, userID)).Create(&orderItemAddOn).Error; err != nil {
+			tx.Rollback()
+			return nil, errors.New("failed to create order item add-on")
+		}
+	}
+
+	// Recalculate total amount for the order
+	if err := s.recalculateOrderTotal(tx, &order, ownerID); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return nil, errors.New("failed to commit order item creation transaction")
+	}
+
+	// Reload the order with all its relations for the comprehensive response
+	if err := s.DB.Preload("User").Preload("Outlet").Preload("OrderPayments.PaymentMethod").Preload("OrderItems.Product").Preload("OrderItems.ProductVariant").Preload("OrderItems.AddOns.AddOn").First(&order, order.ID).Error; err != nil {
+		log.Printf("Error preloading order relations after commit: %v", err)
+		return nil, errors.New("failed to retrieve full order details after commit")
+	}
+
+	return mapOrderToOrderResponse(order, order.Outlet), nil
+}
+
+func (s *OrderService) recalculateOrderTotal(tx *gorm.DB, order *models.Order, ownerID uint) error {
+	var orderItems []models.OrderItem
+	if err := tx.Preload("AddOns").Where("order_id = ?", order.ID).Find(&orderItems).Error; err != nil {
+		return errors.New("failed to retrieve order items for recalculation")
+	}
+
+	newTotalAmount := 0.0
+	for _, item := range orderItems {
+		newTotalAmount += item.Price * item.Quantity
+		for _, addOn := range item.AddOns {
+			newTotalAmount += addOn.Price * addOn.Quantity
+		}
+	}
+
+	order.TotalAmount = newTotalAmount
+	if err := tx.Save(order).Error; err != nil {
+		return errors.New("failed to update order total amount")
+	}
+	return nil
+}
+
 func mapOrderToSimpleOrderResponse(order models.Order) *dtos.SimpleOrderResponse {
 	return &dtos.SimpleOrderResponse{
 		Uuid:        order.Uuid,
@@ -244,12 +585,21 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 			}
 		}
 
+		itemPrice := item.Price
+		itemTotal := item.Price * item.Quantity
+		for _, addOn := range item.AddOns {
+			itemTotal += addOn.Price * addOn.Quantity
+		}
+
 		orderItemsResponse = append(orderItemsResponse, dtos.OrderItemDetailResponse{
 			ID:                 item.ID,
+			Uuid:               item.Uuid,
 			ProductUuid:        productUuid,
 			ProductVariantUuid: productVariantUuid,
 			Name:               productName,
 			Quantity:           int(item.Quantity),
+			Price:              itemPrice,
+			Total:              itemTotal,
 			AddOns:             addOnsResponse,
 		})
 	}
@@ -307,13 +657,13 @@ func mapOrderToOrderResponse(order models.Order, outlet models.Outlet) *dtos.Ord
 	}
 
 	return &dtos.OrderResponse{
-		Uuid:          order.Uuid,
-		OrderDate:     order.CreatedAt.Format(time.RFC3339),
-		TotalAmount:   order.TotalAmount,
-		PaidAmount:    order.PaidAmount,
-		Status:        order.Status,
+		Uuid:           order.Uuid,
+		OrderDate:      order.CreatedAt.Format(time.RFC3339),
+		TotalAmount:    order.TotalAmount,
+		PaidAmount:     order.PaidAmount,
+		Status:         order.Status,
 		PaymentMethods: paymentMethods,
-		CreatedBy:     createdBy,
+		CreatedBy:      createdBy,
 		Outlet: dtos.OutletDetailResponse{
 			Uuid:    outlet.Uuid,
 			Name:    outlet.Name,

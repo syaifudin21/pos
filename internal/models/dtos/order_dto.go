@@ -66,10 +66,13 @@ type OrderItemAddonDetailResponse struct {
 // OrderItemDetailResponse for items
 type OrderItemDetailResponse struct {
 	ID                 uint                           `json:"id"`
+	Uuid               uuid.UUID                      `json:"uuid_item"`
 	ProductUuid        uuid.UUID                      `json:"product_uuid,omitempty"`
 	ProductVariantUuid uuid.UUID                      `json:"product_variant_uuid,omitempty"`
 	Name               string                         `json:"name"` // Product name
 	Quantity           int                            `json:"quantity"`
+	Price              float64                        `json:"price"`
+	Total              float64                        `json:"total"`
 	AddOns             []OrderItemAddonDetailResponse `json:"add_ons,omitempty"`
 }
 
@@ -93,4 +96,23 @@ type SimpleOrderResponse struct {
 	TotalAmount   float64   `json:"total_amount"`
 	PaidAmount    float64   `json:"paid_amount"`
 	Status        string    `json:"status"`
+}
+
+type UpdateOrderItemRequest struct {
+	OrderItemUuid      uuid.UUID               `json:"order_item_uuid" validate:"required"`
+	ProductUuid        uuid.UUID               `json:"product_uuid,omitempty"`
+	ProductVariantUuid uuid.UUID               `json:"product_variant_uuid,omitempty"`
+	Quantity           int                     `json:"quantity" validate:"required,gt=0"`
+	AddOns             []OrderItemAddonRequest `json:"add_ons,omitempty"`
+}
+
+type DeleteOrderItemRequest struct {
+	OrderItemUuid uuid.UUID `json:"order_item_uuid" validate:"required"`
+}
+
+type CreateOrderItemRequest struct {
+	ProductUuid        uuid.UUID               `json:"product_uuid,omitempty"`
+	ProductVariantUuid uuid.UUID               `json:"product_variant_uuid,omitempty"`
+	Quantity           int                     `json:"quantity" validate:"required,gt=0"`
+	AddOns             []OrderItemAddonRequest `json:"add_ons,omitempty"`
 }

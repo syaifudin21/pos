@@ -440,6 +440,57 @@ func (s *StockService) DeductStockForSale(tx *gorm.DB, outletID uint, productID 
 }
 
 // stringPtr is a helper function to return a pointer to a string.
+func (s *StockService) AddStockFromSale(tx *gorm.DB, outletID uint, productID *uint, productVariantID *uint, quantity float64, userID uint) error {
+	var stock models.Stock
+	var query *gorm.DB
+
+	if productVariantID != nil {
+		query = tx.Where("outlet_id = ? AND product_variant_id = ? AND user_id = ?", outletID, *productVariantID, userID)
+	} else if productID != nil {
+		query = tx.Where("outlet_id = ? AND product_id = ? AND user_id = ?", outletID, *productID, userID)
+	} else {
+		return errors.New("product_id or product_variant_id is required for stock addition")
+	}
+
+	if err := query.First(&stock).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// If stock not found, create a new entry
+			stock = models.Stock{
+				OutletID: outletID,
+				Quantity: quantity,
+				UserID:   userID,
+			}
+			if productVariantID != nil {
+				stock.ProductVariantID = productVariantID
+			} else {
+				stock.ProductID = productID
+			}
+			if err := tx.Create(&stock).Error; err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	} else {
+		stock.Quantity += quantity
+		if err := tx.Save(&stock).Error; err != nil {
+			return err
+		}
+	}
+
+	// Record stock movement
+	movement := &models.StockMovement{
+		OutletID:         outletID,
+		ProductID:        productID,
+		ProductVariantID: productVariantID,
+		QuantityChange:   int(quantity),
+		MovementType:     "Return",
+		Description:      stringPtr("Addition from sale return/correction"),
+	}
+	return s.StockMovementService.CreateStockMovementWithTx(tx, movement)
+}
+
+// stringPtr is a helper function to return a pointer to a string.
 func stringPtr(s string) *string {
 	return &s
 }
